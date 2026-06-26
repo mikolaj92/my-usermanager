@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to `ny-usermanager`.
+Thanks for your interest in contributing to `my-usermanager`.
 
 ## Development Setup
 
@@ -22,6 +22,6 @@ uv run basedpyright src tests
 ## Project Rules
 
 - Keep the core package framework neutral.
-- Do not import FastAPI or Pydantic from `ny_usermanager` core imports.
+- Do not import FastAPI or Pydantic from `my_usermanager` core imports.
 - Add tests before implementation changes.
 - Keep optional framework code behind extras and adapter modules.

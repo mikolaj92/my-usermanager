@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from ny_usermanager.memory import MemoryUserStore
-from ny_usermanager.models import User
-from ny_usermanager.stores import (
+from my_usermanager.memory import MemoryUserStore
+from my_usermanager.models import User
+from my_usermanager.stores import (
     DuplicateUserError,
     InvalidPageError,
     UserNotFoundError,

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Final, Protocol, override, runtime_checkable
 if TYPE_CHECKING:
     from datetime import datetime
 
-from ny_usermanager.models import (
+from my_usermanager.models import (
     AuditEvent,
     Grant,
     Permission,

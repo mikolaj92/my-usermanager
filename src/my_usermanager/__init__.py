@@ -2,13 +2,13 @@
 
 from typing import Final
 
-from ny_usermanager.memory import (
+from my_usermanager.memory import (
     MemoryAuditStore,
     MemoryGrantStore,
     MemoryRoleStore,
     MemoryUserStore,
 )
-from ny_usermanager.models import (
+from my_usermanager.models import (
     AuditEvent,
     ExternalIdentity,
     Grant,
@@ -20,7 +20,7 @@ from ny_usermanager.models import (
     validate_identifier,
     validate_permission_name,
 )
-from ny_usermanager.permissions import (
+from my_usermanager.permissions import (
     ADMIN_ROLE_NAME,
     BUILTIN_PERMISSION_NAMES,
     BUILTIN_PERMISSIONS,
@@ -29,7 +29,7 @@ from ny_usermanager.permissions import (
     UnregisteredPermissionError,
     is_valid_permission_name,
 )
-from ny_usermanager.stores import (
+from my_usermanager.stores import (
     AuditFilters,
     AuditStore,
     DuplicateAuditEventError,

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Final, override
 
-from ny_usermanager.models import (
+from my_usermanager.models import (
     Permission,
     Role,
     ValidationError,

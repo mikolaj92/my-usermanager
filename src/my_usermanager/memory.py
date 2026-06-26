@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Final
 
-from ny_usermanager.models import (
+from my_usermanager.models import (
     AuditEvent,
     Grant,
     Permission,
@@ -13,8 +13,8 @@ from ny_usermanager.models import (
     User,
     validate_identifier,
 )
-from ny_usermanager.permissions import BUILTIN_ROLES
-from ny_usermanager.stores import (
+from my_usermanager.permissions import BUILTIN_ROLES
+from my_usermanager.stores import (
     AuditFilters,
     DuplicateAuditEventError,
     DuplicateGrantError,

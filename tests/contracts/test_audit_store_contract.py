@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 
 import pytest
 
-from ny_usermanager.memory import MemoryAuditStore
-from ny_usermanager.models import AuditEvent, Scope
-from ny_usermanager.stores import (
+from my_usermanager.memory import MemoryAuditStore
+from my_usermanager.models import AuditEvent, Scope
+from my_usermanager.stores import (
     AuditFilters,
     AuditStore,
     DuplicateAuditEventError,

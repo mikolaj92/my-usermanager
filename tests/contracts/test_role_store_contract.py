@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from ny_usermanager.memory import MemoryRoleStore
-from ny_usermanager.permissions import ADMIN_ROLE_NAME, BUILTIN_PERMISSION_NAMES
-from ny_usermanager.stores import RoleStore
+from my_usermanager.memory import MemoryRoleStore
+from my_usermanager.permissions import ADMIN_ROLE_NAME, BUILTIN_PERMISSION_NAMES
+from my_usermanager.stores import RoleStore
 
 
 def test_role_store_protocol_is_satisfied_by_memory_store() -> None:

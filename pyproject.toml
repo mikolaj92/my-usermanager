@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ny-usermanager"
+name = "my-usermanager"
 version = "0.1.0"
 description = "Framework-neutral user management and authorization for Python applications."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [
-    { name = "ny-usermanager contributors" },
+    { name = "my-usermanager contributors" },
 ]
 keywords = [
     "authorization",
@@ -42,7 +42,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ny_usermanager"]
+packages = ["src/my_usermanager"]
 
 [tool.basedpyright]
 typeCheckingMode = "all"

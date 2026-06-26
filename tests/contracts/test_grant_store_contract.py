@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from ny_usermanager.memory import MemoryGrantStore
-from ny_usermanager.models import Grant, Permission, Scope
-from ny_usermanager.stores import (
+from my_usermanager.memory import MemoryGrantStore
+from my_usermanager.models import Grant, Permission, Scope
+from my_usermanager.stores import (
     DuplicateGrantError,
     GrantNotFoundError,
     GrantStore,

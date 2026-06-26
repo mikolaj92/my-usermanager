@@ -4,8 +4,8 @@ from textwrap import dedent
 
 import pytest
 
-from ny_usermanager.models import Permission, ValidationError
-from ny_usermanager.permissions import (
+from my_usermanager.models import Permission, ValidationError
+from my_usermanager.permissions import (
     ADMIN_ROLE_NAME,
     BUILTIN_PERMISSION_NAMES,
     BUILTIN_ROLES,
@@ -160,8 +160,8 @@ def test_registry_register_rejects_unsupported_runtime_type_when_int_passed() ->
     # Given: a runtime caller bypassing static typing with register(123).
     script = dedent(
         """
-        from ny_usermanager.models import ValidationError
-        from ny_usermanager.permissions import PermissionRegistry
+        from my_usermanager.models import ValidationError
+        from my_usermanager.permissions import PermissionRegistry
 
         registry = PermissionRegistry()
         before = registry.permissions()
@@ -188,8 +188,8 @@ def test_registry_validate_rejects_unsupported_runtime_type_when_int_passed() ->
     # Given: a runtime caller bypassing static typing with validate_registered(123).
     script = dedent(
         """
-        from ny_usermanager.models import ValidationError
-        from ny_usermanager.permissions import PermissionRegistry
+        from my_usermanager.models import ValidationError
+        from my_usermanager.permissions import PermissionRegistry
 
         registry = PermissionRegistry()
 
@@ -213,8 +213,8 @@ def test_registry_contains_rejects_unsupported_runtime_type_when_int_passed() ->
     # Given: a runtime caller bypassing static typing with contains(123).
     script = dedent(
         """
-        from ny_usermanager.models import ValidationError
-        from ny_usermanager.permissions import PermissionRegistry
+        from my_usermanager.models import ValidationError
+        from my_usermanager.permissions import PermissionRegistry
 
         registry = PermissionRegistry()
 

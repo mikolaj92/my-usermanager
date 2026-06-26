@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from ny_usermanager.models import (
+from my_usermanager.models import (
     AuditEvent,
     ExternalIdentity,
     Grant,

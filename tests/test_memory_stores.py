@@ -5,15 +5,15 @@ from datetime import UTC, datetime
 
 import pytest
 
-from ny_usermanager.memory import (
+from my_usermanager.memory import (
     MemoryAuditStore,
     MemoryGrantStore,
     MemoryRoleStore,
     MemoryUserStore,
 )
-from ny_usermanager.models import AuditEvent, Permission, Scope, User
-from ny_usermanager.permissions import ADMIN_ROLE_NAME
-from ny_usermanager.stores import (
+from my_usermanager.models import AuditEvent, Permission, Scope, User
+from my_usermanager.permissions import ADMIN_ROLE_NAME
+from my_usermanager.stores import (
     AuditFilters,
     DuplicateUserError,
     GrantNotFoundError,

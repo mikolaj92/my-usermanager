@@ -1,6 +1,6 @@
 # Security Policy
 
-`ny-usermanager` is pre-release software at version `0.1.0`.
+`my-usermanager` is pre-release software at version `0.1.0`.
 
 ## Reporting a Vulnerability
 
