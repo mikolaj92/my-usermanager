@@ -1,8 +1,8 @@
 # my-usermanager
 
-`my-usermanager` is planned as a framework-neutral Python package for user management and authorization. It accepts an already-authenticated subject from a host application or authentication provider, then provides authorization and user-management primitives.
+`my-usermanager` is a framework-neutral Python package for user management and authorization. It accepts an already-authenticated subject from a host application or authentication provider, then provides typed authorization and user-management primitives.
 
-Wave 0 contains only the repository bootstrap: packaging metadata, an importable package, tests, documentation placeholders, and CI configuration.
+The core package includes immutable domain values, store protocols, in-memory contract implementations, and a safe `UserManager` facade. The facade enforces the package's default policy: administrators manage user access grants, while ordinary users can update only their own basic profile fields such as username, first name, last name, display name, and email.
 
 ## Scope
 

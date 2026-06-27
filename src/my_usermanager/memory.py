@@ -218,7 +218,14 @@ def _matches_user_query(user: User, query: UserQuery) -> bool:
     if query.text is None:
         return True
     needle = query.text.casefold()
-    searchable_fields = (user.user_id, user.display_name or "", user.email or "")
+    searchable_fields = (
+        user.user_id,
+        user.username or "",
+        user.first_name or "",
+        user.last_name or "",
+        user.display_name or "",
+        user.email or "",
+    )
     return any(needle in field.casefold() for field in searchable_fields)
 
 

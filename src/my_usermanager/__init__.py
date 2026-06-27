@@ -2,6 +2,13 @@
 
 from typing import Final
 
+from my_usermanager.manager import (
+    AuthorizationError,
+    PermissionGrantRequest,
+    RoleGrantRequest,
+    UserManager,
+    UserProfileUpdate,
+)
 from my_usermanager.memory import (
     MemoryAuditStore,
     MemoryGrantStore,
@@ -56,6 +63,7 @@ __all__: Final = (
     "AuditEvent",
     "AuditFilters",
     "AuditStore",
+    "AuthorizationError",
     "DuplicateAuditEventError",
     "DuplicateGrantError",
     "DuplicateUserError",
@@ -69,15 +77,19 @@ __all__: Final = (
     "MemoryRoleStore",
     "MemoryUserStore",
     "Permission",
+    "PermissionGrantRequest",
     "PermissionRegistry",
     "Role",
+    "RoleGrantRequest",
     "RoleStore",
     "Scope",
     "SessionRevoker",
     "StoreError",
     "UnregisteredPermissionError",
     "User",
+    "UserManager",
     "UserNotFoundError",
+    "UserProfileUpdate",
     "UserQuery",
     "UserStore",
     "ValidationError",

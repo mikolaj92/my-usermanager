@@ -171,6 +171,9 @@ class User:
 
     user_id: str
     external_identities: frozenset[ExternalIdentity] = _EMPTY_IDENTITIES
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
     display_name: str | None = None
     email: str | None = None
     disabled: bool = False
@@ -180,6 +183,10 @@ class User:
     def __post_init__(self) -> None:
         """Validate stored profile values after dataclass creation."""
         _ = validate_identifier(self.user_id, field_name="user_id")
+        if self.username is not None:
+            _ = validate_identifier(self.username, field_name="username")
+        _ = _validate_optional_text(self.first_name, field_name="first_name")
+        _ = _validate_optional_text(self.last_name, field_name="last_name")
         _ = _validate_optional_text(self.display_name, field_name="display_name")
         _ = _validate_optional_text(self.email, field_name="email")
 

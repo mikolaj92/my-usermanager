@@ -19,12 +19,18 @@ def test_user_model_has_value_semantics_when_same_values() -> None:
     identity = ExternalIdentity(provider="my-auth", subject="passkey-subject")
     first = User(
         user_id="user_123",
+        username="alice",
+        first_name="Alice",
+        last_name="Example",
         external_identities=frozenset({identity}),
         display_name="Alice",
         email="alice@example.com",
     )
     second = User(
         user_id="user_123",
+        username="alice",
+        first_name="Alice",
+        last_name="Example",
         external_identities=frozenset({identity}),
         display_name="Alice",
         email="alice@example.com",
@@ -37,6 +43,9 @@ def test_user_model_has_value_semantics_when_same_values() -> None:
     # Then: dataclass value semantics and useful repr are available.
     assert same_user is True
     assert "user_123" in representation
+    assert first.username == "alice"
+    assert first.first_name == "Alice"
+    assert first.last_name == "Example"
     assert first.disabled is False
     assert hash(first) == hash(second)
 
@@ -48,6 +57,18 @@ def test_user_model_rejects_invalid_ids_when_constructed(bad_user_id: str) -> No
     # When / Then: constructing a typed user rejects them.
     with pytest.raises(ValidationError, match="user_id"):
         _ = User(user_id=bad_user_id)
+
+
+def test_user_model_rejects_invalid_profile_fields_when_constructed() -> None:
+    # Given / When / Then: profile fields reject malformed boundary text.
+    with pytest.raises(ValidationError, match="username"):
+        _ = User(user_id="user_123", username="bad username")
+
+    with pytest.raises(ValidationError, match="first_name"):
+        _ = User(user_id="user_123", first_name=" Alice")
+
+    with pytest.raises(ValidationError, match="last_name"):
+        _ = User(user_id="user_123", last_name="Example\n")
 
 
 def test_scope_global_representation_when_created_by_factory() -> None:
