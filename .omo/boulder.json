@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "active_work_id": "my-auth-adapter",
+  "works": {
+    "my-auth-adapter": {
+      "work_id": "my-auth-adapter",
+      "active_plan": ".omo/plans/my-auth-adapter.md",
+      "plan_name": "my-auth-adapter",
+      "session_ids": ["codex:my-auth-adapter-orchestrator"],
+      "status": "active",
+      "worktree_path": null
+    }
+  }
+}
