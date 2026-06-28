@@ -18,7 +18,7 @@
 - [x] Phase 2: Add optional `my-auth` adapter module and public extra metadata.
 - [x] Phase 3: Add optional `my-auth` FastAPI hook helpers if the adapter seam supports them cleanly.
 - [x] Phase 4: Update public OSS documentation and install examples.
-- [ ] Phase 5: Run final verification, commit, push, and make/verify the repository public.
+- [x] Phase 5: Run final verification, commit, push, and make/verify the repository public.
 
 ## Decisions locked by this plan
 
