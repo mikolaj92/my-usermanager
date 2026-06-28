@@ -33,6 +33,9 @@ fastapi = [
     "fastapi>=0.115",
     "pydantic>=2.10",
 ]
+myauth = [
+    "my-auth @ git+https://github.com/mikolaj92/my-auth",
+]
 
 [dependency-groups]
 dev = [
@@ -43,6 +46,9 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/my_usermanager"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.basedpyright]
 typeCheckingMode = "all"
