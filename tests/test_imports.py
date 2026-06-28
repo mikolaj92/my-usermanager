@@ -8,6 +8,7 @@ def test_import_package_without_optional_framework_side_effects() -> None:
         "import sys\n"
         "import my_usermanager\n"
         "assert my_usermanager.__version__ == '0.1.0'\n"
+        "assert 'my_auth' not in sys.modules\n"
         "assert 'fastapi' not in sys.modules\n"
         "assert 'pydantic' not in sys.modules\n"
     )
