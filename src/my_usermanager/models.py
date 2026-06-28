@@ -23,6 +23,7 @@ __all__: Final[tuple[str, ...]] = (
     "User",
     "ValidationError",
     "is_valid_permission_name",
+    "validate_external_subject",
     "validate_identifier",
     "validate_permission_name",
 )
@@ -55,6 +56,14 @@ def validate_identifier(value: str, *, field_name: str) -> str:
         raise ValidationError(field_name, reason)
     if any(character.isspace() for character in value):
         reason = "must not contain whitespace"
+        raise ValidationError(field_name, reason)
+    return value
+
+
+def validate_external_subject(value: str, *, field_name: str) -> str:
+    """Validate an external provider subject and return it unchanged."""
+    if value == "":
+        reason = "must not be empty"
         raise ValidationError(field_name, reason)
     return value
 
@@ -106,7 +115,7 @@ class ExternalIdentity:
     def __post_init__(self) -> None:
         """Validate provider and subject identifiers after dataclass creation."""
         _ = validate_identifier(self.provider, field_name="provider")
-        _ = validate_identifier(self.subject, field_name="subject")
+        _ = validate_external_subject(self.subject, field_name="subject")
 
 
 @dataclass(frozen=True, slots=True)
