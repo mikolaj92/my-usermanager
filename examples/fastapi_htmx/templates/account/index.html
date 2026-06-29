@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Account - my-usermanager demo{% endblock %}
+
+{% block content %}
+  <section class="shell stack" aria-labelledby="account-title">
+    <div class="stack">
+      <p class="badge">Account</p>
+      <h1 id="account-title">Demo account</h1>
+      <p class="muted-copy">
+        Passkey and session ownership stays with the host app. This page only
+        proves the no-build static helper boundary.
+      </p>
+    </div>
+
+    <article class="card stack">
+      <div class="cluster between">
+        <div>
+          <h2>{{ current_user.display_name }}</h2>
+          <p class="muted-copy">{{ current_user.email }}</p>
+        </div>
+        <span class="badge">{% if current_user.admin %}Admin{% else %}User{% endif %}</span>
+      </div>
+      <dl class="stack">
+        <div>
+          <dt class="muted-copy">User id</dt>
+          <dd><code>{{ current_user.user_id }}</code></dd>
+        </div>
+        <div>
+          <dt class="muted-copy">Logout policy</dt>
+          <dd>{{ logout_message.body }}</dd>
+        </div>
+      </dl>
+      <div class="cluster">
+        <button class="btn btn-secondary" type="button" data-passkey-demo>Check passkey support</button>
+        <p class="muted-copy" data-passkey-status aria-live="polite">
+          No browser credential request has been made.
+        </p>
+      </div>
+    </article>
+  </section>
+{% endblock %}

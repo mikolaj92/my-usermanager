@@ -1,0 +1,40 @@
+<tr id="user-row-{{ user.user_id }}">
+  <td>
+    <strong>{{ user.display_name }}</strong>
+    <div class="muted-copy"><code>{{ user.user_id }}</code></div>
+  </td>
+  <td>{{ user.email }}</td>
+  <td>
+    <span class="badge">{% if user.disabled %}Disabled{% else %}Active{% endif %}</span>
+  </td>
+  <td>
+    <div class="cluster">
+      {% if user.disabled %}
+        <form
+          method="post"
+          action="/admin/users/{{ user.user_id }}/enable"
+          hx-post="/admin/users/{{ user.user_id }}/enable"
+          hx-target="#user-row-{{ user.user_id }}"
+          hx-swap="outerHTML"
+          hx-indicator="#user-{{ user.user_id }}-indicator"
+        >
+          <button class="btn btn-secondary" type="submit">Enable</button>
+        </form>
+      {% else %}
+        <form
+          method="post"
+          action="/admin/users/{{ user.user_id }}/disable"
+          hx-post="/admin/users/{{ user.user_id }}/disable"
+          hx-target="#user-row-{{ user.user_id }}"
+          hx-swap="outerHTML"
+          hx-indicator="#user-{{ user.user_id }}-indicator"
+        >
+          <button class="btn btn-destructive" type="submit">Disable</button>
+        </form>
+      {% endif %}
+      <span id="user-{{ user.user_id }}-indicator" class="htmx-indicator muted-copy" aria-live="polite">
+        Updating row.
+      </span>
+    </div>
+  </td>
+</tr>
