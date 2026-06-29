@@ -108,6 +108,12 @@ hooks = PasskeyRouteHooks(
 
 The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. Registration/provisioning must be an explicit host decision.
 
+## Optional FastAPI HTMX Basecoat example
+
+See [`examples/fastapi_htmx`](examples/fastapi_htmx/README.md) for an optional no-build FastAPI/Jinja/HTMX/Basecoat proof. It uses CDN UI assets and a tiny vanilla passkey helper without making the framework-neutral core depend on FastAPI, Jinja, HTMX, Basecoat, React, npm, or a bundler.
+
+The example is a host app reference only: the host remains responsible for sessions, cookies, redirects, registration policy, admin checks, identity conflict policy, CSRF/production hardening, and template ownership decisions.
+
 ## Development
 
 ```sh
