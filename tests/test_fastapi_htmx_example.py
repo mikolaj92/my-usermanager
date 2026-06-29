@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import importlib.util
 import re
 import subprocess
 import sys
 from pathlib import Path
 from textwrap import dedent
 from typing import Final
+
+import pytest
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[1]
 EXAMPLE_ROOT: Final = REPO_ROOT / "examples" / "fastapi_htmx"
@@ -25,11 +28,8 @@ FORBIDDEN_CORE_IMPORT_PREFIXES: Final = (
     "pydantic",
     "starlette.templating",
 )
-FRAMEWORK_IMPORT_PREFIXES: Final = (
-    "fastapi",
-    "jinja2",
-    "starlette.templating",
-)
+FRAMEWORK_IMPORT_PREFIXES: Final = ("fastapi", "jinja2", "starlette.templating")
+OPTIONAL_EXAMPLE_DEPENDENCIES: Final = ("fastapi", "jinja2", "httpx2")
 REQUIRED_BASE_TEMPLATE_SNIPPETS: Final = (
     "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css",
     "https://unpkg.com/htmx.org@2.0.4",
@@ -69,6 +69,14 @@ def assert_subprocess_passed(completed: subprocess.CompletedProcess[str]) -> Non
     assert completed.stderr == ""
 
 
+def require_optional_example_dependencies() -> None:
+    for dependency in OPTIONAL_EXAMPLE_DEPENDENCIES:
+        if importlib.util.find_spec(dependency) is None:
+            pytest.skip(
+                f"FastAPI HTMX example tests require optional dependency: {dependency}",
+            )
+
+
 def read_required_file(path: Path) -> str:
     assert path.is_file(), f"Phase 2 must create {path.relative_to(REPO_ROOT)}"
     return path.read_text(encoding="utf-8")
@@ -102,6 +110,7 @@ def assert_loader_contract(markup: str, group_name: str) -> None:
 
 
 def assert_route_contract(script_body: str) -> None:
+    require_optional_example_dependencies()
     script = dedent(
         f"""
         from importlib import import_module
@@ -147,6 +156,8 @@ def test_core_import_keeps_optional_ui_dependencies_out() -> None:
 
 
 def test_example_app_import_is_the_framework_boundary() -> None:
+    require_optional_example_dependencies()
+
     # Given: core import is clean before the optional example is imported.
     import_check = dedent(
         f"""

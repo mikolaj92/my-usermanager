@@ -19,6 +19,7 @@ jobs:
           python-version: "3.12"
       - run: uv sync
       - run: uv run pytest
+      - run: uv run --isolated --no-project --with pytest --with fastapi --with jinja2 --with httpx2 --with-editable . pytest tests/test_fastapi_htmx_example.py
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run basedpyright src tests
