@@ -36,6 +36,7 @@ fastapi = [
 myauth = [
     "my-auth @ git+https://github.com/mikolaj92/my-auth",
 ]
+sqlite = []
 
 [dependency-groups]
 dev = [
