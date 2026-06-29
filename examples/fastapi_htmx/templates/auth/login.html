@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in - my-usermanager demo{% endblock %}
+
+{% block content %}
+  <section class="auth-shell stack" aria-labelledby="login-title">
+    <div class="stack">
+      <p class="badge">Optional example</p>
+      <h1 id="login-title">Sign in to the demo host</h1>
+      <p class="muted-copy">
+        This page is a server-rendered proof. A real application owns sessions,
+        cookies, redirects, and credential policy.
+      </p>
+    </div>
+    {% include "auth/_login_panel.html" %}
+    <p class="muted-copy">
+      Need a local demo subject?
+      <a class="underline" href="/auth/register">Register one</a>.
+    </p>
+  </section>
+{% endblock %}

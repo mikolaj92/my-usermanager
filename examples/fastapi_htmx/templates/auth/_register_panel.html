@@ -1,0 +1,44 @@
+<section id="register-panel" class="card stack" aria-live="polite">
+  <div class="stack">
+    <h2>Register panel</h2>
+    <p class="muted-copy">The response preserves this fragment shape for errors and success.</p>
+  </div>
+
+  {% if message %}
+    <div class="alert" role="{% if message.tone == 'error' %}alert{% else %}status{% endif %}">
+      <strong>{{ message.title }}</strong>
+      <p>{{ message.body }}</p>
+    </div>
+  {% endif %}
+
+  <form
+    class="stack"
+    method="post"
+    action="/auth/register"
+    hx-post="/auth/register"
+    hx-target="#register-panel"
+    hx-swap="outerHTML"
+    hx-indicator="#register-indicator"
+  >
+    <label for="register-display-name">Display name</label>
+    <input
+      id="register-display-name"
+      class="input"
+      name="display_name"
+      autocomplete="name"
+      placeholder="Alice Example"
+    >
+    <label for="register-username">Username</label>
+    <input
+      id="register-username"
+      class="input"
+      name="username"
+      autocomplete="username"
+      placeholder="alice"
+    >
+    <button class="btn" type="submit">Register</button>
+    <p id="register-indicator" class="htmx-indicator muted-copy" aria-live="polite">
+      Applying registration policy.
+    </p>
+  </form>
+</section>

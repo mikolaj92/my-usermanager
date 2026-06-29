@@ -1,0 +1,42 @@
+<section id="auth-panel" class="card stack" aria-live="polite">
+  <div class="stack">
+    <h2>Login panel</h2>
+    <p class="muted-copy">Submit a username to receive this same HTML fragment.</p>
+  </div>
+
+  {% if message %}
+    <div class="alert" role="{% if message.tone == 'error' %}alert{% else %}status{% endif %}">
+      <strong>{{ message.title }}</strong>
+      <p>{{ message.body }}</p>
+    </div>
+  {% endif %}
+
+  <form
+    class="stack"
+    method="post"
+    action="/auth/login"
+    hx-post="/auth/login"
+    hx-target="#auth-panel"
+    hx-swap="outerHTML"
+    hx-indicator="#login-indicator"
+  >
+    <label for="login-username">Username</label>
+    <input
+      id="login-username"
+      class="input"
+      name="username"
+      autocomplete="username"
+      placeholder="alice"
+    >
+    <div class="cluster between">
+      <button class="btn" type="submit">Sign in</button>
+      <button class="btn btn-secondary" type="button" data-passkey-demo>Passkey demo</button>
+    </div>
+    <p id="login-indicator" class="htmx-indicator muted-copy" aria-live="polite">
+      Checking credentials with the demo host.
+    </p>
+    <p class="muted-copy" data-passkey-status>
+      Passkey support is checked locally by the tiny static helper.
+    </p>
+  </form>
+</section>

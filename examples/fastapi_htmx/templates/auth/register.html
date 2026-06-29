@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Register - my-usermanager demo{% endblock %}
+
+{% block content %}
+  <section class="auth-shell stack" aria-labelledby="register-title">
+    <div class="stack">
+      <p class="badge">Host policy</p>
+      <h1 id="register-title">Register a demo user</h1>
+      <p class="muted-copy">
+        Registration is allowed by an explicit helper in the example host, not by
+        the framework-neutral package or optional adapters.
+      </p>
+    </div>
+    {% include "auth/_register_panel.html" %}
+    <p class="muted-copy">
+      Already have a demo subject?
+      <a class="underline" href="/auth/login">Return to sign in</a>.
+    </p>
+  </section>
+{% endblock %}
