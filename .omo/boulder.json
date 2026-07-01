@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "active_work_id": "fastapi-htmx-basecoat-ui",
+  "active_work_id": "fastapi-htmx-adapter",
   "works": {
     "my-auth-adapter": {
       "work_id": "my-auth-adapter",
@@ -16,6 +16,14 @@
       "plan_name": "fastapi-htmx-basecoat-ui",
       "session_ids": ["codex:fastapi-htmx-basecoat-ui-orchestrator"],
       "status": "completed",
+      "worktree_path": null
+    },
+    "fastapi-htmx-adapter": {
+      "work_id": "fastapi-htmx-adapter",
+      "active_plan": ".omo/plans/fastapi-htmx-adapter.md",
+      "plan_name": "fastapi-htmx-adapter",
+      "session_ids": ["codex:fastapi-htmx-adapter-orchestrator"],
+      "status": "active",
       "worktree_path": null
     }
   }
