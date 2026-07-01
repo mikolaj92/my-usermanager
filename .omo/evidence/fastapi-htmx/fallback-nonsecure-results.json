@@ -1,0 +1,116 @@
+[
+  {
+    "console": [],
+    "data": {
+      "bodyText": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+      "hasNavigatorCredentials": false,
+      "hasPublicKeyCredential": false,
+      "isSecureContext": false,
+      "noscriptTexts": [
+        "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+      ],
+      "statusState": "error",
+      "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+      "title": "Sign in with a passkey",
+      "url": "http://notsecure.test:8765/auth/login"
+    },
+    "name": "auth-login-nonsecure-context",
+    "responses": [
+      {
+        "content_type": "text/html; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "document",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/login"
+      },
+      {
+        "content_type": "text/css; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "stylesheet",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.css"
+      },
+      {
+        "content_type": "text/javascript; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "script",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.js"
+      },
+      {
+        "content_type": "text/javascript; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "script",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/ui/static/passkey.js"
+      }
+    ],
+    "route": "/auth/login",
+    "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-nonsecure-context.png"
+  },
+  {
+    "console": [],
+    "data": {
+      "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+      "hasNavigatorCredentials": false,
+      "hasPublicKeyCredential": false,
+      "isSecureContext": false,
+      "noscriptTexts": [
+        "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+      ],
+      "statusState": "error",
+      "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+      "title": "Register a passkey",
+      "url": "http://notsecure.test:8765/auth/register"
+    },
+    "name": "auth-register-nonsecure-context",
+    "responses": [
+      {
+        "content_type": "text/html; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "document",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/register"
+      },
+      {
+        "content_type": "text/css; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "stylesheet",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.css"
+      },
+      {
+        "content_type": "text/javascript; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "script",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.js"
+      },
+      {
+        "content_type": "text/javascript; charset=utf-8",
+        "location": "",
+        "method": "GET",
+        "ok": true,
+        "resource_type": "script",
+        "status": 200,
+        "url": "http://notsecure.test:8765/auth/ui/static/passkey.js"
+      }
+    ],
+    "route": "/auth/register",
+    "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-nonsecure-context.png"
+  }
+]
