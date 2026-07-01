@@ -1,0 +1,3917 @@
+{
+  "base": "http://127.0.0.1:8765",
+  "browser": {
+    "launch_mode": "chrome-channel",
+    "version": "149.0.7827.201"
+  },
+  "completed_at": "2026-06-30T23:10:25.746254+00:00",
+  "fallback": {
+    "nonsecure_login": {
+      "data": {
+        "bodyText": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "hasNavigatorCredentials": false,
+        "hasPublicKeyCredential": false,
+        "isSecureContext": false,
+        "noscriptTexts": [
+          "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+        ],
+        "statusState": "error",
+        "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "title": "Sign in with a passkey",
+        "url": "http://notsecure.test:8765/auth/login"
+      },
+      "name": "auth-login-nonsecure-context",
+      "network": {
+        "console": [],
+        "failed_requests": [],
+        "page_errors": [],
+        "responses": [
+          {
+            "content_type": "text/html; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "document",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/login"
+          },
+          {
+            "content_type": "text/css; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "stylesheet",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.css"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.js"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/ui/static/passkey.js"
+          }
+        ]
+      },
+      "route": "/auth/login",
+      "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-nonsecure-context.png"
+    },
+    "nonsecure_register": {
+      "data": {
+        "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "hasNavigatorCredentials": false,
+        "hasPublicKeyCredential": false,
+        "isSecureContext": false,
+        "noscriptTexts": [
+          "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+        ],
+        "statusState": "error",
+        "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "title": "Register a passkey",
+        "url": "http://notsecure.test:8765/auth/register"
+      },
+      "name": "auth-register-nonsecure-context",
+      "network": {
+        "console": [],
+        "failed_requests": [],
+        "page_errors": [],
+        "responses": [
+          {
+            "content_type": "text/html; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "document",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/register"
+          },
+          {
+            "content_type": "text/css; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "stylesheet",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.css"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/ui/static/passkey-ui.js"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://notsecure.test:8765/auth/ui/static/passkey.js"
+          }
+        ]
+      },
+      "route": "/auth/register",
+      "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-nonsecure-context.png"
+    },
+    "unsupported_login": {
+      "data": {
+        "bodyText": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "hasNavigatorCredentials": false,
+        "hasPublicKeyCredential": false,
+        "isSecureContext": true,
+        "noscriptTexts": [
+          "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+        ],
+        "statusState": "error",
+        "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "title": "Sign in with a passkey",
+        "url": "http://127.0.0.1:8765/auth/login"
+      },
+      "name": "auth-login-unsupported-webauthn",
+      "network": {
+        "console": [],
+        "failed_requests": [],
+        "page_errors": [],
+        "responses": [
+          {
+            "content_type": "text/html; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "document",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/login"
+          },
+          {
+            "content_type": "text/css; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "stylesheet",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+          }
+        ]
+      },
+      "route": "/auth/login",
+      "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-unsupported-webauthn.png"
+    },
+    "unsupported_register": {
+      "data": {
+        "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "hasNavigatorCredentials": false,
+        "hasPublicKeyCredential": false,
+        "isSecureContext": true,
+        "noscriptTexts": [
+          "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+        ],
+        "statusState": "error",
+        "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "title": "Register a passkey",
+        "url": "http://127.0.0.1:8765/auth/register"
+      },
+      "name": "auth-register-unsupported-webauthn",
+      "network": {
+        "console": [],
+        "failed_requests": [],
+        "page_errors": [],
+        "responses": [
+          {
+            "content_type": "text/html; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "document",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/register"
+          },
+          {
+            "content_type": "text/css; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "stylesheet",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+          },
+          {
+            "content_type": "text/javascript; charset=utf-8",
+            "location": "",
+            "method": "GET",
+            "ok": true,
+            "resource_type": "script",
+            "status": 200,
+            "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+          }
+        ]
+      },
+      "route": "/auth/register",
+      "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-unsupported-webauthn.png"
+    }
+  },
+  "favicon": {
+    "body_prefix": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><path d=\"M3 4h10v2H3",
+    "content_type": "image/svg+xml",
+    "status": 200
+  },
+  "htmx": {
+    "after_disable": {
+      "buttons": [
+        "Disable",
+        "Enable",
+        "Disable"
+      ],
+      "liveRegions": [
+        {
+          "ariaLive": "polite",
+          "id": "user-user_zr8pLAOP3NLeX3rGLDuBvP5O_FNTgwMddisGsmz6vqI-indicator",
+          "role": null,
+          "text": "Updating row."
+        },
+        {
+          "ariaLive": "polite",
+          "id": "user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator",
+          "role": null,
+          "text": "Updating row."
+        },
+        {
+          "ariaLive": "polite",
+          "id": "user-user_vxlhN9tWb0k7Mj6CMevHxqkjOxvt82auJlwW-k9bUF8-indicator",
+          "role": null,
+          "text": "Updating row."
+        }
+      ],
+      "navigationEntries": 1,
+      "rowCount": 3,
+      "rowHtml": "<tr id=\"user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\" class=\"htmx-swapping htmx-added htmx-settling\">\n  <td>\n    <strong>Audit Reviewer</strong>\n    <div class=\"um-muted\"><code>auditor-user</code></div>\n  </td>\n  <td>auditor@example.invalid</td>\n  <td><span class=\"badge\">User</span></td>\n  <td><span class=\"badge\">Disabled</span></td>\n  <td>\n    <div class=\"um-cluster\">\n      \n        <form method=\"post\" action=\"/admin/users/enable\" hx-post=\"/admin/users/enable\" hx-target=\"#user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\" hx-swap=\"outerHTML\" hx-indicator=\"#user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\">\n          <input type=\"hidden\" name=\"user_id\" value=\"auditor-user\">\n          <input type=\"hidden\" name=\"row_key\" value=\"user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\">\n          \n            <input type=\"hidden\" name=\"_demo_csrf\" value=\"demo-noop-csrf\">\n          \n          <button class=\"btn btn-secondary\" type=\"submit\">Enable</button>\n        </form>\n      \n      <span id=\"user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\" class=\"htmx-indicator um-muted htmx-request\" aria-live=\"polite\">\n        Updating row.\n      </span>\n    </div>\n  </td>\n</tr>",
+      "rowPresent": true,
+      "rowText": "Audit Reviewer auditor-user auditor@example.invalid User Disabled Enable Updating row.",
+      "tableHtmlLength": 4024,
+      "tablePresent": true,
+      "url": "http://127.0.0.1:8765/admin/users"
+    },
+    "after_enable": {
+      "buttons": [
+        "Disable",
+        "Disable",
+        "Disable"
+      ],
+      "liveRegions": [
+        {
+          "ariaLive": "polite",
+          "id": "user-user_zr8pLAOP3NLeX3rGLDuBvP5O_FNTgwMddisGsmz6vqI-indicator",
+          "role": null,
+          "text": "Updating row."
+        },
+        {
+          "ariaLive": "polite",
+          "id": "user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator",
+          "role": null,
+          "text": "Updating row."
+        },
+        {
+          "ariaLive": "polite",
+          "id": "user-user_vxlhN9tWb0k7Mj6CMevHxqkjOxvt82auJlwW-k9bUF8-indicator",
+          "role": null,
+          "text": "Updating row."
+        }
+      ],
+      "navigationEntries": 1,
+      "rowCount": 3,
+      "rowHtml": "<tr id=\"user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\" class=\"htmx-swapping htmx-added htmx-settling\">\n  <td>\n    <strong>Audit Reviewer</strong>\n    <div class=\"um-muted\"><code>auditor-user</code></div>\n  </td>\n  <td>auditor@example.invalid</td>\n  <td><span class=\"badge\">User</span></td>\n  <td><span class=\"badge\">Active</span></td>\n  <td>\n    <div class=\"um-cluster\">\n      \n        <form method=\"post\" action=\"/admin/users/disable\" hx-post=\"/admin/users/disable\" hx-target=\"#user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\" hx-swap=\"outerHTML\" hx-indicator=\"#user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\">\n          <input type=\"hidden\" name=\"user_id\" value=\"auditor-user\">\n          <input type=\"hidden\" name=\"row_key\" value=\"user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\">\n          \n            <input type=\"hidden\" name=\"_demo_csrf\" value=\"demo-noop-csrf\">\n          \n          <button class=\"btn btn-destructive\" type=\"submit\">Disable</button>\n        </form>\n      \n      <span id=\"user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\" class=\"htmx-indicator um-muted htmx-request\" aria-live=\"polite\">\n        Updating row.\n      </span>\n    </div>\n  </td>\n</tr>",
+      "rowPresent": true,
+      "rowText": "Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row.",
+      "tableHtmlLength": 4081,
+      "tablePresent": true,
+      "url": "http://127.0.0.1:8765/admin/users"
+    },
+    "after_url": "http://127.0.0.1:8765/admin/users",
+    "before": {
+      "buttons": [
+        "Disable",
+        "Disable",
+        "Disable"
+      ],
+      "liveRegions": [
+        {
+          "ariaLive": "polite",
+          "id": "user-user_zr8pLAOP3NLeX3rGLDuBvP5O_FNTgwMddisGsmz6vqI-indicator",
+          "role": null,
+          "text": "Updating row."
+        },
+        {
+          "ariaLive": "polite",
+          "id": "user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator",
+          "role": null,
+          "text": "Updating row."
+        },
+        {
+          "ariaLive": "polite",
+          "id": "user-user_vxlhN9tWb0k7Mj6CMevHxqkjOxvt82auJlwW-k9bUF8-indicator",
+          "role": null,
+          "text": "Updating row."
+        }
+      ],
+      "navigationEntries": 1,
+      "rowCount": 3,
+      "rowHtml": "<tr id=\"user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\">\n  <td>\n    <strong>Audit Reviewer</strong>\n    <div class=\"um-muted\"><code>auditor-user</code></div>\n  </td>\n  <td>auditor@example.invalid</td>\n  <td><span class=\"badge\">User</span></td>\n  <td><span class=\"badge\">Active</span></td>\n  <td>\n    <div class=\"um-cluster\">\n      \n        <form method=\"post\" action=\"/admin/users/disable\" hx-post=\"/admin/users/disable\" hx-target=\"#user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\" hx-swap=\"outerHTML\" hx-indicator=\"#user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\">\n          <input type=\"hidden\" name=\"user_id\" value=\"auditor-user\">\n          <input type=\"hidden\" name=\"row_key\" value=\"user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\">\n          \n            <input type=\"hidden\" name=\"_demo_csrf\" value=\"demo-noop-csrf\">\n          \n          <button class=\"btn btn-destructive\" type=\"submit\">Disable</button>\n        </form>\n      \n      <span id=\"user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\" class=\"htmx-indicator um-muted\" aria-live=\"polite\">\n        Updating row.\n      </span>\n    </div>\n  </td>\n</tr>",
+      "rowPresent": true,
+      "rowText": "Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row.",
+      "tableHtmlLength": 3967,
+      "tablePresent": true,
+      "url": "http://127.0.0.1:8765/admin/users"
+    },
+    "before_url": "http://127.0.0.1:8765/admin/users",
+    "disable_response": {
+      "body_starts_with_tr": true,
+      "contains_full_document": false,
+      "content_type": "text/html; charset=utf-8",
+      "status": 200,
+      "text_snippet": "<tr id=\"user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\"> <td> <strong>Audit Reviewer</strong> <div class=\"um-muted\"><code>auditor-user</code></div> </td> <td>auditor@example.invalid</td> <td><span class=\"badge\">User</span></td> <td><span class=\"badge\">Disabled</span></td> <td> <div class=\"um-cluster\"> <form method=\"post\" action=\"/admin/users/enable\" hx-post=\"/admin/users/enable\" hx-target=\"#user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\" hx-swap=\"outerHTML\" hx-indicator=\"#user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\" > <input type=\"hidden\" name=\"user_id\" value=\"auditor-user\"> <input type=\"hidden\" name=\"row_key\" value=\"user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD"
+    },
+    "enable_response": {
+      "body_starts_with_tr": true,
+      "contains_full_document": false,
+      "content_type": "text/html; charset=utf-8",
+      "status": 200,
+      "text_snippet": "<tr id=\"user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\"> <td> <strong>Audit Reviewer</strong> <div class=\"um-muted\"><code>auditor-user</code></div> </td> <td>auditor@example.invalid</td> <td><span class=\"badge\">User</span></td> <td><span class=\"badge\">Active</span></td> <td> <div class=\"um-cluster\"> <form method=\"post\" action=\"/admin/users/disable\" hx-post=\"/admin/users/disable\" hx-target=\"#user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk\" hx-swap=\"outerHTML\" hx-indicator=\"#user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator\" > <input type=\"hidden\" name=\"user_id\" value=\"auditor-user\"> <input type=\"hidden\" name=\"row_key\" value=\"user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD"
+    },
+    "network": {
+      "console": [],
+      "failed_requests": [],
+      "page_errors": [],
+      "responses": [
+        {
+          "content_type": "text/html; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "document",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/admin/users"
+        },
+        {
+          "content_type": "text/css; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "stylesheet",
+          "status": 200,
+          "url": "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css"
+        },
+        {
+          "content_type": "text/css; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "stylesheet",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/usermanager/ui/static/usermanager-ui.css"
+        },
+        {
+          "content_type": "text/javascript; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "script",
+          "status": 200,
+          "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+        },
+        {
+          "content_type": "text/html; charset=utf-8",
+          "location": "",
+          "method": "POST",
+          "ok": true,
+          "resource_type": "xhr",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/admin/users/disable"
+        },
+        {
+          "content_type": "text/html; charset=utf-8",
+          "location": "",
+          "method": "POST",
+          "ok": true,
+          "resource_type": "xhr",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/admin/users/enable"
+        }
+      ]
+    },
+    "screenshots": [
+      "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-disable.png",
+      "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-enable.png"
+    ],
+    "target_row_id": "user-row-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk",
+    "url_unchanged": true
+  },
+  "nonsecure_base": "http://notsecure.test:8765",
+  "nonsecure_host_reliability": {
+    "method": "Chromium launched with --host-resolver-rules=MAP notsecure.test 127.0.0.1, preserving URL host http://notsecure.test:8765 while routing to local server.",
+    "verified": {
+      "login": {
+        "bodyText": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "hasNavigatorCredentials": false,
+        "hasPublicKeyCredential": false,
+        "isSecureContext": false,
+        "noscriptTexts": [
+          "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+        ],
+        "statusState": "error",
+        "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "title": "Sign in with a passkey",
+        "url": "http://notsecure.test:8765/auth/login"
+      },
+      "register": {
+        "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "hasNavigatorCredentials": false,
+        "hasPublicKeyCredential": false,
+        "isSecureContext": false,
+        "noscriptTexts": [
+          "<p class=\"alert passkey-status\" role=\"status\">\n        WebAuthn passkeys require JavaScript and a browser with PublicKeyCredential support.\n      </p>"
+        ],
+        "statusState": "error",
+        "statusText": "This browser does not support WebAuthn passkeys with PublicKeyCredential.",
+        "title": "Register a passkey",
+        "url": "http://notsecure.test:8765/auth/register"
+      }
+    }
+  },
+  "registration_denied": {
+    "network": {
+      "console": [],
+      "failed_requests": [],
+      "page_errors": [],
+      "responses": [
+        {
+          "content_type": "text/html; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "document",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/auth/register"
+        },
+        {
+          "content_type": "text/css; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "stylesheet",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+        },
+        {
+          "content_type": "text/javascript; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "script",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+        },
+        {
+          "content_type": "text/javascript; charset=utf-8",
+          "location": "",
+          "method": "GET",
+          "ok": true,
+          "resource_type": "script",
+          "status": 200,
+          "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+        }
+      ]
+    },
+    "observables": {
+      "activeElement": {
+        "className": "passkey-ui",
+        "id": "",
+        "tag": "body",
+        "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details."
+      },
+      "bodyScrollWidth": 768,
+      "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+      "documentElementScrollWidth": 768,
+      "focusableCount": 2,
+      "h1Count": 1,
+      "hasHorizontalOverflow": false,
+      "headings": [
+        {
+          "id": "passkey-page-title",
+          "tag": "h1",
+          "text": "Create a passkey"
+        }
+      ],
+      "labelledControls": [
+        {
+          "ariaDescribedBy": "",
+          "ariaLabel": "",
+          "id": "passkey-display-name",
+          "label": "Display name",
+          "name": "display_name",
+          "tag": "input",
+          "text": "",
+          "type": ""
+        },
+        {
+          "ariaDescribedBy": "",
+          "ariaLabel": "",
+          "id": "",
+          "label": "",
+          "name": "",
+          "tag": "button",
+          "text": "Create passkey",
+          "type": "submit"
+        }
+      ],
+      "links": [],
+      "liveRegions": [
+        {
+          "ariaLive": "polite",
+          "dataState": null,
+          "id": "passkey-register-status",
+          "role": "status",
+          "text": "Waiting for registration details."
+        }
+      ],
+      "mainCount": 1,
+      "title": "Register a passkey",
+      "url": "http://127.0.0.1:8765/auth/register",
+      "viewportHeight": 900,
+      "viewportWidth": 768
+    },
+    "result": {
+      "afterCookies": [],
+      "beforeCookies": [],
+      "bodyText": "{\"detail\":\"passkey registration is not allowed\"}",
+      "contentType": "application/json",
+      "hasPasskeyChallengeCookie": false,
+      "json": {
+        "detail": "passkey registration is not allowed"
+      },
+      "method": "Playwright BrowserContext APIRequestContext shared with browser context",
+      "ok": false,
+      "status": 403
+    },
+    "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-registration-closed-route.png"
+  },
+  "routes": {
+    "account": {
+      "1280": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/account"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/usermanager/ui/static/usermanager-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "bg-background text-foreground",
+            "id": "",
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration"
+          },
+          "bodyScrollWidth": 1280,
+          "bodyText": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration",
+          "documentElementScrollWidth": 1280,
+          "focusableCount": 6,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "account-title",
+              "tag": "h1",
+              "text": "Account"
+            },
+            {
+              "id": "",
+              "tag": "h2",
+              "text": "Demo Administrator"
+            },
+            {
+              "id": "demo-passkey-panel-title",
+              "tag": "h2",
+              "text": "Passkey UI composition"
+            }
+          ],
+          "labelledControls": [],
+          "links": [
+            {
+              "href": "#content",
+              "text": "Skip to content"
+            },
+            {
+              "href": "/account",
+              "text": "User management"
+            },
+            {
+              "href": "/account",
+              "text": "Account"
+            },
+            {
+              "href": "/admin/users",
+              "text": "Users"
+            },
+            {
+              "href": "/auth/login",
+              "text": "Open passkey login"
+            },
+            {
+              "href": "/auth/register",
+              "text": "Open passkey registration"
+            }
+          ],
+          "liveRegions": [],
+          "mainCount": 1,
+          "title": "Account - User management",
+          "url": "http://127.0.0.1:8765/account",
+          "viewportHeight": 900,
+          "viewportWidth": 1280
+        },
+        "path": "/account",
+        "route_name": "account",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-1280.png",
+        "tab_probe": [
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 24,
+              "width": 550.15625,
+              "x": 80,
+              "y": 24
+            },
+            "tag": "a",
+            "text": "User management",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 86.65625,
+              "x": 1031.03125,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Account",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/admin/users",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 70.3125,
+              "x": 1129.6875,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Users",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/auth/login",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 160.78125,
+              "x": 101,
+              "y": 581
+            },
+            "tag": "a",
+            "text": "Open passkey login",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/auth/register",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 204.703125,
+              "x": 273.78125,
+              "y": 581
+            },
+            "tag": "a",
+            "text": "Open passkey registration",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 1280,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "375": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/account"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/usermanager/ui/static/usermanager-ui.css"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "bg-background text-foreground",
+            "id": "",
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration"
+          },
+          "bodyScrollWidth": 375,
+          "bodyText": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration",
+          "documentElementScrollWidth": 375,
+          "focusableCount": 6,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "account-title",
+              "tag": "h1",
+              "text": "Account"
+            },
+            {
+              "id": "",
+              "tag": "h2",
+              "text": "Demo Administrator"
+            },
+            {
+              "id": "demo-passkey-panel-title",
+              "tag": "h2",
+              "text": "Passkey UI composition"
+            }
+          ],
+          "labelledControls": [],
+          "links": [
+            {
+              "href": "#content",
+              "text": "Skip to content"
+            },
+            {
+              "href": "/account",
+              "text": "User management"
+            },
+            {
+              "href": "/account",
+              "text": "Account"
+            },
+            {
+              "href": "/admin/users",
+              "text": "Users"
+            },
+            {
+              "href": "/auth/login",
+              "text": "Open passkey login"
+            },
+            {
+              "href": "/auth/register",
+              "text": "Open passkey registration"
+            }
+          ],
+          "liveRegions": [],
+          "mainCount": 1,
+          "title": "Account - User management",
+          "url": "http://127.0.0.1:8765/account",
+          "viewportHeight": 900,
+          "viewportWidth": 375
+        },
+        "path": "/account",
+        "route_name": "account",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-375.png",
+        "tab_probe": [
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.708 0 0 / 0.0164548) 0px 0px 0px 0.0987289px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "2px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -53.63050842285156
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 24,
+              "width": 343,
+              "x": 16,
+              "y": 24
+            },
+            "tag": "a",
+            "text": "User management",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 86.65625,
+              "x": 16,
+              "y": 116
+            },
+            "tag": "a",
+            "text": "Account",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/admin/users",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 70.3125,
+              "x": 114.65625,
+              "y": 116
+            },
+            "tag": "a",
+            "text": "Users",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/auth/login",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 160.78125,
+              "x": 37,
+              "y": 749
+            },
+            "tag": "a",
+            "text": "Open passkey login",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/auth/register",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 204.703125,
+              "x": 37,
+              "y": 797
+            },
+            "tag": "a",
+            "text": "Open passkey registration",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 375,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.708 0 0 / 0.0164548) 0px 0px 0px 0.0987289px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "2px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "768": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/account"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/usermanager/ui/static/usermanager-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "bg-background text-foreground",
+            "id": "",
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration"
+          },
+          "bodyScrollWidth": 768,
+          "bodyText": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration",
+          "documentElementScrollWidth": 768,
+          "focusableCount": 6,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "account-title",
+              "tag": "h1",
+              "text": "Account"
+            },
+            {
+              "id": "",
+              "tag": "h2",
+              "text": "Demo Administrator"
+            },
+            {
+              "id": "demo-passkey-panel-title",
+              "tag": "h2",
+              "text": "Passkey UI composition"
+            }
+          ],
+          "labelledControls": [],
+          "links": [
+            {
+              "href": "#content",
+              "text": "Skip to content"
+            },
+            {
+              "href": "/account",
+              "text": "User management"
+            },
+            {
+              "href": "/account",
+              "text": "Account"
+            },
+            {
+              "href": "/admin/users",
+              "text": "Users"
+            },
+            {
+              "href": "/auth/login",
+              "text": "Open passkey login"
+            },
+            {
+              "href": "/auth/register",
+              "text": "Open passkey registration"
+            }
+          ],
+          "liveRegions": [],
+          "mainCount": 1,
+          "title": "Account - User management",
+          "url": "http://127.0.0.1:8765/account",
+          "viewportHeight": 900,
+          "viewportWidth": 768
+        },
+        "path": "/account",
+        "route_name": "account",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-768.png",
+        "tab_probe": [
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 24,
+              "width": 550.15625,
+              "x": 16,
+              "y": 24
+            },
+            "tag": "a",
+            "text": "User management",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 86.65625,
+              "x": 583.03125,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Account",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/admin/users",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 70.3125,
+              "x": 681.6875,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Users",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/auth/login",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 160.78125,
+              "x": 37,
+              "y": 605
+            },
+            "tag": "a",
+            "text": "Open passkey login",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/auth/register",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 204.703125,
+              "x": 209.78125,
+              "y": 605
+            },
+            "tag": "a",
+            "text": "Open passkey registration",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 768,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Account Account This reusable page delegates authentication and passkey behavior to host callbacks. Demo Administrator admin@example.invalid demo-passkey Local user id demo-user External subject demo:demo-user Passkeys Passkey UI composition This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints. Open passkey login Open passkey registration",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          }
+        ]
+      }
+    },
+    "admin-users": {
+      "1280": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/admin/users"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/usermanager/ui/static/usermanager-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "bg-background text-foreground",
+            "id": "",
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row."
+          },
+          "bodyScrollWidth": 1280,
+          "bodyText": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row.",
+          "documentElementScrollWidth": 1280,
+          "focusableCount": 16,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "users-title",
+              "tag": "h1",
+              "text": "Users"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            }
+          ],
+          "links": [
+            {
+              "href": "#content",
+              "text": "Skip to content"
+            },
+            {
+              "href": "/account",
+              "text": "User management"
+            },
+            {
+              "href": "/account",
+              "text": "Account"
+            },
+            {
+              "href": "/admin/users",
+              "text": "Users"
+            }
+          ],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_zr8pLAOP3NLeX3rGLDuBvP5O_FNTgwMddisGsmz6vqI-indicator",
+              "role": null,
+              "text": "Updating row."
+            },
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator",
+              "role": null,
+              "text": "Updating row."
+            },
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_vxlhN9tWb0k7Mj6CMevHxqkjOxvt82auJlwW-k9bUF8-indicator",
+              "role": null,
+              "text": "Updating row."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Users - User management",
+          "url": "http://127.0.0.1:8765/admin/users",
+          "viewportHeight": 900,
+          "viewportWidth": 1280
+        },
+        "path": "/admin/users",
+        "route_name": "admin-users",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-1280.png",
+        "tab_probe": [
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 24,
+              "width": 550.15625,
+              "x": 80,
+              "y": 24
+            },
+            "tag": "a",
+            "text": "User management",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 86.65625,
+              "x": 1031.03125,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Account",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/admin/users",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 70.3125,
+              "x": 1129.6875,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Users",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 928.84375,
+              "y": 292.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 928.84375,
+              "y": 349.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 928.84375,
+              "y": 406.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 1280,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "375": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/admin/users"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/usermanager/ui/static/usermanager-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "bg-background text-foreground",
+            "id": "",
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row."
+          },
+          "bodyScrollWidth": 375,
+          "bodyText": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row.",
+          "documentElementScrollWidth": 375,
+          "focusableCount": 16,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "users-title",
+              "tag": "h1",
+              "text": "Users"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            }
+          ],
+          "links": [
+            {
+              "href": "#content",
+              "text": "Skip to content"
+            },
+            {
+              "href": "/account",
+              "text": "User management"
+            },
+            {
+              "href": "/account",
+              "text": "Account"
+            },
+            {
+              "href": "/admin/users",
+              "text": "Users"
+            }
+          ],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_zr8pLAOP3NLeX3rGLDuBvP5O_FNTgwMddisGsmz6vqI-indicator",
+              "role": null,
+              "text": "Updating row."
+            },
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator",
+              "role": null,
+              "text": "Updating row."
+            },
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_vxlhN9tWb0k7Mj6CMevHxqkjOxvt82auJlwW-k9bUF8-indicator",
+              "role": null,
+              "text": "Updating row."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Users - User management",
+          "url": "http://127.0.0.1:8765/admin/users",
+          "viewportHeight": 900,
+          "viewportWidth": 375
+        },
+        "path": "/admin/users",
+        "route_name": "admin-users",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-375.png",
+        "tab_probe": [
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 24,
+              "width": 343,
+              "x": 16,
+              "y": 24
+            },
+            "tag": "a",
+            "text": "User management",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 86.65625,
+              "x": 16,
+              "y": 116
+            },
+            "tag": "a",
+            "text": "Account",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/admin/users",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 70.3125,
+              "x": 114.65625,
+              "y": 116
+            },
+            "tag": "a",
+            "text": "Users",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 260.328125,
+              "y": 420.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 260.328125,
+              "y": 505.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 260.328125,
+              "y": 590.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 375,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "768": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/admin/users"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/usermanager/ui/static/usermanager-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "bg-background text-foreground",
+            "id": "",
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row."
+          },
+          "bodyScrollWidth": 768,
+          "bodyText": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row.",
+          "documentElementScrollWidth": 768,
+          "focusableCount": 16,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "users-title",
+              "tag": "h1",
+              "text": "Users"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "user_id",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "row_key",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "_demo_csrf",
+              "tag": "input",
+              "text": "",
+              "type": "hidden"
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Disable",
+              "type": "submit"
+            }
+          ],
+          "links": [
+            {
+              "href": "#content",
+              "text": "Skip to content"
+            },
+            {
+              "href": "/account",
+              "text": "User management"
+            },
+            {
+              "href": "/account",
+              "text": "Account"
+            },
+            {
+              "href": "/admin/users",
+              "text": "Users"
+            }
+          ],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_zr8pLAOP3NLeX3rGLDuBvP5O_FNTgwMddisGsmz6vqI-indicator",
+              "role": null,
+              "text": "Updating row."
+            },
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_xdoVyAOqPDMW9dVDeZT7fVYTTKGD0BPNleA8YXU3kmk-indicator",
+              "role": null,
+              "text": "Updating row."
+            },
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "user-user_vxlhN9tWb0k7Mj6CMevHxqkjOxvt82auJlwW-k9bUF8-indicator",
+              "role": null,
+              "text": "Updating row."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Users - User management",
+          "url": "http://127.0.0.1:8765/admin/users",
+          "viewportHeight": 900,
+          "viewportWidth": 768
+        },
+        "path": "/admin/users",
+        "route_name": "admin-users",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-768.png",
+        "tab_probe": [
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "#content",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 132.1875,
+              "x": 16,
+              "y": -56
+            },
+            "tag": "a",
+            "text": "Skip to content",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 24,
+              "width": 550.15625,
+              "x": 16,
+              "y": 24
+            },
+            "tag": "a",
+            "text": "User management",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/account",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 86.65625,
+              "x": 583.03125,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Account",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "/admin/users",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 70.3125,
+              "x": 681.6875,
+              "y": 34
+            },
+            "tag": "a",
+            "text": "Users",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 624.328125,
+              "y": 290.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 624.328125,
+              "y": 375.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0 0 0 / 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 36,
+              "width": 80.9375,
+              "x": 624.328125,
+              "y": 460.5
+            },
+            "tag": "button",
+            "text": "Disable",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 768,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Skip to content User management Host applications own sessions, redirects, CSRF validation, and persistence. Account Users Admin Users Enable and disable actions call host-owned callbacks and swap one row. Current user: admin User Email Role Status Action Demo Administrator demo-user admin@example.invalid Admin Active Disable Updating row. Audit Reviewer auditor-user auditor@example.invalid User Active Disable Updating row. Unsafe User unsafe/id space\"quote'<tag>&tail unsafe@example.invalid User Active Disable Updating row.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      }
+    },
+    "auth-login": {
+      "1280": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/login"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "passkey-ui",
+            "id": "",
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt."
+          },
+          "bodyScrollWidth": 1280,
+          "bodyText": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+          "documentElementScrollWidth": 1280,
+          "focusableCount": 1,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "passkey-page-title",
+              "tag": "h1",
+              "text": "Sign in without a password"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Continue with passkey",
+              "type": "submit"
+            }
+          ],
+          "links": [],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "passkey-login-status",
+              "role": "status",
+              "text": "Waiting for the WebAuthn passkey prompt."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Sign in with a passkey",
+          "url": "http://127.0.0.1:8765/auth/login",
+          "viewportHeight": 900,
+          "viewportWidth": 1280
+        },
+        "path": "/auth/login",
+        "route_name": "auth-login",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-1280.png",
+        "tab_probe": [
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 1280,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 1280,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 1280,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "375": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/login"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "passkey-ui",
+            "id": "",
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt."
+          },
+          "bodyScrollWidth": 375,
+          "bodyText": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+          "documentElementScrollWidth": 375,
+          "focusableCount": 1,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "passkey-page-title",
+              "tag": "h1",
+              "text": "Sign in without a password"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Continue with passkey",
+              "type": "submit"
+            }
+          ],
+          "links": [],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "passkey-login-status",
+              "role": "status",
+              "text": "Waiting for the WebAuthn passkey prompt."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Sign in with a passkey",
+          "url": "http://127.0.0.1:8765/auth/login",
+          "viewportHeight": 900,
+          "viewportWidth": 375
+        },
+        "path": "/auth/login",
+        "route_name": "auth-login",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-375.png",
+        "tab_probe": [
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 565.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 375,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 565.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 565.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 375,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 565.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 565.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 375,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "768": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/login"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "passkey-ui",
+            "id": "",
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt."
+          },
+          "bodyScrollWidth": 768,
+          "bodyText": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+          "documentElementScrollWidth": 768,
+          "focusableCount": 1,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "passkey-page-title",
+              "tag": "h1",
+              "text": "Sign in without a password"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Continue with passkey",
+              "type": "submit"
+            }
+          ],
+          "links": [],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "passkey-login-status",
+              "role": "status",
+              "text": "Waiting for the WebAuthn passkey prompt."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Sign in with a passkey",
+          "url": "http://127.0.0.1:8765/auth/login",
+          "viewportHeight": 900,
+          "viewportWidth": 768
+        },
+        "path": "/auth/login",
+        "route_name": "auth-login",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-768.png",
+        "tab_probe": [
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 768,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 768,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 537.9375
+            },
+            "tag": "button",
+            "text": "Continue with passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 768,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey sign in Sign in without a password Use your device passkey prompt to continue. This page keeps WebAuthn API responses as JSON. Continue with passkey Waiting for the WebAuthn passkey prompt.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      }
+    },
+    "auth-register": {
+      "1280": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/register"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "passkey-ui",
+            "id": "",
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details."
+          },
+          "bodyScrollWidth": 1280,
+          "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+          "documentElementScrollWidth": 1280,
+          "focusableCount": 2,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "passkey-page-title",
+              "tag": "h1",
+              "text": "Create a passkey"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "passkey-display-name",
+              "label": "Display name",
+              "name": "display_name",
+              "tag": "input",
+              "text": "",
+              "type": ""
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Create passkey",
+              "type": "submit"
+            }
+          ],
+          "links": [],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "passkey-register-status",
+              "role": "status",
+              "text": "Waiting for registration details."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Register a passkey",
+          "url": "http://127.0.0.1:8765/auth/register",
+          "viewportHeight": 900,
+          "viewportWidth": 1280
+        },
+        "path": "/auth/register",
+        "route_name": "auth-register",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-1280.png",
+        "tab_probe": [
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 1280,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 416,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 1280,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "375": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/register"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "passkey-ui",
+            "id": "",
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details."
+          },
+          "bodyScrollWidth": 375,
+          "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+          "documentElementScrollWidth": 375,
+          "focusableCount": 2,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "passkey-page-title",
+              "tag": "h1",
+              "text": "Create a passkey"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "passkey-display-name",
+              "label": "Display name",
+              "name": "display_name",
+              "tag": "input",
+              "text": "",
+              "type": ""
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Create passkey",
+              "type": "submit"
+            }
+          ],
+          "links": [],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "passkey-register-status",
+              "role": "status",
+              "text": "Waiting for registration details."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Register a passkey",
+          "url": "http://127.0.0.1:8765/auth/register",
+          "viewportHeight": 900,
+          "viewportWidth": 375
+        },
+        "path": "/auth/register",
+        "route_name": "auth-register",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-375.png",
+        "tab_probe": [
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 375,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 327,
+              "x": 24,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 375,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      },
+      "768": {
+        "network": {
+          "console": [],
+          "failed_requests": [],
+          "page_errors": [],
+          "responses": [
+            {
+              "content_type": "text/html; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "document",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/register"
+            },
+            {
+              "content_type": "text/css; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "stylesheet",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.css"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey-ui.js"
+            },
+            {
+              "content_type": "text/javascript; charset=utf-8",
+              "location": "",
+              "method": "GET",
+              "ok": true,
+              "resource_type": "script",
+              "status": 200,
+              "url": "http://127.0.0.1:8765/auth/ui/static/passkey.js"
+            }
+          ]
+        },
+        "observables": {
+          "activeElement": {
+            "className": "passkey-ui",
+            "id": "",
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details."
+          },
+          "bodyScrollWidth": 768,
+          "bodyText": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+          "documentElementScrollWidth": 768,
+          "focusableCount": 2,
+          "h1Count": 1,
+          "hasHorizontalOverflow": false,
+          "headings": [
+            {
+              "id": "passkey-page-title",
+              "tag": "h1",
+              "text": "Create a passkey"
+            }
+          ],
+          "labelledControls": [
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "passkey-display-name",
+              "label": "Display name",
+              "name": "display_name",
+              "tag": "input",
+              "text": "",
+              "type": ""
+            },
+            {
+              "ariaDescribedBy": "",
+              "ariaLabel": "",
+              "id": "",
+              "label": "",
+              "name": "",
+              "tag": "button",
+              "text": "Create passkey",
+              "type": "submit"
+            }
+          ],
+          "links": [],
+          "liveRegions": [
+            {
+              "ariaLive": "polite",
+              "dataState": null,
+              "id": "passkey-register-status",
+              "role": "status",
+              "text": "Waiting for registration details."
+            }
+          ],
+          "mainCount": 1,
+          "title": "Register a passkey",
+          "url": "http://127.0.0.1:8765/auth/register",
+          "viewportHeight": 900,
+          "viewportWidth": 768
+        },
+        "path": "/auth/register",
+        "route_name": "auth-register",
+        "screenshot_path": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-768.png",
+        "tab_probe": [
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 768,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "passkey-display-name",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 527.4375
+            },
+            "tag": "input",
+            "text": "",
+            "type": "",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 21,
+              "width": 448,
+              "x": 160,
+              "y": 564.4375
+            },
+            "tag": "button",
+            "text": "Create passkey",
+            "type": "submit",
+            "visible": true
+          },
+          {
+            "boxShadow": "none",
+            "href": "",
+            "id": "",
+            "outlineStyle": "none",
+            "outlineWidth": "3px",
+            "rect": {
+              "height": 900,
+              "width": 768,
+              "x": 0,
+              "y": 0
+            },
+            "tag": "body",
+            "text": "Passkey registration Create a passkey Start by creating a passkey for this account. Display name Create passkey Waiting for registration details.",
+            "type": "",
+            "visible": true
+          }
+        ]
+      }
+    }
+  }
+}
