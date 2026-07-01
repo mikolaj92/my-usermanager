@@ -1,0 +1,12 @@
+User management
+Host applications own sessions, redirects, CSRF validation, and persistence.
+Account
+This reusable page delegates authentication and passkey behavior to host callbacks.
+Demo Administrator
+admin@example.invalid —
+Local user id
+demo-user
+External subject
+demo: demo-user
+Passkey UI composition
+This account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints.

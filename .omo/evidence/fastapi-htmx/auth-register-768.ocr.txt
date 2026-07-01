@@ -1,0 +1,8 @@
+Passkey registration
+
+Create a passkey
+
+Start by creating a passkey for this account.
+Display name
+
+Waiting for registration details.

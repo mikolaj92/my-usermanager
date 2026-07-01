@@ -1,0 +1,140 @@
+{
+  "contact_sheet": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/screenshot-contact-sheet.png",
+  "count": 19,
+  "created_at": "2026-06-30T23:10:25.901937+00:00",
+  "images": [
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 375
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 1280
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 375
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 1280
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 375
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 1280
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 375
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 1280
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-disable.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 1280
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-enable.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 1280
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-registration-closed-route.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-nonsecure-context.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-nonsecure-context.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-unsupported-webauthn.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    },
+    {
+      "blank_or_single_color": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-unsupported-webauthn.png",
+      "height": 900,
+      "mode": "RGB",
+      "width": 768
+    }
+  ]
+}

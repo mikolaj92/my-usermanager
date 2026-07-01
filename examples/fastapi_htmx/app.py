@@ -1,25 +1,39 @@
-"""Optional FastAPI, Jinja, HTMX, and Basecoat demo host app."""
+"""Optional FastAPI composition host for the reusable HTMX UI adapters."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from pathlib import Path
-from typing import TYPE_CHECKING, Final
-from urllib.parse import parse_qs
+from typing import Final
 from warnings import filterwarnings
 
-from fastapi import APIRouter, FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, FastAPI, status
+from fastapi.responses import PlainTextResponse, RedirectResponse, Response
+from my_auth.fastapi_htmx import PasskeyUiConfig, create_passkey_ui_router
 
-if TYPE_CHECKING:
-    from starlette.responses import Response
+from examples.fastapi_htmx.demo_passkeys import (
+    PASSKEY_PATHS,
+    _demo_passkey_service,
+    _passkey_hooks,
+)
+from examples.fastapi_htmx.demo_usermanager import _demo_csrf_token, _usermanager_hooks
+from examples.fastapi_htmx.demo_users import (
+    DEMO_CSRF_HEADER,
+)
+from examples.fastapi_htmx.demo_users import (
+    DEMO_UNSAFE_USER_ID as _DEMO_UNSAFE_USER_ID,
+)
+from my_usermanager.adapters.fastapi_htmx import (
+    UserManagerUiConfig,
+    create_usermanager_ui_router,
+)
 
-_BASE_DIR: Final = Path(__file__).resolve().parent
-_DEMO_ADMIN_ID: Final = "demo-user"
-_TEMPLATES: Final = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
-_ROUTER: Final = APIRouter()
+_HOST_ROUTER: Final = APIRouter()
+DEMO_UNSAFE_USER_ID: Final = _DEMO_UNSAFE_USER_ID
+_FAVICON_SVG: Final = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">'
+    '<path d="M3 4h10v2H3zm0 3h10v2H3zm0 3h7v2H3z" '
+    'fill="currentColor"/>'
+    "</svg>"
+)
 
 filterwarnings(
     "ignore",
@@ -28,285 +42,58 @@ filterwarnings(
 )
 
 
-@dataclass(frozen=True, slots=True)
-class DemoUser:
-    """Host-owned user row for the in-memory demo UI."""
-
-    user_id: str
-    username: str
-    display_name: str
-    email: str
-    admin: bool = False
-    disabled: bool = False
-
-
-@dataclass(frozen=True, slots=True)
-class FormValues:
-    """Parsed URL-encoded form values from an HTMX request."""
-
-    fields: dict[str, tuple[str, ...]]
-
-    def first(self, field_name: str) -> str:
-        """Return the first stripped field value, or an empty string."""
-        values = self.fields.get(field_name, ())
-        if values == ():
-            return ""
-        return values[0].strip()
-
-
-@dataclass(frozen=True, slots=True)
-class PanelMessage:
-    """Server-rendered status copy for a swapped panel."""
-
-    tone: str
-    title: str
-    body: str
-
-
-@dataclass(frozen=True, slots=True)
-class RegistrationForm:
-    """Typed registration form data owned by the demo host."""
-
-    username: str
-    display_name: str
-
-
-def _initial_users() -> dict[str, DemoUser]:
-    return {
-        _DEMO_ADMIN_ID: DemoUser(
-            user_id=_DEMO_ADMIN_ID,
-            username="admin",
-            display_name="Demo Administrator",
-            email="admin@example.invalid",
-            admin=True,
-        ),
-        "auditor-user": DemoUser(
-            user_id="auditor-user",
-            username="auditor",
-            display_name="Audit Reviewer",
-            email="auditor@example.invalid",
-        ),
-    }
-
-
-_DEMO_USERS: Final = _initial_users()
-
-
-def get_current_user() -> DemoUser:
-    """Return the demo subject selected by the host application."""
-    return _DEMO_USERS[_DEMO_ADMIN_ID]
-
-
-def login(username: str) -> PanelMessage:
-    """Apply demo login policy without creating sessions or cookies."""
-    if username == "":
-        return PanelMessage(
-            tone="error",
-            title="Username required",
-            body="Enter a username to render the signed-in panel fragment.",
-        )
-    return PanelMessage(
-        tone="success",
-        title="Demo sign-in accepted",
-        body=f"The host app would now establish a session for {username}.",
-    )
-
-
-def logout() -> PanelMessage:
-    """Describe demo logout without mutating framework-neutral code."""
-    return PanelMessage(
-        tone="success",
-        title="Signed out locally",
-        body="A real host app would clear its own session cookie here.",
-    )
-
-
-def registration_allowed() -> bool:
-    """Return the host-owned registration policy for the demo."""
-    return True
-
-
-def require_admin(user: DemoUser) -> DemoUser:
-    """Require the caller-selected demo user to be an administrator."""
-    if user.admin:
-        return user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Admin access is required for this demo action.",
-    )
-
-
-@_ROUTER.get("/", include_in_schema=False)
-def root() -> RedirectResponse:
-    """Redirect the bare demo root to the login screen."""
-    return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
-
-
-@_ROUTER.get("/health", response_class=PlainTextResponse)
-def health() -> str:
-    """Return a plain readiness response for browser QA."""
-    return "ok"
-
-
-@_ROUTER.get("/auth/login", response_class=HTMLResponse)
-def show_login(request: Request) -> Response:
-    """Render the full login page."""
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="auth/login.html",
-        context={"current_user": get_current_user(), "message": None},
-    )
-
-
-@_ROUTER.post("/auth/login", response_class=HTMLResponse)
-async def submit_login(request: Request) -> Response:
-    """Render the login panel fragment for an HTMX form post."""
-    form = await _read_form_values(request)
-    message = login(form.first("username"))
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="auth/_login_panel.html",
-        context={"message": message},
-    )
-
-
-@_ROUTER.get("/auth/register", response_class=HTMLResponse)
-def show_register(request: Request) -> Response:
-    """Render the full registration page."""
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="auth/register.html",
-        context={"current_user": get_current_user(), "message": None},
-    )
-
-
-@_ROUTER.post("/auth/register", response_class=HTMLResponse)
-async def submit_register(request: Request) -> Response:
-    """Render the registration panel fragment for an HTMX form post."""
-    form_values = await _read_form_values(request)
-    registration = RegistrationForm(
-        username=form_values.first("username"),
-        display_name=form_values.first("display_name"),
-    )
-    message = _register(registration)
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="auth/_register_panel.html",
-        context={"message": message},
-    )
-
-
-@_ROUTER.get("/account", response_class=HTMLResponse)
-def show_account(request: Request) -> Response:
-    """Render the account and passkey demonstration page."""
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="account/index.html",
-        context={"current_user": get_current_user(), "logout_message": logout()},
-    )
-
-
-@_ROUTER.get("/admin/users", response_class=HTMLResponse)
-def list_users(request: Request) -> Response:
-    """Render the full demo user table page."""
-    admin = require_admin(get_current_user())
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="users/list.html",
-        context={"current_user": admin, "users": tuple(_DEMO_USERS.values())},
-    )
-
-
-@_ROUTER.post("/admin/users/{user_id}/disable", response_class=HTMLResponse)
-def disable_user(request: Request, user_id: str) -> Response:
-    """Disable one demo user and render only its table row fragment."""
-    _ = require_admin(get_current_user())
-    user = _replace_user(_require_user(user_id), disabled=True)
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="users/_row.html",
-        context={"user": user},
-    )
-
-
-@_ROUTER.post("/admin/users/{user_id}/enable", response_class=HTMLResponse)
-def enable_user(request: Request, user_id: str) -> Response:
-    """Enable one demo user and render only its table row fragment."""
-    _ = require_admin(get_current_user())
-    user = _replace_user(_require_user(user_id), disabled=False)
-    return _TEMPLATES.TemplateResponse(
-        request=request,
-        name="users/_row.html",
-        context={"user": user},
-    )
-
-
 def create_app() -> FastAPI:
-    """Create the optional no-build example application."""
-    demo_app = FastAPI(title="my-usermanager FastAPI HTMX Basecoat example")
-    demo_app.mount(
-        "/auth/static",
-        StaticFiles(directory=_BASE_DIR / "static"),
-        name="auth-static",
+    """Create the optional no-build adapter composition example."""
+    demo_app = FastAPI(title="my-usermanager FastAPI HTMX adapter composition example")
+    passkey_ui = create_passkey_ui_router(
+        service=_demo_passkey_service(),
+        hooks=_passkey_hooks(),
+        config=PasskeyUiConfig(
+            paths=PASSKEY_PATHS,
+            csrf_header_name=DEMO_CSRF_HEADER,
+            csrf_token=_demo_csrf_token,
+        ),
     )
-    demo_app.include_router(_ROUTER)
+    usermanager_ui = create_usermanager_ui_router(
+        config=UserManagerUiConfig(login_url=PASSKEY_PATHS.login_page),
+        hooks=_usermanager_hooks(),
+    )
+    demo_app.include_router(passkey_ui.router)
+    demo_app.mount(
+        passkey_ui.static_mount_path,
+        passkey_ui.static_files,
+        name="my_auth_fastapi_htmx_static",
+    )
+    demo_app.include_router(usermanager_ui.router)
+    demo_app.mount(
+        usermanager_ui.static_mount_path,
+        usermanager_ui.static_files,
+        name="my_usermanager_fastapi_htmx_static",
+    )
+    demo_app.include_router(_HOST_ROUTER)
     return demo_app
 
 
-async def _read_form_values(request: Request) -> FormValues:
-    body = (await request.body()).decode()
-    parsed = parse_qs(body, keep_blank_values=True)
-    return FormValues(
-        fields={key: tuple(values) for key, values in parsed.items()},
+@_HOST_ROUTER.get("/", include_in_schema=False)
+def _root() -> RedirectResponse:
+    return RedirectResponse(
+        url=PASSKEY_PATHS.login_page,
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
-def _register(form: RegistrationForm) -> PanelMessage:
-    if not registration_allowed():
-        return PanelMessage(
-            tone="error",
-            title="Registration closed",
-            body="The demo host policy is currently refusing new registrations.",
-        )
-    if form.username == "" or form.display_name == "":
-        return PanelMessage(
-            tone="error",
-            title="Registration needs two fields",
-            body="Enter both a display name and username to render this fragment.",
-        )
-    user_id = _user_id_from_username(form.username)
-    _DEMO_USERS[user_id] = DemoUser(
-        user_id=user_id,
-        username=form.username,
-        display_name=form.display_name,
-        email=f"{user_id}@example.invalid",
+@_HOST_ROUTER.get("/health", response_class=PlainTextResponse)
+def _health() -> str:
+    return "ok"
+
+
+@_HOST_ROUTER.get("/favicon.ico", include_in_schema=False)
+def _favicon() -> Response:
+    return Response(
+        content=_FAVICON_SVG,
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "public, max-age=86400"},
     )
-    return PanelMessage(
-        tone="success",
-        title="Demo registration accepted",
-        body=f"The host app added {form.display_name} to its in-memory user list.",
-    )
-
-
-def _require_user(user_id: str) -> DemoUser:
-    user = _DEMO_USERS.get(user_id)
-    if user is not None:
-        return user
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Demo user was not found.",
-    )
-
-
-def _replace_user(user: DemoUser, *, disabled: bool) -> DemoUser:
-    updated = replace(user, disabled=disabled)
-    _DEMO_USERS[user.user_id] = updated
-    return updated
-
-
-def _user_id_from_username(username: str) -> str:
-    parts = [character if character.isalnum() else "-" for character in username]
-    return "".join(parts).strip("-").casefold() or "registered-user"
 
 
 app: Final = create_app()

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Users - User management{% endblock %}
+
+{% block content %}
+  <section class="um-shell um-stack" aria-labelledby="users-title">
+    <div class="um-cluster um-between">
+      <div>
+        <p class="badge">Admin</p>
+        <h1 id="users-title">Users</h1>
+        <p class="um-muted">Enable and disable actions call host-owned callbacks and swap one row.</p>
+      </div>
+      <span class="badge">Current user: {{ current_user.username or current_user.user_id }}</span>
+    </div>
+
+    <div id="users-table" class="card um-table-scroll" data-htmx-target="#users-table">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">User</th>
+            <th scope="col">Email</th>
+            <th scope="col">Role</th>
+            <th scope="col">Status</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            {% include "users/_row.html" %}
+          {% else %}
+            <tr>
+              <td colspan="5">No users are available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

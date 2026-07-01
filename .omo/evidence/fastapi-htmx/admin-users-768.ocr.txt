@@ -1,0 +1,10 @@
+User management
+Host applications own sessions, redirects, CSRF validation, and persistence.
+Enable and disable actions call host-owned callbacks and swap one row.
+User Email Role Status Action
+admin@example.invalid
+demo-user
+auditor@example.invalid
+auditor-user
+unsafe@example invalid
+unsafe/id space"quote'<tag>&tail ‘@examp|
