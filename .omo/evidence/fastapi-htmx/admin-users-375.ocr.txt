@@ -1,0 +1,14 @@
+User management
+
+Host applications own sessions, redirects,
+CSRF validation, and persistence.
+
+Users
+
+Enable and disable actions call host-owned
+callbacks and swap one row.
+
+Role Status Action
+ample.invalid
+cample.invalid
+ample.invalia
