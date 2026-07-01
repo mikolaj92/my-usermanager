@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Generator
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -41,13 +41,16 @@ from my_usermanager.subjects import (
     ExternalIdentityUserStore,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def conn() -> Generator[sqlite3.Connection, None, None]:
     db = sqlite3.connect(":memory:")
     db.execute("PRAGMA foreign_keys = ON")
@@ -58,22 +61,26 @@ def conn() -> Generator[sqlite3.Connection, None, None]:
         db.close()
 
 
-@pytest.fixture()
+@pytest.fixture
 def user_store(conn: sqlite3.Connection) -> SQLiteUserStore:
     return SQLiteUserStore(conn)
 
 
-@pytest.fixture()
+@pytest.fixture
 def grant_store(conn: sqlite3.Connection) -> SQLiteGrantStore:
     return SQLiteGrantStore(conn)
 
 
-@pytest.fixture()
+@pytest.fixture
 def audit_store(conn: sqlite3.Connection) -> SQLiteAuditStore:
     return SQLiteAuditStore(conn)
 
 
-def _event(event_id: str, action: str = "user.created", target_id: str = "user_1") -> AuditEvent:
+def _event(
+    event_id: str,
+    action: str = "user.created",
+    target_id: str = "user_1",
+) -> AuditEvent:
     return AuditEvent(
         event_id=event_id,
         timestamp=datetime(2025, 1, 1, tzinfo=UTC),
@@ -91,7 +98,9 @@ def _event(event_id: str, action: str = "user.created", target_id: str = "user_1
 # ---------------------------------------------------------------------------
 
 
-def test_sqlite_user_store_satisfies_user_store_protocol(user_store: SQLiteUserStore) -> None:
+def test_sqlite_user_store_satisfies_user_store_protocol(
+    user_store: SQLiteUserStore,
+) -> None:
     assert isinstance(user_store, UserStore)
 
 
@@ -101,11 +110,15 @@ def test_sqlite_user_store_satisfies_external_identity_user_store_protocol(
     assert isinstance(user_store, ExternalIdentityUserStore)
 
 
-def test_sqlite_grant_store_satisfies_grant_store_protocol(grant_store: SQLiteGrantStore) -> None:
+def test_sqlite_grant_store_satisfies_grant_store_protocol(
+    grant_store: SQLiteGrantStore,
+) -> None:
     assert isinstance(grant_store, GrantStore)
 
 
-def test_sqlite_audit_store_satisfies_audit_store_protocol(audit_store: SQLiteAuditStore) -> None:
+def test_sqlite_audit_store_satisfies_audit_store_protocol(
+    audit_store: SQLiteAuditStore,
+) -> None:
     assert isinstance(audit_store, AuditStore)
 
 
@@ -155,7 +168,9 @@ def test_user_store_list_sorted_by_user_id(user_store: SQLiteUserStore) -> None:
 
 
 def test_user_store_list_text_filter(user_store: SQLiteUserStore) -> None:
-    user_store.create(User(user_id="user_b", display_name="Alice Example", email="a@example.com"))
+    user_store.create(
+        User(user_id="user_b", display_name="Alice Example", email="a@example.com"),
+    )
     user_store.create(User(user_id="user_a", display_name="Bob"))
     results = user_store.list(limit=10, offset=0, query=UserQuery(text="renamed"))
     assert results == ()
@@ -198,11 +213,17 @@ def test_user_store_persists_external_identities(user_store: SQLiteUserStore) ->
     assert identity in loaded.external_identities
 
 
-def test_user_store_update_replaces_external_identities(user_store: SQLiteUserStore) -> None:
+def test_user_store_update_replaces_external_identities(
+    user_store: SQLiteUserStore,
+) -> None:
     old_id = ExternalIdentity(provider="passkey", subject="cred_old")
     new_id = ExternalIdentity(provider="passkey", subject="cred_new")
-    user_store.create(User(user_id="user_a", external_identities=frozenset({old_id})))
-    user_store.update(User(user_id="user_a", external_identities=frozenset({new_id})))
+    user_store.create(
+        User(user_id="user_a", external_identities=frozenset({old_id})),
+    )
+    user_store.update(
+        User(user_id="user_a", external_identities=frozenset({new_id})),
+    )
     loaded = user_store.get("user_a")
     assert loaded is not None
     assert new_id in loaded.external_identities
@@ -223,7 +244,9 @@ def test_resolve_external_identity_returns_user(user_store: SQLiteUserStore) -> 
     assert resolved.user_id == "user_a"
 
 
-def test_resolve_external_identity_unknown_returns_none(user_store: SQLiteUserStore) -> None:
+def test_resolve_external_identity_unknown_returns_none(
+    user_store: SQLiteUserStore,
+) -> None:
     identity = ExternalIdentity(provider="passkey", subject="cred_unknown")
     assert user_store.resolve_external_identity(identity) is None
 
@@ -247,7 +270,9 @@ def test_link_external_identity_conflict_raises(user_store: SQLiteUserStore) -> 
         user_store.link_external_identity(user_id="user_b", identity=identity)
 
 
-def test_link_external_identity_idempotent_for_same_user(user_store: SQLiteUserStore) -> None:
+def test_link_external_identity_idempotent_for_same_user(
+    user_store: SQLiteUserStore,
+) -> None:
     user_store.create(User(user_id="user_a"))
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
     user_store.link_external_identity(user_id="user_a", identity=identity)
@@ -292,7 +317,9 @@ def test_grant_store_add_and_list_role_grant(grant_store: SQLiteGrantStore) -> N
     assert listed == (grant,)
 
 
-def test_grant_store_add_and_list_permission_grant(grant_store: SQLiteGrantStore) -> None:
+def test_grant_store_add_and_list_permission_grant(
+    grant_store: SQLiteGrantStore,
+) -> None:
     scope = Scope.global_()
     perm = Permission("reports.read")
     grant = grant_store.add_permission_grant("user_123", perm, scope)
@@ -303,10 +330,18 @@ def test_grant_store_add_and_list_permission_grant(grant_store: SQLiteGrantStore
 
 def test_grant_store_deterministic_ordering(grant_store: SQLiteGrantStore) -> None:
     tenant_scope = Scope.scoped("tenant", "tenant_123")
-    permission_grant = Grant.for_permission("user_123", Permission("reports.read"), Scope.global_())
+    permission_grant = Grant.for_permission(
+        "user_123",
+        Permission("reports.read"),
+        Scope.global_(),
+    )
     role_grant = Grant.for_role("user_123", "admin", tenant_scope)
 
-    grant_store.add_permission_grant("user_123", Permission("reports.read"), Scope.global_())
+    grant_store.add_permission_grant(
+        "user_123",
+        Permission("reports.read"),
+        Scope.global_(),
+    )
     grant_store.add_role_grant("user_123", "admin", tenant_scope)
 
     listed = grant_store.list_grants_for_user("user_123")
@@ -337,19 +372,25 @@ def test_grant_store_duplicate_role_grant_raises(grant_store: SQLiteGrantStore) 
         grant_store.add_role_grant("user_123", "admin", scope)
 
 
-def test_grant_store_remove_missing_role_grant_raises(grant_store: SQLiteGrantStore) -> None:
+def test_grant_store_remove_missing_role_grant_raises(
+    grant_store: SQLiteGrantStore,
+) -> None:
     with pytest.raises(GrantNotFoundError):
         grant_store.remove_role_grant("user_123", "admin", Scope.global_())
 
 
-def test_grant_store_remove_missing_permission_grant_raises(grant_store: SQLiteGrantStore) -> None:
+def test_grant_store_remove_missing_permission_grant_raises(
+    grant_store: SQLiteGrantStore,
+) -> None:
     with pytest.raises(GrantNotFoundError, match=r"reports\.read"):
         grant_store.remove_permission_grant(
             "user_123", Permission("reports.read"), Scope.global_()
         )
 
 
-def test_grant_store_list_missing_user_returns_empty(grant_store: SQLiteGrantStore) -> None:
+def test_grant_store_list_missing_user_returns_empty(
+    grant_store: SQLiteGrantStore,
+) -> None:
     assert grant_store.list_grants_for_user("missing") == ()
 
 
@@ -378,7 +419,9 @@ def test_audit_store_preserves_append_order(audit_store: SQLiteAuditStore) -> No
     assert page == (updated, other)
 
 
-def test_audit_store_filters_by_action_and_target(audit_store: SQLiteAuditStore) -> None:
+def test_audit_store_filters_by_action_and_target(
+    audit_store: SQLiteAuditStore,
+) -> None:
     audit_store.append(_event("evt_1", action="user.created", target_id="user_1"))
     audit_store.append(_event("evt_2", action="user.updated", target_id="user_1"))
     audit_store.append(_event("evt_3", action="user.created", target_id="user_2"))
@@ -421,6 +464,8 @@ def test_audit_store_filters_by_actor(audit_store: SQLiteAuditStore) -> None:
     audit_store.append(other)
 
     filtered = audit_store.list(
-        limit=10, offset=0, filters=AuditFilters(actor_id="other_actor")
+        limit=10,
+        offset=0,
+        filters=AuditFilters(actor_id="other_actor"),
     )
     assert filtered == (other,)

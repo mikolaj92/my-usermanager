@@ -7,6 +7,7 @@ life-cycle and any transaction management.
 Schema bootstrap::
 
     from my_usermanager.adapters.sqlite import create_tables
+
     create_tables(conn)
 
 All stores are synchronous and thread-safe when each thread uses its own
@@ -41,7 +42,7 @@ from my_usermanager.stores import (
     UserNotFoundError,
     UserQuery,
 )
-
+from my_usermanager.subjects import ExternalIdentityConflictError
 
 __all__: Final[tuple[str, ...]] = (
     "SQLiteAuditStore",
@@ -105,6 +106,10 @@ CREATE TABLE IF NOT EXISTS um_audit_events (
 );
 """
 
+_LIMIT_FIELD: Final = "limit"
+_OFFSET_FIELD: Final = "offset"
+_PAGE_ERROR_MESSAGE: Final = "must be greater than or equal to zero"
+
 
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all my-usermanager tables if they do not exist."""
@@ -116,11 +121,12 @@ def create_tables(conn: sqlite3.Connection) -> None:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _validate_page(*, limit: int, offset: int) -> None:
     if limit < 0:
-        raise InvalidPageError("limit", limit, "must be greater than or equal to zero")
+        raise InvalidPageError(_LIMIT_FIELD, limit, _PAGE_ERROR_MESSAGE)
     if offset < 0:
-        raise InvalidPageError("offset", offset, "must be greater than or equal to zero")
+        raise InvalidPageError(_OFFSET_FIELD, offset, _PAGE_ERROR_MESSAGE)
 
 
 def _scope_from_row(scope_type: str | None, scope_id: str | None) -> Scope:
@@ -145,18 +151,28 @@ def _user_from_row(
     )
 
 
-def _load_identities(conn: sqlite3.Connection, user_id: str) -> frozenset[ExternalIdentity]:
+def _load_identities(
+    conn: sqlite3.Connection,
+    user_id: str,
+) -> frozenset[ExternalIdentity]:
     rows = conn.execute(
         "SELECT provider, subject FROM um_external_identities WHERE user_id = ?",
         (user_id,),
     ).fetchall()
-    return frozenset(ExternalIdentity(provider=r["provider"], subject=r["subject"]) for r in rows)
+    return frozenset(
+        ExternalIdentity(provider=r["provider"], subject=r["subject"]) for r in rows
+    )
 
 
-def _save_identities(conn: sqlite3.Connection, user_id: str, identities: frozenset[ExternalIdentity]) -> None:
+def _save_identities(
+    conn: sqlite3.Connection,
+    user_id: str,
+    identities: frozenset[ExternalIdentity],
+) -> None:
     conn.execute("DELETE FROM um_external_identities WHERE user_id = ?", (user_id,))
     conn.executemany(
-        "INSERT OR IGNORE INTO um_external_identities (provider, subject, user_id) VALUES (?, ?, ?)",
+        "INSERT OR IGNORE INTO um_external_identities "
+        "(provider, subject, user_id) VALUES (?, ?, ?)",
         [(i.provider, i.subject, user_id) for i in identities],
     )
 
@@ -167,7 +183,11 @@ def _grant_from_row(row: sqlite3.Row) -> Grant:
     permission_name: str = row["permission_name"]
     if role_name:
         return Grant.for_role(row["user_id"], role_name, scope)
-    return Grant.for_permission(row["user_id"], Permission(permission_name), scope)
+    return Grant.for_permission(
+        row["user_id"],
+        Permission(permission_name),
+        scope,
+    )
 
 
 def _grant_sort_key(grant: Grant) -> tuple[str, str, str, str, str]:
@@ -176,7 +196,13 @@ def _grant_sort_key(grant: Grant) -> tuple[str, str, str, str, str]:
     if grant.role_name is not None:
         return (grant.user_id, scope_type, scope_id, "role", grant.role_name)
     if grant.permission is not None:
-        return (grant.user_id, scope_type, scope_id, "permission", grant.permission.name)
+        return (
+            grant.user_id,
+            scope_type,
+            scope_id,
+            "permission",
+            grant.permission.name,
+        )
     return (grant.user_id, scope_type, scope_id, "invalid", "")
 
 
@@ -231,39 +257,56 @@ def _matches_user_query_sql(query: UserQuery) -> tuple[str, list[object]]:
     return where, params
 
 
+def _append_optional_filter(
+    clauses: list[str],
+    params: list[object],
+    clause: str,
+    value: object | None,
+) -> None:
+    if value is None:
+        return
+    clauses.append(clause)
+    params.append(value)
+
+
+def _append_optional_time_filter(
+    clauses: list[str],
+    params: list[object],
+    clause: str,
+    value: datetime | None,
+) -> None:
+    if value is None:
+        return
+    clauses.append(clause)
+    params.append(value.isoformat())
+
+
+def _append_scope_filter(
+    clauses: list[str],
+    params: list[object],
+    scope: Scope | None,
+) -> None:
+    if scope is None:
+        return
+    if scope.scope_type is None:
+        clauses.append("scope_type IS NULL AND scope_id IS NULL")
+        return
+    clauses.append("scope_type = ? AND scope_id = ?")
+    params.extend([scope.scope_type, scope.scope_id])
+
+
 def _matches_audit_filters_sql(filters: AuditFilters) -> tuple[str, list[object]]:
     clauses: list[str] = []
     params: list[object] = []
-    if filters.actor_id is not None:
-        clauses.append("actor_id = ?")
-        params.append(filters.actor_id)
-    if filters.action is not None:
-        clauses.append("action = ?")
-        params.append(filters.action)
-    if filters.target_type is not None:
-        clauses.append("target_type = ?")
-        params.append(filters.target_type)
-    if filters.target_id is not None:
-        clauses.append("target_id = ?")
-        params.append(filters.target_id)
-    if filters.result is not None:
-        clauses.append("result = ?")
-        params.append(filters.result)
-    if filters.request_id is not None:
-        clauses.append("request_id = ?")
-        params.append(filters.request_id)
-    if filters.scope is not None:
-        if filters.scope.scope_type is None:
-            clauses.append("scope_type IS NULL AND scope_id IS NULL")
-        else:
-            clauses.append("scope_type = ? AND scope_id = ?")
-            params.extend([filters.scope.scope_type, filters.scope.scope_id])
-    if filters.since is not None:
-        clauses.append("timestamp >= ?")
-        params.append(filters.since.isoformat())
-    if filters.until is not None:
-        clauses.append("timestamp <= ?")
-        params.append(filters.until.isoformat())
+    _append_optional_filter(clauses, params, "actor_id = ?", filters.actor_id)
+    _append_optional_filter(clauses, params, "action = ?", filters.action)
+    _append_optional_filter(clauses, params, "target_type = ?", filters.target_type)
+    _append_optional_filter(clauses, params, "target_id = ?", filters.target_id)
+    _append_optional_filter(clauses, params, "result = ?", filters.result)
+    _append_optional_filter(clauses, params, "request_id = ?", filters.request_id)
+    _append_scope_filter(clauses, params, filters.scope)
+    _append_optional_time_filter(clauses, params, "timestamp >= ?", filters.since)
+    _append_optional_time_filter(clauses, params, "timestamp <= ?", filters.until)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     return where, params
 
@@ -271,6 +314,7 @@ def _matches_audit_filters_sql(filters: AuditFilters) -> tuple[str, list[object]
 # ---------------------------------------------------------------------------
 # SQLiteUserStore
 # ---------------------------------------------------------------------------
+
 
 class SQLiteUserStore:
     """SQLite-backed UserStore and ExternalIdentityUserStore implementation.
@@ -295,14 +339,20 @@ class SQLiteUserStore:
                     email, disabled, system, scope_type, scope_id)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    user.user_id, user.username, user.first_name, user.last_name,
-                    user.display_name, user.email,
-                    1 if user.disabled else 0, 1 if user.system else 0,
-                    user.scope.scope_type, user.scope.scope_id,
+                    user.user_id,
+                    user.username,
+                    user.first_name,
+                    user.last_name,
+                    user.display_name,
+                    user.email,
+                    1 if user.disabled else 0,
+                    1 if user.system else 0,
+                    user.scope.scope_type,
+                    user.scope.scope_id,
                 ),
             )
-        except sqlite3.IntegrityError:
-            raise DuplicateUserError(user.user_id)
+        except sqlite3.IntegrityError as err:
+            raise DuplicateUserError(user.user_id) from err
         _save_identities(self._conn, user.user_id, user.external_identities)
         self._conn.commit()
         return user
@@ -325,9 +375,16 @@ class SQLiteUserStore:
                email=?, disabled=?, system=?, scope_type=?, scope_id=?
                WHERE user_id=?""",
             (
-                user.username, user.first_name, user.last_name, user.display_name,
-                user.email, 1 if user.disabled else 0, 1 if user.system else 0,
-                user.scope.scope_type, user.scope.scope_id, user.user_id,
+                user.username,
+                user.first_name,
+                user.last_name,
+                user.display_name,
+                user.email,
+                1 if user.disabled else 0,
+                1 if user.system else 0,
+                user.scope.scope_type,
+                user.scope.scope_id,
+                user.user_id,
             ),
         )
         if cur.rowcount == 0:
@@ -340,8 +397,13 @@ class SQLiteUserStore:
         """Return users sorted by user_id after applying query filters."""
         _validate_page(limit=limit, offset=offset)
         where, params = _matches_user_query_sql(query)
+        # `where` comes from fixed clauses with all values bound as parameters.
+        statement = (
+            f"SELECT * FROM um_users {where} "  # noqa: S608
+            "ORDER BY user_id LIMIT ? OFFSET ?"
+        )
         rows = self._conn.execute(
-            f"SELECT * FROM um_users {where} ORDER BY user_id LIMIT ? OFFSET ?",
+            statement,
             (*params, limit, offset),
         ).fetchall()
         return tuple(
@@ -362,7 +424,8 @@ class SQLiteUserStore:
     def resolve_external_identity(self, identity: ExternalIdentity) -> User | None:
         """Return the linked user or None when the identity is unlinked."""
         row = self._conn.execute(
-            "SELECT user_id FROM um_external_identities WHERE provider = ? AND subject = ?",
+            "SELECT user_id FROM um_external_identities "
+            "WHERE provider = ? AND subject = ?",
             (identity.provider, identity.subject),
         ).fetchone()
         if row is None:
@@ -376,9 +439,9 @@ class SQLiteUserStore:
         identity: ExternalIdentity,
     ) -> User:
         """Link an external identity to an existing user or raise on conflict."""
-        from my_usermanager.subjects import ExternalIdentityConflictError
         existing_row = self._conn.execute(
-            "SELECT user_id FROM um_external_identities WHERE provider = ? AND subject = ?",
+            "SELECT user_id FROM um_external_identities "
+            "WHERE provider = ? AND subject = ?",
             (identity.provider, identity.subject),
         ).fetchone()
         if existing_row is not None and existing_row["user_id"] != user_id:
@@ -388,7 +451,8 @@ class SQLiteUserStore:
                 requested_user_id=user_id,
             )
         self._conn.execute(
-            "INSERT OR IGNORE INTO um_external_identities (provider, subject, user_id) VALUES (?, ?, ?)",
+            "INSERT OR IGNORE INTO um_external_identities "
+            "(provider, subject, user_id) VALUES (?, ?, ?)",
             (identity.provider, identity.subject, user_id),
         )
         self._conn.commit()
@@ -401,6 +465,7 @@ class SQLiteUserStore:
 # ---------------------------------------------------------------------------
 # SQLiteRoleStore
 # ---------------------------------------------------------------------------
+
 
 class SQLiteRoleStore:
     """Read-only SQLite-backed RoleStore seeded with built-in roles.
@@ -429,6 +494,7 @@ class SQLiteRoleStore:
 # SQLiteGrantStore
 # ---------------------------------------------------------------------------
 
+
 class SQLiteGrantStore:
     """SQLite-backed GrantStore implementation."""
 
@@ -449,8 +515,8 @@ class SQLiteGrantStore:
                    VALUES (?, ?, '', ?, ?)""",
                 (user_id, role_name, scope.scope_type or "", scope.scope_id or ""),
             )
-        except sqlite3.IntegrityError:
-            raise DuplicateGrantError(grant)
+        except sqlite3.IntegrityError as err:
+            raise DuplicateGrantError(grant) from err
         self._conn.commit()
         return grant
 
@@ -469,7 +535,10 @@ class SQLiteGrantStore:
         return grant
 
     def add_permission_grant(
-        self, user_id: str, permission: Permission, scope: Scope
+        self,
+        user_id: str,
+        permission: Permission,
+        scope: Scope,
     ) -> Grant:
         """Store a direct permission grant or raise DuplicateGrantError."""
         grant = Grant.for_permission(user_id, permission, scope)
@@ -478,15 +547,23 @@ class SQLiteGrantStore:
                 """INSERT INTO um_grants
                    (user_id, role_name, permission_name, scope_type, scope_id)
                    VALUES (?, '', ?, ?, ?)""",
-                (user_id, permission.name, scope.scope_type or "", scope.scope_id or ""),
+                (
+                    user_id,
+                    permission.name,
+                    scope.scope_type or "",
+                    scope.scope_id or "",
+                ),
             )
-        except sqlite3.IntegrityError:
-            raise DuplicateGrantError(grant)
+        except sqlite3.IntegrityError as err:
+            raise DuplicateGrantError(grant) from err
         self._conn.commit()
         return grant
 
     def remove_permission_grant(
-        self, user_id: str, permission: Permission, scope: Scope
+        self,
+        user_id: str,
+        permission: Permission,
+        scope: Scope,
     ) -> Grant:
         """Remove a direct permission grant or raise GrantNotFoundError."""
         grant = Grant.for_permission(user_id, permission, scope)
@@ -514,6 +591,7 @@ class SQLiteGrantStore:
 # ---------------------------------------------------------------------------
 # SQLiteAuditStore
 # ---------------------------------------------------------------------------
+
 
 class SQLiteAuditStore:
     """SQLite-backed append-only AuditStore preserving insertion order."""
@@ -551,8 +629,8 @@ class SQLiteAuditStore:
                     json.dumps(dict(event.metadata)),
                 ),
             )
-        except sqlite3.IntegrityError:
-            raise DuplicateAuditEventError(event.event_id)
+        except sqlite3.IntegrityError as err:
+            raise DuplicateAuditEventError(event.event_id) from err
         self._conn.commit()
         return event
 
@@ -566,8 +644,13 @@ class SQLiteAuditStore:
         """Return append-ordered audit events after applying filters."""
         _validate_page(limit=limit, offset=offset)
         where, params = _matches_audit_filters_sql(filters)
+        # `where` comes from fixed clauses with all values bound as parameters.
+        statement = (
+            f"SELECT * FROM um_audit_events {where} "  # noqa: S608
+            "ORDER BY rowid LIMIT ? OFFSET ?"
+        )
         rows = self._conn.execute(
-            f"SELECT * FROM um_audit_events {where} ORDER BY rowid LIMIT ? OFFSET ?",
+            statement,
             (*params, limit, offset),
         ).fetchall()
         return tuple(_audit_from_row(r) for r in rows)
