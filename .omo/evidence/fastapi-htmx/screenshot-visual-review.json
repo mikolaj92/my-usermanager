@@ -1,0 +1,2532 @@
+{
+  "coverage": {
+    "all_images_non_blank": true,
+    "annotated_contact_sheet": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/screenshot-contact-sheet-annotated.png",
+    "average_ocr_words": 34.68,
+    "contact_sheet": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/screenshot-contact-sheet.png",
+    "edge_touch_risk_count": 0,
+    "screenshot_count": 19
+  },
+  "created_at": "2026-06-30T23:16:44.476177+00:00",
+  "diff_reports": [
+    {
+      "diff_bbox": [
+        483,
+        256,
+        1111,
+        443
+      ],
+      "diff_pixels": 14275,
+      "diff_ratio": 0.012391,
+      "dimensions_match": true,
+      "height": 900,
+      "hotspots": [
+        {
+          "diffRatio": 0.09947,
+          "gridX": 2,
+          "gridY": 1,
+          "height": 225,
+          "width": 320,
+          "x": 640,
+          "y": 225
+        },
+        {
+          "diffRatio": 0.05232,
+          "gridX": 1,
+          "gridY": 1,
+          "height": 225,
+          "width": 320,
+          "x": 320,
+          "y": 225
+        },
+        {
+          "diffRatio": 0.04647,
+          "gridX": 3,
+          "gridY": 1,
+          "height": 225,
+          "width": 320,
+          "x": 960,
+          "y": 225
+        }
+      ],
+      "left": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-enable.png",
+      "name": "admin-users-active-to-disabled",
+      "right": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-disable.png",
+      "similarity_score": 98.761,
+      "total_pixels": 1152000,
+      "width": 1280
+    },
+    {
+      "diff_bbox": [
+        160,
+        316,
+        608,
+        602
+      ],
+      "diff_pixels": 30355,
+      "diff_ratio": 0.043916,
+      "dimensions_match": true,
+      "height": 900,
+      "hotspots": [
+        {
+          "diffRatio": 0.2619,
+          "gridX": 1,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 192,
+          "y": 450
+        },
+        {
+          "diffRatio": 0.19755,
+          "gridX": 2,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 384,
+          "y": 450
+        },
+        {
+          "diffRatio": 0.08986,
+          "gridX": 1,
+          "gridY": 1,
+          "height": 225,
+          "width": 192,
+          "x": 192,
+          "y": 225
+        },
+        {
+          "diffRatio": 0.06986,
+          "gridX": 2,
+          "gridY": 1,
+          "height": 225,
+          "width": 192,
+          "x": 384,
+          "y": 225
+        },
+        {
+          "diffRatio": 0.04586,
+          "gridX": 0,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 0,
+          "y": 450
+        },
+        {
+          "diffRatio": 0.02273,
+          "gridX": 0,
+          "gridY": 1,
+          "height": 225,
+          "width": 192,
+          "x": 0,
+          "y": 225
+        },
+        {
+          "diffRatio": 0.01491,
+          "gridX": 3,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 576,
+          "y": 450
+        }
+      ],
+      "left": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-768.png",
+      "name": "auth-login-secure-to-nonsecure",
+      "right": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-nonsecure-context.png",
+      "similarity_score": 95.608,
+      "total_pixels": 691200,
+      "width": 768
+    },
+    {
+      "diff_bbox": [
+        160,
+        290,
+        608,
+        628
+      ],
+      "diff_pixels": 27343,
+      "diff_ratio": 0.039559,
+      "dimensions_match": true,
+      "height": 900,
+      "hotspots": [
+        {
+          "diffRatio": 0.25051,
+          "gridX": 1,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 192,
+          "y": 450
+        },
+        {
+          "diffRatio": 0.16222,
+          "gridX": 2,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 384,
+          "y": 450
+        },
+        {
+          "diffRatio": 0.10794,
+          "gridX": 1,
+          "gridY": 1,
+          "height": 225,
+          "width": 192,
+          "x": 192,
+          "y": 225
+        },
+        {
+          "diffRatio": 0.05477,
+          "gridX": 0,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 0,
+          "y": 450
+        },
+        {
+          "diffRatio": 0.0241,
+          "gridX": 0,
+          "gridY": 1,
+          "height": 225,
+          "width": 192,
+          "x": 0,
+          "y": 225
+        },
+        {
+          "diffRatio": 0.01838,
+          "gridX": 3,
+          "gridY": 2,
+          "height": 225,
+          "width": 192,
+          "x": 576,
+          "y": 450
+        },
+        {
+          "diffRatio": 0.01502,
+          "gridX": 2,
+          "gridY": 1,
+          "height": 225,
+          "width": 192,
+          "x": 384,
+          "y": 225
+        }
+      ],
+      "left": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-768.png",
+      "name": "auth-register-secure-to-nonsecure",
+      "right": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-nonsecure-context.png",
+      "similarity_score": 96.044,
+      "total_pixels": 691200,
+      "width": 768
+    }
+  ],
+  "findings": {
+    "blocking": [],
+    "positive": [
+      "All 19 screenshots load as PNG/RGB images and are not blank/single-color.",
+      "Pixel content bounding boxes stay inside captured image dimensions; browser DOM evidence separately reports no body-level horizontal overflow at 375/768/1280.",
+      "Dominant palettes are neutral warm backgrounds/cards with dark text and muted borders, matching the calm admin-console design direction.",
+      "HTMX active/disabled screenshot diff is localized and confirms a row-state visual change rather than a full-page visual replacement.",
+      "Non-secure and unsupported fallback screenshots contain visible unsupported-WebAuthn state text in OCR/DOM evidence."
+    ],
+    "review": [
+      {
+        "finding": "OCR did not confidently extract expected text: Disabled",
+        "image": "admin-users-after-disable.png",
+        "severity": "review"
+      },
+      {
+        "finding": "OCR did not confidently extract expected text: Active",
+        "image": "admin-users-after-enable.png",
+        "severity": "review"
+      }
+    ]
+  },
+  "images": [
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        249.02,
+        249.02,
+        249.02
+      ],
+      "channel_stddev": [
+        34.08,
+        34.08,
+        34.08
+      ],
+      "content_bbox": [
+        79,
+        30,
+        1201,
+        640
+      ],
+      "content_height": 610,
+      "content_margins": {
+        "bottom": 260,
+        "left": 79,
+        "right": 79,
+        "top": 30
+      },
+      "content_width": 1122,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.8216,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#E4E4E4",
+          "ratio": 0.0513,
+          "rgb": [
+            228,
+            228,
+            228
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0349,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#FAFAFA",
+          "ratio": 0.0305,
+          "rgb": [
+            250,
+            250,
+            250
+          ]
+        },
+        {
+          "hex": "#8D8D8D",
+          "ratio": 0.0244,
+          "rgb": [
+            141,
+            141,
+            141
+          ]
+        },
+        {
+          "hex": "#FCFCFC",
+          "ratio": 0.0228,
+          "rgb": [
+            252,
+            252,
+            252
+          ]
+        },
+        {
+          "hex": "#FEFEFE",
+          "ratio": 0.0142,
+          "rgb": [
+            254,
+            254,
+            254
+          ]
+        },
+        {
+          "hex": "#FCFDFD",
+          "ratio": 0.0002,
+          "rgb": [
+            252,
+            253,
+            253
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "account-1280.png",
+      "ocr_text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nAccount\nThis reusable page delegates authentication and passkey behavior to host callbacks.\nDemo Administrator\nadmin@example.invalid \u2014\nLocal user id\ndemo-user\nExternal subject\ndemo: demo-user\nPasskey UI composition\nThis account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints.",
+      "ocr_word_count": 56,
+      "width": 1280
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        234.99,
+        234.99,
+        234.99
+      ],
+      "channel_stddev": [
+        60.67,
+        60.67,
+        60.67
+      ],
+      "content_bbox": [
+        15,
+        30,
+        360,
+        856
+      ],
+      "content_height": 826,
+      "content_margins": {
+        "bottom": 44,
+        "left": 15,
+        "right": 15,
+        "top": 30
+      },
+      "content_width": 345,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.6022,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0771,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#FAFAFA",
+          "ratio": 0.0675,
+          "rgb": [
+            250,
+            250,
+            250
+          ]
+        },
+        {
+          "hex": "#C6C6C6",
+          "ratio": 0.0656,
+          "rgb": [
+            198,
+            198,
+            198
+          ]
+        },
+        {
+          "hex": "#D6D6D6",
+          "ratio": 0.0563,
+          "rgb": [
+            214,
+            214,
+            214
+          ]
+        },
+        {
+          "hex": "#393939",
+          "ratio": 0.0531,
+          "rgb": [
+            57,
+            57,
+            57
+          ]
+        },
+        {
+          "hex": "#F1F1F1",
+          "ratio": 0.0496,
+          "rgb": [
+            241,
+            241,
+            241
+          ]
+        },
+        {
+          "hex": "#A5A5A5",
+          "ratio": 0.0285,
+          "rgb": [
+            165,
+            165,
+            165
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "account-375.png",
+      "ocr_text": "User management\nHost applications own sessions, redirects,\nCSRF validation, and persistence.\nAccount\nThis reusable page delegates authentication\nand passkey behavior to host callbacks.\nDemo Administrator\nadmin@example.invalid \u2014\nLocal user id\ndemo-user\nExternal subject\ndemo: demo-user\nPasskey UI composition\nThis account page receives passkey\nHTML through render_passkey_panel,\nwhile my-auth owns the reusable\npasskey forms and JSON endpoints.\nOpen passkey login",
+      "ocr_word_count": 59,
+      "width": 375
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        245.14,
+        245.14,
+        245.14
+      ],
+      "channel_stddev": [
+        43.54,
+        43.54,
+        43.54
+      ],
+      "content_bbox": [
+        15,
+        30,
+        753,
+        664
+      ],
+      "content_height": 634,
+      "content_margins": {
+        "bottom": 236,
+        "left": 15,
+        "right": 15,
+        "top": 30
+      },
+      "content_width": 738,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.752,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0454,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#F8F8F8",
+          "ratio": 0.042,
+          "rgb": [
+            248,
+            248,
+            248
+          ]
+        },
+        {
+          "hex": "#B5B5B5",
+          "ratio": 0.0408,
+          "rgb": [
+            181,
+            181,
+            181
+          ]
+        },
+        {
+          "hex": "#FCFCFC",
+          "ratio": 0.039,
+          "rgb": [
+            252,
+            252,
+            252
+          ]
+        },
+        {
+          "hex": "#E7E7E7",
+          "ratio": 0.0347,
+          "rgb": [
+            231,
+            231,
+            231
+          ]
+        },
+        {
+          "hex": "#D0D0D0",
+          "ratio": 0.0252,
+          "rgb": [
+            208,
+            208,
+            208
+          ]
+        },
+        {
+          "hex": "#505050",
+          "ratio": 0.0211,
+          "rgb": [
+            80,
+            80,
+            80
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "account-768.png",
+      "ocr_text": "User management\n\nHost applications own sessions, redirects, CSRF validation, and persistence.\n\nAccount\n\nThis reusable page delegates authentication and passkey behavior to host callbacks.\nDemo Administrator\nadmin@example.invalid \u2014\nLocal user id\ndemo-user\nExternal subject\ndemo: demo-user\nPasskey UI composition\nThis account page receives passkey HTML through render_passkey_panel, while my-auth owns\nthe reusable passkey forms and JSON endpoints.",
+      "ocr_word_count": 56,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        249.92,
+        248.31,
+        248.38
+      ],
+      "channel_stddev": [
+        31.17,
+        37.33,
+        36.83
+      ],
+      "content_bbox": [
+        79,
+        30,
+        1201,
+        480
+      ],
+      "content_height": 450,
+      "content_margins": {
+        "bottom": 420,
+        "left": 79,
+        "right": 79,
+        "top": 30
+      },
+      "content_width": 1122,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.8201,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#FBFBFB",
+          "ratio": 0.0475,
+          "rgb": [
+            251,
+            251,
+            251
+          ]
+        },
+        {
+          "hex": "#DCD9DA",
+          "ratio": 0.033,
+          "rgb": [
+            220,
+            217,
+            218
+          ]
+        },
+        {
+          "hex": "#FEFEFE",
+          "ratio": 0.0284,
+          "rgb": [
+            254,
+            254,
+            254
+          ]
+        },
+        {
+          "hex": "#9F7A7C",
+          "ratio": 0.0262,
+          "rgb": [
+            159,
+            122,
+            124
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0231,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#F4F3F3",
+          "ratio": 0.0194,
+          "rgb": [
+            244,
+            243,
+            243
+          ]
+        },
+        {
+          "hex": "#FEFFFF",
+          "ratio": 0.0023,
+          "rgb": [
+            254,
+            255,
+            255
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "admin-users-1280.png",
+      "ocr_text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nDemo Administrator\nadmin@example.invalid\ndemo-user\nAudit Reviewer\nauditor@example. invalid Disable\nauditor-user\nUnsafe User\nunsafe@example.invalid Disable\nunsafe/id space\"quote'<tag>&tail \u2018@examp|",
+      "ocr_word_count": 44,
+      "width": 1280
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        240.53,
+        235.03,
+        235.29
+      ],
+      "channel_stddev": [
+        52.15,
+        63.53,
+        62.59
+      ],
+      "content_bbox": [
+        15,
+        30,
+        360,
+        694
+      ],
+      "content_height": 664,
+      "content_margins": {
+        "bottom": 206,
+        "left": 15,
+        "right": 15,
+        "top": 30
+      },
+      "content_width": 345,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.6903,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#803A3D",
+          "ratio": 0.0714,
+          "rgb": [
+            128,
+            58,
+            61
+          ]
+        },
+        {
+          "hex": "#FCFCFC",
+          "ratio": 0.0471,
+          "rgb": [
+            252,
+            252,
+            252
+          ]
+        },
+        {
+          "hex": "#D2D0D0",
+          "ratio": 0.0446,
+          "rgb": [
+            210,
+            208,
+            208
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0432,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#F3F2F2",
+          "ratio": 0.0393,
+          "rgb": [
+            243,
+            242,
+            242
+          ]
+        },
+        {
+          "hex": "#B7B5B6",
+          "ratio": 0.037,
+          "rgb": [
+            183,
+            181,
+            182
+          ]
+        },
+        {
+          "hex": "#FEFFFF",
+          "ratio": 0.0271,
+          "rgb": [
+            254,
+            255,
+            255
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "admin-users-375.png",
+      "ocr_text": "User management\n\nHost applications own sessions, redirects,\nCSRF validation, and persistence.\n\nUsers\n\nEnable and disable actions call host-owned\ncallbacks and swap one row.\n\nRole Status Action\nample.invalid\ncample.invalid\nample.invalia",
+      "ocr_word_count": 29,
+      "width": 375
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        246.62,
+        243.94,
+        244.07
+      ],
+      "channel_stddev": [
+        39.87,
+        47.67,
+        47.04
+      ],
+      "content_bbox": [
+        15,
+        30,
+        753,
+        564
+      ],
+      "content_height": 534,
+      "content_margins": {
+        "bottom": 336,
+        "left": 15,
+        "right": 15,
+        "top": 30
+      },
+      "content_width": 738,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.7449,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#FBFBFB",
+          "ratio": 0.0639,
+          "rgb": [
+            251,
+            251,
+            251
+          ]
+        },
+        {
+          "hex": "#D5D4D4",
+          "ratio": 0.0515,
+          "rgb": [
+            213,
+            212,
+            212
+          ]
+        },
+        {
+          "hex": "#966B6D",
+          "ratio": 0.0401,
+          "rgb": [
+            150,
+            107,
+            109
+          ]
+        },
+        {
+          "hex": "#FEFEFE",
+          "ratio": 0.0393,
+          "rgb": [
+            254,
+            254,
+            254
+          ]
+        },
+        {
+          "hex": "#EDEBEB",
+          "ratio": 0.0301,
+          "rgb": [
+            237,
+            235,
+            235
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0282,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#FEFFFF",
+          "ratio": 0.002,
+          "rgb": [
+            254,
+            255,
+            255
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "admin-users-768.png",
+      "ocr_text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nadmin@example.invalid\ndemo-user\nauditor@example.invalid\nauditor-user\nunsafe@example invalid\nunsafe/id space\"quote'<tag>&tail \u2018@examp|",
+      "ocr_word_count": 36,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        249.82,
+        248.74,
+        248.79
+      ],
+      "channel_stddev": [
+        31.55,
+        35.74,
+        35.39
+      ],
+      "content_bbox": [
+        79,
+        30,
+        1201,
+        480
+      ],
+      "content_height": 450,
+      "content_margins": {
+        "bottom": 420,
+        "left": 79,
+        "right": 79,
+        "top": 30
+      },
+      "content_width": 1122,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.8168,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#FBFBFB",
+          "ratio": 0.0486,
+          "rgb": [
+            251,
+            251,
+            251
+          ]
+        },
+        {
+          "hex": "#DFDDDD",
+          "ratio": 0.0319,
+          "rgb": [
+            223,
+            221,
+            221
+          ]
+        },
+        {
+          "hex": "#FEFEFE",
+          "ratio": 0.0302,
+          "rgb": [
+            254,
+            254,
+            254
+          ]
+        },
+        {
+          "hex": "#9B8384",
+          "ratio": 0.0265,
+          "rgb": [
+            155,
+            131,
+            132
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0239,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#F5F4F4",
+          "ratio": 0.0201,
+          "rgb": [
+            245,
+            244,
+            244
+          ]
+        },
+        {
+          "hex": "#FEFFFF",
+          "ratio": 0.0021,
+          "rgb": [
+            254,
+            255,
+            255
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-disable.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "admin-users-after-disable.png",
+      "ocr_text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nDemo Administrator\nadmin@example invalid\ndemo-user\nAudit Reviewer\nauditor@example. invalid Enable Updating row.\nauditer-user Gera ep pdating\nUnsafe User\nunsafe@example. invalid Disable\nunsafe/id space\"quote'<tag>&tail *@examp|",
+      "ocr_word_count": 51,
+      "width": 1280
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        249.86,
+        248.25,
+        248.33
+      ],
+      "channel_stddev": [
+        31.31,
+        37.45,
+        36.96
+      ],
+      "content_bbox": [
+        79,
+        30,
+        1201,
+        480
+      ],
+      "content_height": 450,
+      "content_margins": {
+        "bottom": 420,
+        "left": 79,
+        "right": 79,
+        "top": 30
+      },
+      "content_width": 1122,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.8179,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#FBFBFB",
+          "ratio": 0.0479,
+          "rgb": [
+            251,
+            251,
+            251
+          ]
+        },
+        {
+          "hex": "#DCD9DA",
+          "ratio": 0.0332,
+          "rgb": [
+            220,
+            217,
+            218
+          ]
+        },
+        {
+          "hex": "#FEFEFE",
+          "ratio": 0.0285,
+          "rgb": [
+            254,
+            254,
+            254
+          ]
+        },
+        {
+          "hex": "#A07B7D",
+          "ratio": 0.0267,
+          "rgb": [
+            160,
+            123,
+            125
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0233,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#F3F3F3",
+          "ratio": 0.0202,
+          "rgb": [
+            243,
+            243,
+            243
+          ]
+        },
+        {
+          "hex": "#FEFFFF",
+          "ratio": 0.0023,
+          "rgb": [
+            254,
+            255,
+            255
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-enable.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "admin-users-after-enable.png",
+      "ocr_text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nDemo Administrator\nadmin@example.invalid\ndemo-user\nAudit Reviewer\nauditor@example. invalid DIETER Updating row.\nauditor-user Gexamp) Peating\nUnsafe User\nunsafe@example.invalid Disable\nunsafe/id space\"quote'<tag>&tail \u2018@examp|",
+      "ocr_word_count": 48,
+      "width": 1280
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        252.85,
+        252.85,
+        252.85
+      ],
+      "channel_stddev": [
+        20.81,
+        20.81,
+        20.81
+      ],
+      "content_bbox": [
+        416,
+        325,
+        864,
+        593
+      ],
+      "content_height": 268,
+      "content_margins": {
+        "bottom": 307,
+        "left": 416,
+        "right": 416,
+        "top": 325
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9556,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#C1C1C1",
+          "ratio": 0.0098,
+          "rgb": [
+            193,
+            193,
+            193
+          ]
+        },
+        {
+          "hex": "#E8E8E8",
+          "ratio": 0.0081,
+          "rgb": [
+            232,
+            232,
+            232
+          ]
+        },
+        {
+          "hex": "#979797",
+          "ratio": 0.0074,
+          "rgb": [
+            151,
+            151,
+            151
+          ]
+        },
+        {
+          "hex": "#D0D0D0",
+          "ratio": 0.0058,
+          "rgb": [
+            208,
+            208,
+            208
+          ]
+        },
+        {
+          "hex": "#EEEEEE",
+          "ratio": 0.0051,
+          "rgb": [
+            238,
+            238,
+            238
+          ]
+        },
+        {
+          "hex": "#F9F9F9",
+          "ratio": 0.0044,
+          "rgb": [
+            249,
+            249,
+            249
+          ]
+        },
+        {
+          "hex": "#DFDFDF",
+          "ratio": 0.0038,
+          "rgb": [
+            223,
+            223,
+            223
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-login-1280.png",
+      "ocr_text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nWaiting for the WebAuthn passkey prompt.",
+      "ocr_word_count": 29,
+      "width": 1280
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        247.87,
+        247.87,
+        247.87
+      ],
+      "channel_stddev": [
+        37.74,
+        37.74,
+        37.74
+      ],
+      "content_bbox": [
+        24,
+        297,
+        351,
+        621
+      ],
+      "content_height": 324,
+      "content_margins": {
+        "bottom": 279,
+        "left": 24,
+        "right": 24,
+        "top": 297
+      },
+      "content_width": 327,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.8738,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#E9E9E9",
+          "ratio": 0.0286,
+          "rgb": [
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "hex": "#A7A7A7",
+          "ratio": 0.0237,
+          "rgb": [
+            167,
+            167,
+            167
+          ]
+        },
+        {
+          "hex": "#CACACA",
+          "ratio": 0.0215,
+          "rgb": [
+            202,
+            202,
+            202
+          ]
+        },
+        {
+          "hex": "#DDDDDD",
+          "ratio": 0.0153,
+          "rgb": [
+            221,
+            221,
+            221
+          ]
+        },
+        {
+          "hex": "#BBBBBB",
+          "ratio": 0.0144,
+          "rgb": [
+            187,
+            187,
+            187
+          ]
+        },
+        {
+          "hex": "#F6F6F6",
+          "ratio": 0.0131,
+          "rgb": [
+            246,
+            246,
+            246
+          ]
+        },
+        {
+          "hex": "#676767",
+          "ratio": 0.0095,
+          "rgb": [
+            103,
+            103,
+            103
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-login-375.png",
+      "ocr_text": "Passkey sign in\n\nSign in without a\npassword\n\nUse your device passkey prompt to continue.\nThis page keeps WebAuthn API responses as\nJSON.\n\n[ Continue with passkey ]\nWaiting for the WebAuthn passkey prompt.",
+      "ocr_word_count": 34,
+      "width": 375
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        251.42,
+        251.42,
+        251.42
+      ],
+      "channel_stddev": [
+        26.77,
+        26.77,
+        26.77
+      ],
+      "content_bbox": [
+        160,
+        325,
+        608,
+        593
+      ],
+      "content_height": 268,
+      "content_margins": {
+        "bottom": 307,
+        "left": 160,
+        "right": 160,
+        "top": 325
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9268,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#E4E4E4",
+          "ratio": 0.0176,
+          "rgb": [
+            228,
+            228,
+            228
+          ]
+        },
+        {
+          "hex": "#ADADAD",
+          "ratio": 0.0116,
+          "rgb": [
+            173,
+            173,
+            173
+          ]
+        },
+        {
+          "hex": "#EEEEEE",
+          "ratio": 0.0102,
+          "rgb": [
+            238,
+            238,
+            238
+          ]
+        },
+        {
+          "hex": "#C0C0C0",
+          "ratio": 0.01,
+          "rgb": [
+            192,
+            192,
+            192
+          ]
+        },
+        {
+          "hex": "#D0D0D0",
+          "ratio": 0.0098,
+          "rgb": [
+            208,
+            208,
+            208
+          ]
+        },
+        {
+          "hex": "#F9F9F9",
+          "ratio": 0.0082,
+          "rgb": [
+            249,
+            249,
+            249
+          ]
+        },
+        {
+          "hex": "#767676",
+          "ratio": 0.0059,
+          "rgb": [
+            118,
+            118,
+            118
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-login-768.png",
+      "ocr_text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nWaiting for the WebAuthn passkey prompt.",
+      "ocr_word_count": 29,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        251.08,
+        251.08,
+        251.08
+      ],
+      "channel_stddev": [
+        27.98,
+        27.98,
+        27.98
+      ],
+      "content_bbox": [
+        160,
+        316,
+        608,
+        602
+      ],
+      "content_height": 286,
+      "content_margins": {
+        "bottom": 298,
+        "left": 160,
+        "right": 160,
+        "top": 316
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9184,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#C0C0C0",
+          "ratio": 0.0175,
+          "rgb": [
+            192,
+            192,
+            192
+          ]
+        },
+        {
+          "hex": "#E9E9E9",
+          "ratio": 0.0138,
+          "rgb": [
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "hex": "#959595",
+          "ratio": 0.0136,
+          "rgb": [
+            149,
+            149,
+            149
+          ]
+        },
+        {
+          "hex": "#CFCFCF",
+          "ratio": 0.01,
+          "rgb": [
+            207,
+            207,
+            207
+          ]
+        },
+        {
+          "hex": "#F0F0F0",
+          "ratio": 0.0098,
+          "rgb": [
+            240,
+            240,
+            240
+          ]
+        },
+        {
+          "hex": "#FAFAFA",
+          "ratio": 0.0094,
+          "rgb": [
+            250,
+            250,
+            250
+          ]
+        },
+        {
+          "hex": "#DFDFDF",
+          "ratio": 0.0076,
+          "rgb": [
+            223,
+            223,
+            223
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-nonsecure-context.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-login-nonsecure-context.png",
+      "ocr_text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential.",
+      "ocr_word_count": 32,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        251.08,
+        251.08,
+        251.08
+      ],
+      "channel_stddev": [
+        27.98,
+        27.98,
+        27.98
+      ],
+      "content_bbox": [
+        160,
+        316,
+        608,
+        602
+      ],
+      "content_height": 286,
+      "content_margins": {
+        "bottom": 298,
+        "left": 160,
+        "right": 160,
+        "top": 316
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9184,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#C0C0C0",
+          "ratio": 0.0175,
+          "rgb": [
+            192,
+            192,
+            192
+          ]
+        },
+        {
+          "hex": "#E9E9E9",
+          "ratio": 0.0138,
+          "rgb": [
+            233,
+            233,
+            233
+          ]
+        },
+        {
+          "hex": "#959595",
+          "ratio": 0.0136,
+          "rgb": [
+            149,
+            149,
+            149
+          ]
+        },
+        {
+          "hex": "#CFCFCF",
+          "ratio": 0.01,
+          "rgb": [
+            207,
+            207,
+            207
+          ]
+        },
+        {
+          "hex": "#F0F0F0",
+          "ratio": 0.0098,
+          "rgb": [
+            240,
+            240,
+            240
+          ]
+        },
+        {
+          "hex": "#FAFAFA",
+          "ratio": 0.0094,
+          "rgb": [
+            250,
+            250,
+            250
+          ]
+        },
+        {
+          "hex": "#DFDFDF",
+          "ratio": 0.0076,
+          "rgb": [
+            223,
+            223,
+            223
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-unsupported-webauthn.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-login-unsupported-webauthn.png",
+      "ocr_text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential.",
+      "ocr_word_count": 32,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        253.33,
+        253.33,
+        253.33
+      ],
+      "channel_stddev": [
+        17.75,
+        17.75,
+        17.75
+      ],
+      "content_bbox": [
+        416,
+        299,
+        864,
+        619
+      ],
+      "content_height": 320,
+      "content_margins": {
+        "bottom": 281,
+        "left": 416,
+        "right": 416,
+        "top": 299
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9511,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0097,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#EEEEEE",
+          "ratio": 0.0082,
+          "rgb": [
+            238,
+            238,
+            238
+          ]
+        },
+        {
+          "hex": "#F3F3F3",
+          "ratio": 0.0072,
+          "rgb": [
+            243,
+            243,
+            243
+          ]
+        },
+        {
+          "hex": "#D3D3D3",
+          "ratio": 0.0069,
+          "rgb": [
+            211,
+            211,
+            211
+          ]
+        },
+        {
+          "hex": "#BEBEBE",
+          "ratio": 0.0068,
+          "rgb": [
+            190,
+            190,
+            190
+          ]
+        },
+        {
+          "hex": "#E3E3E3",
+          "ratio": 0.0062,
+          "rgb": [
+            227,
+            227,
+            227
+          ]
+        },
+        {
+          "hex": "#8E8E8E",
+          "ratio": 0.0039,
+          "rgb": [
+            142,
+            142,
+            142
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-1280.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-register-1280.png",
+      "ocr_text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details.",
+      "ocr_word_count": 19,
+      "width": 1280
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        249.61,
+        249.61,
+        249.61
+      ],
+      "channel_stddev": [
+        32.05,
+        32.05,
+        32.05
+      ],
+      "content_bbox": [
+        24,
+        299,
+        351,
+        619
+      ],
+      "content_height": 320,
+      "content_margins": {
+        "bottom": 281,
+        "left": 24,
+        "right": 24,
+        "top": 299
+      },
+      "content_width": 327,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.8701,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#EBEBEB",
+          "ratio": 0.0283,
+          "rgb": [
+            235,
+            235,
+            235
+          ]
+        },
+        {
+          "hex": "#B4B4B4",
+          "ratio": 0.0211,
+          "rgb": [
+            180,
+            180,
+            180
+          ]
+        },
+        {
+          "hex": "#F2F2F2",
+          "ratio": 0.0206,
+          "rgb": [
+            242,
+            242,
+            242
+          ]
+        },
+        {
+          "hex": "#FCFCFC",
+          "ratio": 0.0184,
+          "rgb": [
+            252,
+            252,
+            252
+          ]
+        },
+        {
+          "hex": "#C9C9C9",
+          "ratio": 0.0157,
+          "rgb": [
+            201,
+            201,
+            201
+          ]
+        },
+        {
+          "hex": "#DBDBDB",
+          "ratio": 0.0155,
+          "rgb": [
+            219,
+            219,
+            219
+          ]
+        },
+        {
+          "hex": "#787878",
+          "ratio": 0.0102,
+          "rgb": [
+            120,
+            120,
+            120
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-375.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-register-375.png",
+      "ocr_text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details.",
+      "ocr_word_count": 19,
+      "width": 375
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        252.22,
+        252.22,
+        252.22
+      ],
+      "channel_stddev": [
+        22.84,
+        22.84,
+        22.84
+      ],
+      "content_bbox": [
+        160,
+        299,
+        608,
+        619
+      ],
+      "content_height": 320,
+      "content_margins": {
+        "bottom": 281,
+        "left": 160,
+        "right": 160,
+        "top": 299
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9224,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#EEEEEE",
+          "ratio": 0.0189,
+          "rgb": [
+            238,
+            238,
+            238
+          ]
+        },
+        {
+          "hex": "#BDBDBD",
+          "ratio": 0.0131,
+          "rgb": [
+            189,
+            189,
+            189
+          ]
+        },
+        {
+          "hex": "#FCFCFC",
+          "ratio": 0.0125,
+          "rgb": [
+            252,
+            252,
+            252
+          ]
+        },
+        {
+          "hex": "#D4D4D4",
+          "ratio": 0.0105,
+          "rgb": [
+            212,
+            212,
+            212
+          ]
+        },
+        {
+          "hex": "#E5E5E5",
+          "ratio": 0.0097,
+          "rgb": [
+            229,
+            229,
+            229
+          ]
+        },
+        {
+          "hex": "#F4F4F4",
+          "ratio": 0.0069,
+          "rgb": [
+            244,
+            244,
+            244
+          ]
+        },
+        {
+          "hex": "#8B8B8B",
+          "ratio": 0.006,
+          "rgb": [
+            139,
+            139,
+            139
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-768.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-register-768.png",
+      "ocr_text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details.",
+      "ocr_word_count": 19,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        251.76,
+        251.76,
+        251.76
+      ],
+      "channel_stddev": [
+        24.74,
+        24.74,
+        24.74
+      ],
+      "content_bbox": [
+        160,
+        290,
+        608,
+        628
+      ],
+      "content_height": 338,
+      "content_margins": {
+        "bottom": 272,
+        "left": 160,
+        "right": 160,
+        "top": 290
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9113,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#EBEBEB",
+          "ratio": 0.0199,
+          "rgb": [
+            235,
+            235,
+            235
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0144,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#B8B8B8",
+          "ratio": 0.0143,
+          "rgb": [
+            184,
+            184,
+            184
+          ]
+        },
+        {
+          "hex": "#F3F3F3",
+          "ratio": 0.0127,
+          "rgb": [
+            243,
+            243,
+            243
+          ]
+        },
+        {
+          "hex": "#DFDFDF",
+          "ratio": 0.0111,
+          "rgb": [
+            223,
+            223,
+            223
+          ]
+        },
+        {
+          "hex": "#CECECE",
+          "ratio": 0.0105,
+          "rgb": [
+            206,
+            206,
+            206
+          ]
+        },
+        {
+          "hex": "#8C8C8C",
+          "ratio": 0.0058,
+          "rgb": [
+            140,
+            140,
+            140
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-nonsecure-context.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-register-nonsecure-context.png",
+      "ocr_text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\n\nDisplay name\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential.",
+      "ocr_word_count": 24,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        252.22,
+        252.22,
+        252.22
+      ],
+      "channel_stddev": [
+        22.84,
+        22.84,
+        22.84
+      ],
+      "content_bbox": [
+        160,
+        299,
+        608,
+        619
+      ],
+      "content_height": 320,
+      "content_margins": {
+        "bottom": 281,
+        "left": 160,
+        "right": 160,
+        "top": 299
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9224,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#EEEEEE",
+          "ratio": 0.0189,
+          "rgb": [
+            238,
+            238,
+            238
+          ]
+        },
+        {
+          "hex": "#BDBDBD",
+          "ratio": 0.0131,
+          "rgb": [
+            189,
+            189,
+            189
+          ]
+        },
+        {
+          "hex": "#FCFCFC",
+          "ratio": 0.0125,
+          "rgb": [
+            252,
+            252,
+            252
+          ]
+        },
+        {
+          "hex": "#D4D4D4",
+          "ratio": 0.0105,
+          "rgb": [
+            212,
+            212,
+            212
+          ]
+        },
+        {
+          "hex": "#E5E5E5",
+          "ratio": 0.0097,
+          "rgb": [
+            229,
+            229,
+            229
+          ]
+        },
+        {
+          "hex": "#F4F4F4",
+          "ratio": 0.0069,
+          "rgb": [
+            244,
+            244,
+            244
+          ]
+        },
+        {
+          "hex": "#8B8B8B",
+          "ratio": 0.006,
+          "rgb": [
+            139,
+            139,
+            139
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-registration-closed-route.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-register-registration-closed-route.png",
+      "ocr_text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details.",
+      "ocr_word_count": 19,
+      "width": 768
+    },
+    {
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
+      "blank_or_single_color": false,
+      "channel_mean": [
+        251.76,
+        251.76,
+        251.76
+      ],
+      "channel_stddev": [
+        24.74,
+        24.74,
+        24.74
+      ],
+      "content_bbox": [
+        160,
+        290,
+        608,
+        628
+      ],
+      "content_height": 338,
+      "content_margins": {
+        "bottom": 272,
+        "left": 160,
+        "right": 160,
+        "top": 290
+      },
+      "content_width": 448,
+      "dominant_colors": [
+        {
+          "hex": "#FFFFFF",
+          "ratio": 0.9113,
+          "rgb": [
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "hex": "#EBEBEB",
+          "ratio": 0.0199,
+          "rgb": [
+            235,
+            235,
+            235
+          ]
+        },
+        {
+          "hex": "#FDFDFD",
+          "ratio": 0.0144,
+          "rgb": [
+            253,
+            253,
+            253
+          ]
+        },
+        {
+          "hex": "#B8B8B8",
+          "ratio": 0.0143,
+          "rgb": [
+            184,
+            184,
+            184
+          ]
+        },
+        {
+          "hex": "#F3F3F3",
+          "ratio": 0.0127,
+          "rgb": [
+            243,
+            243,
+            243
+          ]
+        },
+        {
+          "hex": "#DFDFDF",
+          "ratio": 0.0111,
+          "rgb": [
+            223,
+            223,
+            223
+          ]
+        },
+        {
+          "hex": "#CECECE",
+          "ratio": 0.0105,
+          "rgb": [
+            206,
+            206,
+            206
+          ]
+        },
+        {
+          "hex": "#8C8C8C",
+          "ratio": 0.0058,
+          "rgb": [
+            140,
+            140,
+            140
+          ]
+        }
+      ],
+      "edge_ink_2px": {
+        "bottom": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0
+      },
+      "edge_touch_risk": false,
+      "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-unsupported-webauthn.png",
+      "height": 900,
+      "mode": "RGB",
+      "name": "auth-register-unsupported-webauthn.png",
+      "ocr_text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\n\nDisplay name\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential.",
+      "ocr_word_count": 24,
+      "width": 768
+    }
+  ],
+  "method": "Pillow pixel analysis plus Tesseract OCR; image model inspection was unavailable, so this artifact is a screenshot diff/layout review rather than an image-model review.",
+  "status": "PASS"
+}
