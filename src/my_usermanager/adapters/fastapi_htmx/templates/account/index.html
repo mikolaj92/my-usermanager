@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Account - User management{% endblock %}
+
+{% block content %}
+  <section class="um-shell um-stack" aria-labelledby="account-title">
+    <div class="um-stack-tight">
+      <p class="badge">Account</p>
+      <h1 id="account-title">Account</h1>
+      <p class="um-muted">This reusable page delegates authentication and passkey behavior to host callbacks.</p>
+    </div>
+
+    <article class="card um-card um-stack">
+      <div class="um-cluster um-between">
+        <div>
+          <h2>{{ current_user.display_name or current_user.username or current_user.user_id }}</h2>
+          {% if current_user.email %}<p class="um-muted">{{ current_user.email }}</p>{% endif %}
+        </div>
+        <span class="badge">{{ current_user.provider }}</span>
+      </div>
+      <dl class="um-stack-tight">
+        <div>
+          <dt class="um-muted">Local user id</dt>
+          <dd><code>{{ current_user.user_id }}</code></dd>
+        </div>
+        <div>
+          <dt class="um-muted">External subject</dt>
+          <dd><code>{{ current_user.subject }}</code></dd>
+        </div>
+      </dl>
+    </article>
+
+    {{ passkey_panel_html|safe }}
+  </section>
+{% endblock %}

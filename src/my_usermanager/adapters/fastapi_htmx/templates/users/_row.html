@@ -1,0 +1,49 @@
+<tr id="user-row-{{ user.row_key }}">
+  <td>
+    <strong>{{ user.display_name or user.username }}</strong>
+    <div class="um-muted"><code>{{ user.user_id }}</code></div>
+  </td>
+  <td>{{ user.email or "—" }}</td>
+  <td><span class="badge">{% if user.is_admin %}Admin{% else %}User{% endif %}</span></td>
+  <td><span class="badge">{% if user.disabled %}Disabled{% else %}Active{% endif %}</span></td>
+  <td>
+    <div class="um-cluster">
+      {% if user.disabled %}
+        <form
+          method="post"
+          action="{{ config.enable_user_path }}"
+          hx-post="{{ config.enable_user_path }}"
+          hx-target="#user-row-{{ user.row_key }}"
+          hx-swap="outerHTML"
+          hx-indicator="#user-{{ user.row_key }}-indicator"
+        >
+          <input type="hidden" name="user_id" value="{{ user.user_id }}">
+          <input type="hidden" name="row_key" value="{{ user.row_key }}">
+          {% for name, value in csrf_inputs %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <button class="btn btn-secondary" type="submit">Enable</button>
+        </form>
+      {% else %}
+        <form
+          method="post"
+          action="{{ config.disable_user_path }}"
+          hx-post="{{ config.disable_user_path }}"
+          hx-target="#user-row-{{ user.row_key }}"
+          hx-swap="outerHTML"
+          hx-indicator="#user-{{ user.row_key }}-indicator"
+        >
+          <input type="hidden" name="user_id" value="{{ user.user_id }}">
+          <input type="hidden" name="row_key" value="{{ user.row_key }}">
+          {% for name, value in csrf_inputs %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <button class="btn btn-destructive" type="submit">Disable</button>
+        </form>
+      {% endif %}
+      <span id="user-{{ user.row_key }}-indicator" class="htmx-indicator um-muted" aria-live="polite">
+        Updating row.
+      </span>
+    </div>
+  </td>
+</tr>
