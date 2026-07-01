@@ -1,0 +1,13 @@
+User management
+Host applications own sessions, redirects, CSRF validation, and persistence.
+Enable and disable actions call host-owned callbacks and swap one row.
+User Email Role Status Action
+Demo Administrator
+admin@example.invalid
+demo-user
+Audit Reviewer
+auditor@example. invalid DIETER Updating row.
+auditor-user Gexamp) Peating
+Unsafe User
+unsafe@example.invalid Disable
+unsafe/id space"quote'<tag>&tail ‘@examp|
