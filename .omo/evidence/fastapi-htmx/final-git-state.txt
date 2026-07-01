@@ -1,0 +1,45 @@
+ M .omo/boulder.json
+ M .omo/start-work/ledger.jsonl
+ M README.md
+ M examples/fastapi_htmx/README.md
+ M examples/fastapi_htmx/app.py
+ D examples/fastapi_htmx/static/passkey.js
+ D examples/fastapi_htmx/templates/account/index.html
+ D examples/fastapi_htmx/templates/auth/_login_panel.html
+ D examples/fastapi_htmx/templates/auth/_register_panel.html
+ D examples/fastapi_htmx/templates/auth/login.html
+ D examples/fastapi_htmx/templates/auth/register.html
+ D examples/fastapi_htmx/templates/base.html
+ D examples/fastapi_htmx/templates/users/_row.html
+ D examples/fastapi_htmx/templates/users/list.html
+ M pyproject.toml
+ M tests/test_fastapi_htmx_example.py
+ M uv.lock
+?? .omo/drafts/fastapi-htmx-adapter.md
+?? .omo/evidence/
+?? .omo/plans/fastapi-htmx-adapter.md
+?? examples/fastapi_htmx/demo_passkeys.py
+?? examples/fastapi_htmx/demo_usermanager.py
+?? examples/fastapi_htmx/demo_users.py
+?? src/my_usermanager/adapters/fastapi_htmx/
+?? tests/test_fastapi_htmx_adapter.py
+ .omo/boulder.json                                  |  10 +-
+ .omo/start-work/ledger.jsonl                       |  33 ++
+ README.md                                          | 135 ++++++-
+ examples/fastapi_htmx/README.md                    | 261 ++++++++++----
+ examples/fastapi_htmx/app.py                       | 345 ++++--------------
+ examples/fastapi_htmx/static/passkey.js            |  25 --
+ examples/fastapi_htmx/templates/account/index.html |  42 ---
+ .../fastapi_htmx/templates/auth/_login_panel.html  |  42 ---
+ .../templates/auth/_register_panel.html            |  44 ---
+ examples/fastapi_htmx/templates/auth/login.html    |  21 --
+ examples/fastapi_htmx/templates/auth/register.html |  21 --
+ examples/fastapi_htmx/templates/base.html          | 117 -------
+ examples/fastapi_htmx/templates/users/_row.html    |  40 ---
+ examples/fastapi_htmx/templates/users/list.html    |  40 ---
+ pyproject.toml                                     |  15 +
+ tests/test_fastapi_htmx_example.py                 | 389 ++++++++++-----------
+ uv.lock                                            | 135 ++++++-
+ 17 files changed, 757 insertions(+), 958 deletions(-)
+fastapi-htmx-adapter
+c61c1e851df43a5f184257aef510bf801a07e14c

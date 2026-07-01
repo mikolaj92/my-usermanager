@@ -1,0 +1,20 @@
+{
+  "checked_files": [
+    "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/browser-qa-results.json",
+    "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/browser-qa-summary.json",
+    "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/fallback-nonsecure-results.json"
+  ],
+  "errors": [],
+  "status": "PASS",
+  "summary": {
+    "console_errors": 0,
+    "failed_requests": 0,
+    "favicon_content_type": "image/svg+xml",
+    "favicon_status": 200,
+    "htmx_redirect_responses": 0,
+    "non_ok_responses": 0,
+    "overflow_failures": 0,
+    "page_errors": 0,
+    "screenshot_count": 19
+  }
+}

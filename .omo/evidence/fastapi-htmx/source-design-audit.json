@@ -1,0 +1,193 @@
+{
+  "approved_cdn_mentions_containing_npm_not_tooling": [
+    {
+      "line": 8,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates/base.html",
+      "term": "npm",
+      "text": "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css\">"
+    }
+  ],
+  "canonical_htmx_url_present": true,
+  "dependency_design_md_present": false,
+  "dependency_fastapi_htmx_scanned": true,
+  "dependency_root": "/Users/mini-m4-1/Developer/my-auth",
+  "design_md_path": "/Users/mini-m4-1/Developer/my-usermanager/DESIGN.md",
+  "design_md_present": true,
+  "forbidden_stack_terms_in_docs_or_negative_policy_text": [
+    {
+      "line": 226,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "React",
+      "text": "The adapter is intentionally no-build: no React, shadcn, Tailwind, npm,"
+    },
+    {
+      "line": 226,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "shadcn",
+      "text": "The adapter is intentionally no-build: no React, shadcn, Tailwind, npm,"
+    },
+    {
+      "line": 226,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "Tailwind",
+      "text": "The adapter is intentionally no-build: no React, shadcn, Tailwind, npm,"
+    },
+    {
+      "line": 226,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "npm",
+      "text": "The adapter is intentionally no-build: no React, shadcn, Tailwind, npm,"
+    },
+    {
+      "line": 227,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "bundler",
+      "text": "bundler, SPA shell, or client-side JSON templates. It is server-rendered"
+    },
+    {
+      "line": 227,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "SPA",
+      "text": "bundler, SPA shell, or client-side JSON templates. It is server-rendered"
+    },
+    {
+      "line": 232,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "React",
+      "text": "See [`examples/fastapi_htmx`](examples/fastapi_htmx/README.md) for an optional no-build FastAPI/Jinja/HTMX/Basecoat proof. It composes packaged adapter templates/static resources without making the framework-neutral core depend on FastAPI, Jinja, HTMX, Basecoat, React, npm, or a bundler."
+    },
+    {
+      "line": 232,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "npm",
+      "text": "See [`examples/fastapi_htmx`](examples/fastapi_htmx/README.md) for an optional no-build FastAPI/Jinja/HTMX/Basecoat proof. It composes packaged adapter templates/static resources without making the framework-neutral core depend on FastAPI, Jinja, HTMX, Basecoat, React, npm, or a bundler."
+    },
+    {
+      "line": 232,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+      "term": "bundler",
+      "text": "See [`examples/fastapi_htmx`](examples/fastapi_htmx/README.md) for an optional no-build FastAPI/Jinja/HTMX/Basecoat proof. It composes packaged adapter templates/static resources without making the framework-neutral core depend on FastAPI, Jinja, HTMX, Basecoat, React, npm, or a bundler."
+    },
+    {
+      "line": 13,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "React",
+      "text": "Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler."
+    },
+    {
+      "line": 13,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "Tailwind",
+      "text": "Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler."
+    },
+    {
+      "line": 13,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "npm",
+      "text": "Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler."
+    },
+    {
+      "line": 13,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "bundler",
+      "text": "Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler."
+    },
+    {
+      "line": 13,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "SPA",
+      "text": "Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler."
+    },
+    {
+      "line": 204,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "React",
+      "text": "example does not include React, shadcn, Tailwind, `npm`, a bundler, SPA state, or"
+    },
+    {
+      "line": 204,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "shadcn",
+      "text": "example does not include React, shadcn, Tailwind, `npm`, a bundler, SPA state, or"
+    },
+    {
+      "line": 204,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "Tailwind",
+      "text": "example does not include React, shadcn, Tailwind, `npm`, a bundler, SPA state, or"
+    },
+    {
+      "line": 204,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "npm",
+      "text": "example does not include React, shadcn, Tailwind, `npm`, a bundler, SPA state, or"
+    },
+    {
+      "line": 204,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "bundler",
+      "text": "example does not include React, shadcn, Tailwind, `npm`, a bundler, SPA state, or"
+    },
+    {
+      "line": 204,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+      "term": "SPA",
+      "text": "example does not include React, shadcn, Tailwind, `npm`, a bundler, SPA state, or"
+    }
+  ],
+  "forbidden_stack_terms_in_implementation": [],
+  "htmx_sources": [
+    {
+      "line": 10,
+      "path": "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates/base.html",
+      "text": "<script src=\"https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js\" defer></script>"
+    }
+  ],
+  "inline_style_attributes": [],
+  "npm_or_spa_project_manifests": [],
+  "passed": true,
+  "raw_hex_outside_design_md": [],
+  "redirecting_htmx_url_present": false,
+  "scanned_files": [
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/__init__.py",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/config.py",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/router.py",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/static/passkey-ui.css",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/static/passkey-ui.js",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/static/passkey.js",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/static.py",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/templates/_login_panel.html",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/templates/_passkey_status.html",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/templates/_register_panel.html",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/templates/base.html",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/templates/login.html",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/templates/register.html",
+    "/Users/mini-m4-1/Developer/my-auth/src/my_auth/fastapi_htmx/templates.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/README.md",
+    "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/README.md",
+    "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/__init__.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/app.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/demo_passkeys.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/demo_usermanager.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/examples/fastapi_htmx/demo_users.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/pyproject.toml",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/__init__.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/auth.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/awaitables.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/config.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/forms.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/ids.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/protocols.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/responses.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/router.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/rows.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/static/usermanager-ui.css",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/static.py",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates/account/index.html",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates/auth/_integration_panel.html",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates/base.html",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates/users/_row.html",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates/users/list.html",
+    "/Users/mini-m4-1/Developer/my-usermanager/src/my_usermanager/adapters/fastapi_htmx/templates.py"
+  ]
+}
