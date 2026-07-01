@@ -1,0 +1,11 @@
+Passkey sign in
+
+Sign in without a
+password
+
+Use your device passkey prompt to continue.
+This page keeps WebAuthn API responses as
+JSON.
+
+[ Continue with passkey ]
+Waiting for the WebAuthn passkey prompt.
