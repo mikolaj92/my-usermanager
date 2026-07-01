@@ -1,0 +1,116 @@
+[
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-1280.png",
+    "name": "account-1280.png",
+    "ocr_word_count": 56,
+    "text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nAccount\nThis reusable page delegates authentication and passkey behavior to host callbacks.\nDemo Administrator\nadmin@example.invalid \u2014\nLocal user id\ndemo-user\nExternal subject\ndemo: demo-user\nPasskey UI composition\nThis account page receives passkey HTML through render_passkey_panel, while my-auth owns the reusable passkey forms and JSON endpoints."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-375.png",
+    "name": "account-375.png",
+    "ocr_word_count": 59,
+    "text": "User management\nHost applications own sessions, redirects,\nCSRF validation, and persistence.\nAccount\nThis reusable page delegates authentication\nand passkey behavior to host callbacks.\nDemo Administrator\nadmin@example.invalid \u2014\nLocal user id\ndemo-user\nExternal subject\ndemo: demo-user\nPasskey UI composition\nThis account page receives passkey\nHTML through render_passkey_panel,\nwhile my-auth owns the reusable\npasskey forms and JSON endpoints.\nOpen passkey login"
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/account-768.png",
+    "name": "account-768.png",
+    "ocr_word_count": 56,
+    "text": "User management\n\nHost applications own sessions, redirects, CSRF validation, and persistence.\n\nAccount\n\nThis reusable page delegates authentication and passkey behavior to host callbacks.\nDemo Administrator\nadmin@example.invalid \u2014\nLocal user id\ndemo-user\nExternal subject\ndemo: demo-user\nPasskey UI composition\nThis account page receives passkey HTML through render_passkey_panel, while my-auth owns\nthe reusable passkey forms and JSON endpoints."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-1280.png",
+    "name": "admin-users-1280.png",
+    "ocr_word_count": 44,
+    "text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nDemo Administrator\nadmin@example.invalid\ndemo-user\nAudit Reviewer\nauditor@example. invalid Disable\nauditor-user\nUnsafe User\nunsafe@example.invalid Disable\nunsafe/id space\"quote'<tag>&tail \u2018@examp|"
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-375.png",
+    "name": "admin-users-375.png",
+    "ocr_word_count": 29,
+    "text": "User management\n\nHost applications own sessions, redirects,\nCSRF validation, and persistence.\n\nUsers\n\nEnable and disable actions call host-owned\ncallbacks and swap one row.\n\nRole Status Action\nample.invalid\ncample.invalid\nample.invalia"
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-768.png",
+    "name": "admin-users-768.png",
+    "ocr_word_count": 36,
+    "text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nadmin@example.invalid\ndemo-user\nauditor@example.invalid\nauditor-user\nunsafe@example invalid\nunsafe/id space\"quote'<tag>&tail \u2018@examp|"
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-disable.png",
+    "name": "admin-users-after-disable.png",
+    "ocr_word_count": 51,
+    "text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nDemo Administrator\nadmin@example invalid\ndemo-user\nAudit Reviewer\nauditor@example. invalid Enable Updating row.\nauditer-user Gera ep pdating\nUnsafe User\nunsafe@example. invalid Disable\nunsafe/id space\"quote'<tag>&tail *@examp|"
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/admin-users-after-enable.png",
+    "name": "admin-users-after-enable.png",
+    "ocr_word_count": 48,
+    "text": "User management\nHost applications own sessions, redirects, CSRF validation, and persistence.\nEnable and disable actions call host-owned callbacks and swap one row.\nUser Email Role Status Action\nDemo Administrator\nadmin@example.invalid\ndemo-user\nAudit Reviewer\nauditor@example. invalid DIETER Updating row.\nauditor-user Gexamp) Peating\nUnsafe User\nunsafe@example.invalid Disable\nunsafe/id space\"quote'<tag>&tail \u2018@examp|"
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-1280.png",
+    "name": "auth-login-1280.png",
+    "ocr_word_count": 29,
+    "text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nWaiting for the WebAuthn passkey prompt."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-375.png",
+    "name": "auth-login-375.png",
+    "ocr_word_count": 34,
+    "text": "Passkey sign in\n\nSign in without a\npassword\n\nUse your device passkey prompt to continue.\nThis page keeps WebAuthn API responses as\nJSON.\n\n[ Continue with passkey ]\nWaiting for the WebAuthn passkey prompt."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-768.png",
+    "name": "auth-login-768.png",
+    "ocr_word_count": 29,
+    "text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nWaiting for the WebAuthn passkey prompt."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-nonsecure-context.png",
+    "name": "auth-login-nonsecure-context.png",
+    "ocr_word_count": 32,
+    "text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-login-unsupported-webauthn.png",
+    "name": "auth-login-unsupported-webauthn.png",
+    "ocr_word_count": 32,
+    "text": "Passkey sign in\n\nSign in without a password\nUse your device passkey prompt to continue. This page\nkeeps WebAuthn API responses as JSON.\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-1280.png",
+    "name": "auth-register-1280.png",
+    "ocr_word_count": 19,
+    "text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-375.png",
+    "name": "auth-register-375.png",
+    "ocr_word_count": 19,
+    "text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-768.png",
+    "name": "auth-register-768.png",
+    "ocr_word_count": 19,
+    "text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-nonsecure-context.png",
+    "name": "auth-register-nonsecure-context.png",
+    "ocr_word_count": 24,
+    "text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\n\nDisplay name\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-registration-closed-route.png",
+    "name": "auth-register-registration-closed-route.png",
+    "ocr_word_count": 19,
+    "text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\nDisplay name\n\nWaiting for registration details."
+  },
+  {
+    "file": "/Users/mini-m4-1/Developer/my-usermanager/.omo/evidence/fastapi-htmx/auth-register-unsupported-webauthn.png",
+    "name": "auth-register-unsupported-webauthn.png",
+    "ocr_word_count": 24,
+    "text": "Passkey registration\n\nCreate a passkey\n\nStart by creating a passkey for this account.\n\nDisplay name\n\nThis browser does not support WebAuthn passkeys with\nPublicKeyCredential."
+  }
+]
