@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="User management account and admin interface.">
+    <title>{% block title %}User management{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css">
+    <link rel="stylesheet" href="{{ static_url_path }}/usermanager-ui.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+  </head>
+  <body class="bg-background text-foreground">
+    <div class="um-page-shell">
+      <a class="um-skip-link btn btn-secondary" href="#content">Skip to content</a>
+      <header class="um-shell um-cluster um-between" aria-label="User management header">
+        <div class="um-stack-tight">
+          <a class="font-semibold" href="{{ config.account_path }}">User management</a>
+          <p class="um-muted">Host applications own sessions, redirects, CSRF validation, and persistence.</p>
+        </div>
+        <nav class="um-cluster" aria-label="User management navigation">
+          <a class="btn btn-ghost" href="{{ config.account_path }}">Account</a>
+          <a class="btn btn-ghost" href="{{ config.users_path }}">Users</a>
+        </nav>
+      </header>
+      <main id="content" tabindex="-1">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </body>
+</html>
