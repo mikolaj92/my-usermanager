@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -13,42 +12,32 @@ import pytest
 REPO_ROOT: Final = Path(__file__).resolve().parents[1]
 EXAMPLE_ROOT: Final = REPO_ROOT / "examples" / "fastapi_htmx"
 APP_PATH: Final = EXAMPLE_ROOT / "app.py"
+README_PATH: Final = EXAMPLE_ROOT / "README.md"
 APP_MODULE: Final = "examples.fastapi_htmx.app"
-TEMPLATE_ROOT: Final = EXAMPLE_ROOT / "templates"
-BASE_TEMPLATE: Final = TEMPLATE_ROOT / "base.html"
 DEMO_USER_ID: Final = "demo-user"
 
-FORBIDDEN_CORE_IMPORT_PREFIXES: Final = (
-    "examples.fastapi_htmx",
+FORBIDDEN_CORE_IMPORTS: Final = (
     "fastapi",
     "jinja2",
-    "my_auth",
-    "my_usermanager.adapters.my_auth",
-    "my_usermanager.adapters.my_auth_fastapi",
     "pydantic",
-    "starlette.templating",
+    "my_auth",
+    "my_usermanager.adapters.fastapi_htmx",
 )
-FRAMEWORK_IMPORT_PREFIXES: Final = ("fastapi", "jinja2", "starlette.templating")
-OPTIONAL_EXAMPLE_DEPENDENCIES: Final = ("fastapi", "jinja2", "httpx2")
-REQUIRED_BASE_TEMPLATE_SNIPPETS: Final = (
-    "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/basecoat.cdn.min.css",
-    "https://unpkg.com/htmx.org@2.0.4",
-    "https://cdn.jsdelivr.net/npm/basecoat-css@0.3.11/dist/js/all.min.js",
-    "/auth/static/passkey.js",
-)
-FORBIDDEN_ADAPTER_POLICY_SNIPPETS: Final = (
-    "ADMIN_ROLE_NAME",
-    "grant_permission(",
-    "grant_role(",
+OPTIONAL_EXAMPLE_DEPENDENCIES: Final = ("fastapi", "jinja2", "httpx", "my_auth")
+FORBIDDEN_APP_SOURCE_SNIPPETS: Final = (
     "request.session",
     "set_cookie(",
-)
-ADAPTER_BOUNDARY_FILES: Final = (
-    REPO_ROOT / "src" / "my_usermanager" / "adapters" / "my_auth.py",
-    REPO_ROOT / "src" / "my_usermanager" / "adapters" / "my_auth_fastapi.py",
-)
-HX_INDICATOR_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"""hx-indicator\s*=\s*["'](?P<selector>[^"']+)["']""",
+    "grant_permission(",
+    "grant_role(",
+    "ADMIN_ROLE_NAME",
+    "Request.form(",
+    "python-multipart",
+    "React",
+    "shadcn",
+    "Tailwind",
+    "npm",
+    "bundler",
+    "SPA",
 )
 
 
@@ -78,35 +67,8 @@ def require_optional_example_dependencies() -> None:
 
 
 def read_required_file(path: Path) -> str:
-    assert path.is_file(), f"Phase 2 must create {path.relative_to(REPO_ROOT)}"
+    assert path.is_file(), f"missing required file: {path.relative_to(REPO_ROOT)}"
     return path.read_text(encoding="utf-8")
-
-
-def read_template_group(name: str) -> str:
-    template_dir = TEMPLATE_ROOT / name
-    assert template_dir.is_dir(), (
-        f"Phase 2 must create {template_dir.relative_to(REPO_ROOT)}"
-    )
-    template_paths = tuple(sorted(template_dir.glob("*.html")))
-    assert template_paths != (), (
-        f"Phase 2 must add HTML templates under {template_dir.relative_to(REPO_ROOT)}"
-    )
-    return "\n".join(path.read_text(encoding="utf-8") for path in template_paths)
-
-
-def assert_loader_contract(markup: str, group_name: str) -> None:
-    indicator_matches = tuple(HX_INDICATOR_PATTERN.finditer(markup))
-    assert indicator_matches != (), f"{group_name} actions must use hx-indicator"
-    assert "htmx-indicator" in markup, (
-        f"{group_name} indicators must include the .htmx-indicator class"
-    )
-    for indicator_match in indicator_matches:
-        selector = indicator_match.group("selector")
-        if selector.startswith("#"):
-            target_id = selector.removeprefix("#")
-            assert f'id="{target_id}"' in markup or f"id='{target_id}'" in markup, (
-                f"{group_name} hx-indicator target {selector} must exist in markup"
-            )
 
 
 def assert_route_contract(script_body: str) -> None:
@@ -125,202 +87,221 @@ def assert_route_contract(script_body: str) -> None:
     assert_subprocess_passed(run_fresh_python(script))
 
 
-def test_core_import_keeps_optional_ui_dependencies_out() -> None:
-    # Given: a fresh interpreter that imports only the framework-neutral package.
-    import_check = dedent(
-        f"""
-        import sys
+def test_root_and_adapters_imports_keep_optional_ui_dependencies_out() -> None:
+    # Given: fresh processes import the framework-neutral package boundaries only.
+    import_blocks = (("import my_usermanager",), ("import my_usermanager.adapters",))
 
-        import my_usermanager
+    # When / Then: optional UI deps, my-auth, and fastapi_htmx stay unloaded.
+    for import_block in import_blocks:
+        script = "\n".join(
+            (
+                "import sys",
+                *import_block,
+                f"forbidden = {FORBIDDEN_CORE_IMPORTS!r}",
+                "loaded = [name for name in forbidden if name in sys.modules]",
+                "assert loaded == [], loaded",
+            ),
+        )
+        assert_subprocess_passed(run_fresh_python(script))
 
-        forbidden_prefixes = {FORBIDDEN_CORE_IMPORT_PREFIXES!r}
-        loaded = [
-            prefix
-            for prefix in forbidden_prefixes
-            if any(
-                module_name == prefix or module_name.startswith(f"{{prefix}}.")
-                for module_name in sys.modules
-            )
-        ]
 
-        assert my_usermanager.__version__ == "0.1.0"
-        assert loaded == [], loaded
-        """,
+def test_example_source_consumes_adapters_instead_of_duplicate_templates() -> None:
+    # Given: the composed example host source.
+    app_source = read_required_file(APP_PATH)
+
+    # When / Then: the example mounts reusable adapters and no longer owns their UI.
+    assert "create_passkey_ui_router" in app_source
+    assert "create_usermanager_ui_router" in app_source
+    assert "Jinja2Templates" not in app_source
+    assert "StaticFiles(directory=" not in app_source
+    assert tuple((EXAMPLE_ROOT / "templates").glob("**/*.html")) == ()
+    assert not (EXAMPLE_ROOT / "static" / "passkey.js").exists()
+
+
+def test_readme_uses_uv_only_and_names_host_owned_security_boundaries() -> None:
+    # Given: the example README documents the composed demo.
+    readme = read_required_file(README_PATH)
+
+    # When / Then: commands are uv-only and production security is host-owned.
+    assert "uv run --no-sync" in readme
+    assert "--with-editable /Users/mini-m4-1/Developer/my-auth" in readme
+    forbidden_commands = ("pip ", "python -m pip", "npm ", "pnpm ", "yarn ")
+    for snippet in forbidden_commands:
+        assert snippet not in readme
+    required_boundaries = (
+        "host application owns sessions",
+        "no-op demo CSRF",
+        "in-memory users",
+        "does not provide production sessions",
+        "does not provide production CSRF validation",
+        "does not provide persistence",
+        "does not provide audit logging",
+        "does not provide role or grant editors",
     )
-
-    # When: the import runs in isolation.
-    completed = run_fresh_python(import_check)
-
-    # Then: FastAPI/Jinja/Pydantic/my-auth/example UI modules are not loaded.
-    assert_subprocess_passed(completed)
+    for snippet in required_boundaries:
+        assert snippet in readme
 
 
-def test_example_app_import_is_the_framework_boundary() -> None:
-    require_optional_example_dependencies()
+def test_policy_scan_for_changed_example_files() -> None:
+    # Given: only executable example Python is in this phase's implementation scope.
+    source = read_required_file(APP_PATH)
 
-    # Given: core import is clean before the optional example is imported.
-    import_check = dedent(
-        f"""
-        import sys
-        from importlib import import_module
-
-        import my_usermanager
-
-        framework_prefixes = {FRAMEWORK_IMPORT_PREFIXES!r}
-        before = [
-            prefix
-            for prefix in framework_prefixes
-            if any(
-                module_name == prefix or module_name.startswith(f"{{prefix}}.")
-                for module_name in sys.modules
-            )
-        ]
-        assert my_usermanager.__version__ == "0.1.0"
-        assert before == [], before
-
-        app_module = import_module({APP_MODULE!r})
-
-        after = [
-            prefix
-            for prefix in framework_prefixes
-            if any(
-                module_name == prefix or module_name.startswith(f"{{prefix}}.")
-                for module_name in sys.modules
-            )
-        ]
-        missing = [prefix for prefix in framework_prefixes if prefix not in after]
-        assert missing == [], missing
-        assert hasattr(app_module, "app")
-        """,
-    )
-
-    # When: the example app import is the explicit FastAPI/Jinja boundary.
-    completed = run_fresh_python(import_check)
-
-    # Then: that import owns the framework side effects and exposes `app`.
-    assert_subprocess_passed(completed)
+    # When / Then: the example has no production policy/session/SPA implementation.
+    for forbidden in FORBIDDEN_APP_SOURCE_SNIPPETS:
+        assert forbidden not in source
 
 
-def test_base_template_uses_no_build_cdn_assets() -> None:
-    # Given: the planned shared Jinja layout.
-    base_template = read_required_file(BASE_TEMPLATE)
-
-    # When / Then: Basecoat, HTMX, Basecoat JS, and passkey JS are CDN/static only.
-    for required_snippet in REQUIRED_BASE_TEMPLATE_SNIPPETS:
-        assert required_snippet in base_template
-
-
-def test_auth_templates_have_htmx_targets_and_loaders() -> None:
-    # Given: planned auth page and panel templates.
-    auth_markup = read_template_group("auth")
-
-    # When / Then: auth actions target stable fragments and show HTMX loaders.
-    assert "#auth-panel" in auth_markup
-    assert "#register-panel" in auth_markup
-    assert_loader_contract(auth_markup, "auth")
-
-
-def test_user_templates_have_row_targets_and_loaders() -> None:
-    # Given: planned admin user page and row templates.
-    user_markup = read_template_group("users")
-
-    # When / Then: user actions target stable row fragments and show HTMX loaders.
-    assert "#users-table" in user_markup
-    assert "#user-row-" in user_markup or "user-row-{{" in user_markup
-    assert_loader_contract(user_markup, "user")
-
-
-def test_given_login_action_when_posted_then_auth_panel_fragment_is_html() -> None:
-    # Given / When / Then: login returns the HTML fragment HTMX swaps into #auth-panel.
+def test_passkey_login_and_register_pages_are_my_auth_adapter_html() -> None:
+    # Given / When / Then: my-auth owns passkey login/register UI pages.
     assert_route_contract(
         """
-        response = client.post("/auth/login", data={"username": "alice"})
-        content_type = response.headers.get("content-type", "")
+        login = client.get("/auth/login")
+        register = client.get("/auth/register")
+        for response in (login, register):
+            content_type = response.headers.get("content-type", "")
+            assert response.status_code == 200, response.text
+            assert content_type.startswith("text/html"), content_type
+            assert "application/json" not in content_type
 
-        assert response.status_code == 200, response.text
-        assert content_type.startswith("text/html"), content_type
-        assert "application/json" not in content_type
-        assert 'id="auth-panel"' in response.text or "id='auth-panel'" in response.text
+        assert 'data-passkey-form="login"' in login.text
+        assert 'data-passkey-form="register"' in register.text
+        assert "/auth/ui/static/passkey-ui.js" in login.text + register.text
+        assert "X-Demo-CSRF" in login.text + register.text
+        assert "demo-noop-csrf" in login.text + register.text
+        assert "data-passkey-demo" not in login.text + register.text
         """,
     )
 
 
-def test_register_action_returns_register_panel_html() -> None:
-    # Given / When / Then: register returns the #register-panel HTML fragment.
+def test_registration_policy_denial_remains_host_owned_json_edge() -> None:
+    # Given / When / Then: demo policy can deny registration before service work.
     assert_route_contract(
         """
         response = client.post(
-            "/auth/register",
-            data={"display_name": "Alice Example", "username": "alice"},
+            "/api/auth/register/options?registration=closed",
+            json={"display_name": "Denied User"},
         )
         content_type = response.headers.get("content-type", "")
 
-        assert response.status_code == 200, response.text
-        assert content_type.startswith("text/html"), content_type
-        assert "application/json" not in content_type
-        has_double_id = 'id="register-panel"' in response.text
-        has_single_id = "id='register-panel'" in response.text
-        assert has_double_id or has_single_id
+        assert response.status_code == 403, response.text
+        assert content_type.startswith("application/json"), content_type
+        assert response.json()["detail"] == "passkey registration is not allowed"
+        assert "passkey_challenge" not in response.cookies
         """,
     )
 
 
-def test_disable_user_action_returns_single_user_row_html() -> None:
-    # Given / When / Then: disabling a demo user returns only that user's row fragment.
+def test_account_page_uses_usermanager_hook_for_passkey_panel() -> None:
+    # Given / When / Then: account HTML comes from the usermanager adapter hook seam.
+    assert_route_contract(
+        """
+        response = client.get("/account")
+        content_type = response.headers.get("content-type", "")
+
+        assert response.status_code == 200, response.text
+        assert content_type.startswith("text/html"), content_type
+        assert "Passkey UI composition" in response.text
+        assert "/auth/login" in response.text
+        assert "/auth/register" in response.text
+        assert "render_passkey_panel" in response.text
+        assert "application/json" not in content_type
+        """,
+    )
+
+
+def test_admin_users_page_uses_dom_safe_keys_and_noop_csrf_inputs() -> None:
+    # Given / When / Then: unsafe raw ids are kept out of DOM ids and HTMX attrs.
+    assert_route_contract(
+        r"""
+        import re
+
+        unsafe_id = app_module.DEMO_UNSAFE_USER_ID
+        response = client.get("/admin/users")
+        content_type = response.headers.get("content-type", "")
+
+        assert response.status_code == 200, response.text
+        assert content_type.startswith("text/html"), content_type
+        assert 'id="users-table"' in response.text
+        assert 'name="_demo_csrf" value="demo-noop-csrf"' in response.text
+        assert "Unsafe User" in response.text
+        attr_pattern = re.compile(
+            r'''(?:id|hx-target|hx-post|action)\s*=\s*["']([^"']+)["']'''
+        )
+        values = [match.group(1) for match in attr_pattern.finditer(response.text)]
+        assert values != []
+        for bad in (unsafe_id, "unsafe/id", "<tag>", "&tail"):
+            assert all(bad not in value for value in values)
+        assert re.search(r'id="user-row-[A-Za-z][A-Za-z0-9_-]*"', response.text)
+        """
+    )
+
+
+def test_disable_enable_fragments_mutate_only_in_memory_demo_users() -> None:
+    # Given / When / Then: HTMX mutations call host callbacks and swap one row.
     assert_route_contract(
         f"""
-        response = client.post("/admin/users/{DEMO_USER_ID}/disable")
-        content_type = response.headers.get("content-type", "")
-
-        assert response.status_code == 200, response.text
-        assert content_type.startswith("text/html"), content_type
-        assert "application/json" not in content_type
-        has_double_id = 'id="user-row-{DEMO_USER_ID}"' in response.text
-        has_single_id = "id='user-row-{DEMO_USER_ID}'" in response.text
-        has_users_table = (
-            'id="users-table"' in response.text
-            or "id='users-table'" in response.text
+        disable = client.post(
+            "/admin/users/disable",
+            data={{"user_id": {DEMO_USER_ID!r}}},
         )
-        assert has_double_id or has_single_id
-        assert not has_users_table
+        enable = client.post(
+            "/admin/users/enable",
+            data={{"user_id": {DEMO_USER_ID!r}}},
+        )
+        table = client.get("/admin/users")
+
+        for response in (disable, enable, table):
+            content_type = response.headers.get("content-type", "")
+            assert response.status_code == 200, response.text
+            assert content_type.startswith("text/html"), content_type
+            assert "application/json" not in content_type
+
+        assert 'id="user-row-' in disable.text
+        assert 'id="users-table"' not in disable.text
+        assert "Disabled" in disable.text
+        assert "Active" in enable.text
+        assert "Active" in table.text
         """,
     )
 
 
-def test_enable_user_action_returns_single_user_row_html() -> None:
-    # Given / When / Then: enabling a demo user returns only that user's row fragment.
+def test_malformed_disable_form_returns_html_error_without_mutation() -> None:
+    # Given / When / Then: malformed form input is rejected as an HTML fragment.
     assert_route_contract(
-        f"""
-        response = client.post("/admin/users/{DEMO_USER_ID}/enable")
+        """
+        response = client.post(
+            "/admin/users/disable",
+            content=b"user_id=%FF",
+            headers={"content-type": "application/x-www-form-urlencoded"},
+        )
         content_type = response.headers.get("content-type", "")
 
-        assert response.status_code == 200, response.text
+        assert response.status_code == 400, response.text
         assert content_type.startswith("text/html"), content_type
-        assert "application/json" not in content_type
-        has_double_id = 'id="user-row-{DEMO_USER_ID}"' in response.text
-        has_single_id = "id='user-row-{DEMO_USER_ID}'" in response.text
-        has_users_table = (
-            'id="users-table"' in response.text
-            or "id='users-table'" in response.text
-        )
-        assert has_double_id or has_single_id
-        assert not has_users_table
+        assert "Malformed form body" in response.text
         """,
     )
 
 
-def test_host_policy_boundaries_stay_in_demo_helpers() -> None:
-    # Given: the example host app source and framework-neutral adapter sources.
-    app_source = read_required_file(APP_PATH)
+def test_api_auth_endpoints_remain_json_and_adapter_challenge_cookie_only() -> None:
+    # Given / When / Then: /api/auth remains JSON with passkey challenge cookies.
+    assert_route_contract(
+        """
+        options = client.post("/api/auth/login/options")
+        missing_cookie = client.post(
+            "/api/auth/login/verify",
+            json={"id": "credential"},
+        )
 
-    # When / Then: registration and admin routes pass through explicit host helpers.
-    assert "def registration_allowed" in app_source
-    assert app_source.count("registration_allowed") >= 2
-    assert "def require_admin" in app_source
-    assert app_source.count("require_admin") >= 2
+        assert options.status_code == 200, options.text
+        assert options.headers["content-type"].startswith("application/json")
+        assert options.json()["challenge"] == "demo-login-challenge"
+        set_cookies = options.headers.get_list("set-cookie")
+        assert set_cookies != []
+        assert all(cookie.startswith("passkey_challenge=") for cookie in set_cookies)
 
-    # And: optional adapter/core layers do not create implicit admin grants or sessions.
-    for adapter_path in ADAPTER_BOUNDARY_FILES:
-        adapter_source = read_required_file(adapter_path)
-        for forbidden_snippet in FORBIDDEN_ADAPTER_POLICY_SNIPPETS:
-            assert forbidden_snippet not in adapter_source
+        assert missing_cookie.status_code == 400, missing_cookie.text
+        assert missing_cookie.headers["content-type"].startswith("application/json")
+        assert missing_cookie.json()["detail"] == "missing passkey challenge"
+        """,
+    )
