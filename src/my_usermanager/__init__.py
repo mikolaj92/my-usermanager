@@ -2,6 +2,12 @@
 
 from typing import Final
 
+from my_usermanager.admin import (
+    AdminGrantService,
+    GrantChange,
+    SelfDemotionError,
+    UserAccessSummary,
+)
 from my_usermanager.manager import (
     AuthorizationError,
     PermissionGrantRequest,
@@ -60,6 +66,7 @@ __all__: Final = (
     "BUILTIN_PERMISSIONS",
     "BUILTIN_PERMISSION_NAMES",
     "BUILTIN_ROLES",
+    "AdminGrantService",
     "AuditEvent",
     "AuditFilters",
     "AuditStore",
@@ -69,6 +76,7 @@ __all__: Final = (
     "DuplicateUserError",
     "ExternalIdentity",
     "Grant",
+    "GrantChange",
     "GrantNotFoundError",
     "GrantStore",
     "InvalidPageError",
@@ -83,10 +91,12 @@ __all__: Final = (
     "RoleGrantRequest",
     "RoleStore",
     "Scope",
+    "SelfDemotionError",
     "SessionRevoker",
     "StoreError",
     "UnregisteredPermissionError",
     "User",
+    "UserAccessSummary",
     "UserManager",
     "UserNotFoundError",
     "UserProfileUpdate",
