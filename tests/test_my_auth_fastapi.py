@@ -4,16 +4,24 @@ import subprocess
 import sys
 from dataclasses import dataclass, replace
 from textwrap import dedent
-from typing import ClassVar, NoReturn
+from typing import TYPE_CHECKING, ClassVar, NoReturn
 
 import pytest
 
 from my_usermanager.adapters import my_auth as my_auth_adapter
 from my_usermanager.adapters import my_auth_fastapi as fastapi_adapter
 from my_usermanager.memory import MemoryGrantStore, MemoryRoleStore
-from my_usermanager.models import ExternalIdentity, User
+from my_usermanager.models import ExternalIdentity, Permission, User
 from my_usermanager.permissions import PermissionRegistry
-from my_usermanager.subjects import ExternalIdentityConflictError
+from my_usermanager.subjects import (
+    ExternalIdentityConflictError,
+    ExternalIdentityNotFoundError,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from my_usermanager.sessions import SessionPrincipal
 
 
 @dataclass(frozen=True, slots=True)
@@ -306,3 +314,110 @@ def test_make_registration_user_requires_explicit_policy_and_does_not_grant(
     assert grants.list_grants_for_user("new_passkey_user") == ()
     assert roles.list() == before_roles
     assert registry.permissions() == before_permissions
+
+
+def test_user_to_session_principal_projects_profile_identity_and_claims() -> None:
+    # Given: a linked local user and caller-owned authorization projection output.
+    identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
+    user = User(
+        user_id="local_user_123",
+        external_identities=frozenset({identity}),
+        username="alice",
+        display_name="Alice Example",
+    )
+
+    # When: the adapter builds a typed session principal.
+    principal = fastapi_adapter.user_to_session_principal(
+        user,
+        roles=("admin",),
+        permissions=(Permission("users.read"),),
+        claims={"is_member": True},
+    )
+
+    # Then: local identity and projected authorization data are preserved.
+    assert principal.user_id == "local_user_123"
+    assert principal.username == "alice"
+    assert principal.display_name == "Alice Example"
+    assert principal.external_identities == frozenset({identity})
+    assert principal.roles == frozenset({"admin"})
+    assert principal.permissions == frozenset({Permission("users.read")})
+    assert principal.claims == {"is_member": True}
+
+
+def test_login_session_principal_writer_resolves_linked_user_and_writes_session() -> (
+    None
+):
+    # Given: a linked local user and a host-owned session writer.
+    identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
+    user = User(
+        user_id="local_user_123",
+        external_identities=frozenset({identity}),
+        username="alice",
+    )
+    store = FakeExternalIdentityUserStore(users=(user,))
+    _ = store.link_external_identity(user_id="local_user_123", identity=identity)
+    written: list[tuple[str, str, str, bool]] = []
+
+    def write_principal(
+        response: str,
+        request: str,
+        principal: SessionPrincipal,
+    ) -> None:
+        written.append(
+            (
+                response,
+                request,
+                principal.user_id,
+                bool(principal.claims["is_member"]),
+            ),
+        )
+
+    login: Callable[[str, str, FakePasskeyUser], None] = (
+        fastapi_adapter.build_login_session_principal_writer(
+            store,
+            write_principal,
+            principal_builder=(
+                lambda linked_user: fastapi_adapter.user_to_session_principal(
+                    linked_user,
+                    claims={"is_member": True},
+                )
+            ),
+        )
+    )
+
+    # When: my-auth invokes PasskeyRouteHooks.login.
+    login(
+        "response",
+        "request",
+        FakePasskeyUser(
+            user_id="passkey_user_123",
+            user_handle=b"linked-handle",
+            name="Passkey User",
+        ),
+    )
+
+    # Then: only the host writer mutates session state.
+    assert written == [("response", "request", "local_user_123", True)]
+
+
+def test_login_session_principal_writer_requires_existing_identity_link() -> None:
+    # Given: no local link for the my-auth passkey subject.
+    store = FakeExternalIdentityUserStore(users=())
+    login: Callable[[str, str, FakePasskeyUser], None] = (
+        fastapi_adapter.build_login_session_principal_writer(
+            store,
+            lambda _response, _request, _principal: None,
+        )
+    )
+
+    # When / Then: the helper fails with the existing typed identity error.
+    with pytest.raises(ExternalIdentityNotFoundError):
+        login(
+            "response",
+            "request",
+            FakePasskeyUser(
+                user_id="passkey_user_123",
+                user_handle=b"linked-handle",
+                name="Passkey User",
+            ),
+        )
