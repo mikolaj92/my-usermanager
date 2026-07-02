@@ -126,6 +126,51 @@ hooks = PasskeyRouteHooks(
 
 The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. Registration/provisioning must be an explicit host decision.
 
+## Session principal helpers
+
+The core package exposes a typed `SessionPrincipal` that hosts can write into a
+Starlette/FastAPI signed-cookie `request.session`, or persist behind an opaque
+DB-backed session token.
+
+```python
+from my_usermanager import (
+    SessionPrincipal,
+    read_session_principal,
+    write_session_principal,
+)
+
+principal = SessionPrincipal(
+    user_id=user.user_id,
+    username=user.username,
+    roles=frozenset({"admin"}),
+    claims={"is_member": True},
+)
+write_session_principal(request.session, principal)
+current = read_session_principal(request.session)
+```
+
+For DB-backed session cookies, keep the cookie value opaque and implement
+`SessionTokenStore` with `get`, `save`, and `delete`; then use
+`read_token_principal`, `write_token_principal`, and `clear_token_principal`.
+
+FastAPI apps that use `SessionMiddleware` can install the optional FastAPI extra
+and use the dependency helpers:
+
+```python
+from typing import Annotated
+from fastapi import Depends
+from my_usermanager import SessionPrincipal
+from my_usermanager.adapters.fastapi import require_user
+
+
+@app.get("/account")
+def account(user: Annotated[SessionPrincipal, Depends(require_user)]):
+    return {"user_id": user.user_id}
+```
+
+Malformed session payloads are treated as unauthenticated. The host still owns
+session lifetime, cookie settings, CSRF, login/logout routes, and persistence.
+
 ## FastAPI/Jinja/HTMX user-management UI adapter
 
 `my_usermanager.adapters.fastapi_htmx` is an optional server-rendered
