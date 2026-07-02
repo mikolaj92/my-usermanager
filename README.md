@@ -141,6 +141,48 @@ hooks = PasskeyRouteHooks(
 
 The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. The login helper only turns an already-linked local user into a `SessionPrincipal`; the host still owns the actual session write and any claim projection. Registration/provisioning must be an explicit host decision.
 
+## Grant claim projection
+
+Use `GrantClaimsProjector` to collapse stored roles, direct permissions, and app-defined mappings into a session principal:
+
+```python
+from my_usermanager import (
+    GrantClaimsProjector,
+    Permission,
+    Scope,
+    max_permission_level_claim,
+    permission_claim,
+    role_claim,
+)
+
+projector = GrantClaimsProjector(
+    roles=role_store,
+    grants=grant_store,
+    claim_mappers=(
+        role_claim("is_member", "member"),  # rnkstr-style membership
+        role_claim("is_admin", "admin"),  # wolnyrolnik-style admin boolean
+        max_permission_level_claim(  # pyemitype-style cumulative level
+            "svg_level",
+            {
+                Permission("svg.level1"): 1,
+                Permission("svg.level2"): 2,
+                Permission("svg.level3"): 3,
+            },
+        ),
+        permission_claim(  # msds-portal workflow/pipeline access
+            "can_run_workflow",
+            Permission("workflows.run"),
+            scope=Scope.scoped("workflow", workflow_id),
+        ),
+    ),
+)
+
+projection = projector.project(user.user_id, scope=Scope.scoped("workflow", workflow_id))
+principal = projection.to_session_principal(user, extra_claims={"report": "full"})
+```
+
+The default projection always includes `is_admin`, plus principal roles and permissions for the requested scope. Compute it once during login, call it from `refresh_session_principal` on each request, or recompute/revoke host sessions after grant changes.
+
 ## Session principal helpers
 
 The core package exposes a typed `SessionPrincipal` that hosts can write into a

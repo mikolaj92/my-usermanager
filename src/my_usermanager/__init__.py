@@ -2,6 +2,15 @@
 
 from typing import Final
 
+from my_usermanager.claims import (
+    ClaimMapper,
+    GrantClaims,
+    GrantClaimsContext,
+    GrantClaimsProjector,
+    max_permission_level_claim,
+    permission_claim,
+    role_claim,
+)
 from my_usermanager.manager import (
     AuthorizationError,
     PermissionGrantRequest,
@@ -80,11 +89,15 @@ __all__: Final = (
     "AuditFilters",
     "AuditStore",
     "AuthorizationError",
+    "ClaimMapper",
     "DuplicateAuditEventError",
     "DuplicateGrantError",
     "DuplicateUserError",
     "ExternalIdentity",
     "Grant",
+    "GrantClaims",
+    "GrantClaimsContext",
+    "GrantClaimsProjector",
     "GrantNotFoundError",
     "GrantStore",
     "InvalidPageError",
@@ -117,10 +130,13 @@ __all__: Final = (
     "clear_session_principal",
     "clear_token_principal",
     "is_valid_permission_name",
+    "max_permission_level_claim",
+    "permission_claim",
     "principal_template_context",
     "read_session_principal",
     "read_token_principal",
     "refresh_session_principal",
+    "role_claim",
     "validate_identifier",
     "validate_permission_name",
     "write_session_principal",
