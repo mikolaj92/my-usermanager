@@ -2,6 +2,12 @@
 
 from typing import Final
 
+from my_usermanager.admin import (
+    AdminGrantOperation,
+    AdminUserGrantSummary,
+    GrantAdminService,
+    UnsafeGrantMutationError,
+)
 from my_usermanager.claims import (
     ClaimMapper,
     GrantClaims,
@@ -85,6 +91,8 @@ __all__: Final = (
     "BUILTIN_PERMISSION_NAMES",
     "BUILTIN_ROLES",
     "SESSION_PRINCIPAL_KEY",
+    "AdminGrantOperation",
+    "AdminUserGrantSummary",
     "AuditEvent",
     "AuditFilters",
     "AuditStore",
@@ -95,6 +103,7 @@ __all__: Final = (
     "DuplicateUserError",
     "ExternalIdentity",
     "Grant",
+    "GrantAdminService",
     "GrantClaims",
     "GrantClaimsContext",
     "GrantClaimsProjector",
@@ -119,6 +128,7 @@ __all__: Final = (
     "SessionTokenStore",
     "StoreError",
     "UnregisteredPermissionError",
+    "UnsafeGrantMutationError",
     "User",
     "UserManager",
     "UserNotFoundError",
