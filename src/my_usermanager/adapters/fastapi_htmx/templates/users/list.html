@@ -8,7 +8,7 @@
       <div>
         <p class="badge">Admin</p>
         <h1 id="users-title">Users</h1>
-        <p class="um-muted">Enable and disable actions call host-owned callbacks and swap one row.</p>
+        <p class="um-muted">User status and access changes call host-owned callbacks and swap one row.</p>
       </div>
       <span class="badge">Current user: {{ current_user.username or current_user.user_id }}</span>
     </div>
@@ -19,7 +19,8 @@
           <tr>
             <th scope="col">User</th>
             <th scope="col">Email</th>
-            <th scope="col">Role</th>
+            <th scope="col">Access</th>
+            <th scope="col">Identities</th>
             <th scope="col">Status</th>
             <th scope="col">Action</th>
           </tr>
@@ -29,7 +30,7 @@
             {% include "users/_row.html" %}
           {% else %}
             <tr>
-              <td colspan="5">No users are available.</td>
+              <td colspan="6">No users are available.</td>
             </tr>
           {% endfor %}
         </tbody>

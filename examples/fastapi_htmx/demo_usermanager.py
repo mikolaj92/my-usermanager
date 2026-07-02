@@ -11,11 +11,22 @@ from examples.fastapi_htmx.demo_users import (
     DEMO_CSRF_HEADER,
     DEMO_CSRF_MARKER,
     _current_demo_subject,
+    _demo_capability_options,
+    _demo_role_options,
     _demo_user_rows,
+    _grant_demo_permission,
+    _grant_demo_role,
     _require_demo_admin,
+    _revoke_demo_permission,
+    _revoke_demo_role,
     _set_demo_user_disabled,
 )
-from my_usermanager.adapters.fastapi_htmx import CsrfContext, UserRow
+from my_usermanager.adapters.fastapi_htmx import (
+    CapabilityOption,
+    CsrfContext,
+    PermissionGrantRow,
+    UserRow,
+)
 
 if TYPE_CHECKING:
     from fastapi import Request
@@ -42,6 +53,20 @@ class _UserManagerHooks:
     ) -> tuple[UserRow, ...]:
         return _demo_user_rows()
 
+    def role_options(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+    ) -> tuple[str, ...]:
+        return _demo_role_options()
+
+    def capability_options(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+    ) -> tuple[CapabilityOption, ...]:
+        return _demo_capability_options()
+
     def set_user_disabled(
         self,
         _request: Request,
@@ -50,6 +75,42 @@ class _UserManagerHooks:
         disabled: bool,
     ) -> UserRow:
         return _set_demo_user_disabled(user_id, disabled=disabled)
+
+    def grant_role(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        user_id: str,
+        role_name: str,
+    ) -> UserRow:
+        return _grant_demo_role(user_id, role_name)
+
+    def revoke_role(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        user_id: str,
+        role_name: str,
+    ) -> UserRow:
+        return _revoke_demo_role(user_id, role_name)
+
+    def grant_permission(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        user_id: str,
+        permission: PermissionGrantRow,
+    ) -> UserRow:
+        return _grant_demo_permission(user_id, permission)
+
+    def revoke_permission(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        user_id: str,
+        permission: PermissionGrantRow,
+    ) -> UserRow:
+        return _revoke_demo_permission(user_id, permission)
 
     def csrf_context(self, _request: Request) -> CsrfContext:
         return CsrfContext(

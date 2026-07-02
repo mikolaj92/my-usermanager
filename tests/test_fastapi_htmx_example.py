@@ -136,7 +136,7 @@ def test_readme_uses_uv_only_and_names_host_owned_security_boundaries() -> None:
         "does not provide production CSRF validation",
         "does not provide persistence",
         "does not provide audit logging",
-        "does not provide role or grant editors",
+        "does not provide production role/grant policy",
     )
     for snippet in required_boundaries:
         assert snippet in readme

@@ -10,7 +10,12 @@ if TYPE_CHECKING:
 
     from fastapi import Request, Response
 
-    from my_usermanager.adapters.fastapi_htmx.config import CsrfContext, UserRow
+    from my_usermanager.adapters.fastapi_htmx.config import (
+        CapabilityOption,
+        CsrfContext,
+        PermissionGrantRow,
+        UserRow,
+    )
     from my_usermanager.subjects import AuthenticatedSubject
 
 type MaybeAwaitable[T] = T | Awaitable[T]
@@ -42,6 +47,22 @@ class UserManagerUiHooks(Protocol):
         """Return rows for the admin user list."""
         ...
 
+    def role_options(
+        self,
+        request: Request,
+        current_user: AuthenticatedSubject,
+    ) -> MaybeAwaitable[Sequence[str]]:
+        """Return role names the host allows this panel to grant."""
+        ...
+
+    def capability_options(
+        self,
+        request: Request,
+        current_user: AuthenticatedSubject,
+    ) -> MaybeAwaitable[Sequence[CapabilityOption]]:
+        """Return app-defined capability options the panel can grant."""
+        ...
+
     def set_user_disabled(
         self,
         request: Request,
@@ -50,6 +71,46 @@ class UserManagerUiHooks(Protocol):
         disabled: bool,
     ) -> MaybeAwaitable[UserRow]:
         """Set disabled state for exactly one host-owned user."""
+        ...
+
+    def grant_role(
+        self,
+        request: Request,
+        current_user: AuthenticatedSubject,
+        user_id: str,
+        role_name: str,
+    ) -> MaybeAwaitable[UserRow]:
+        """Grant a role and return the updated user row."""
+        ...
+
+    def revoke_role(
+        self,
+        request: Request,
+        current_user: AuthenticatedSubject,
+        user_id: str,
+        role_name: str,
+    ) -> MaybeAwaitable[UserRow]:
+        """Revoke a role and return the updated user row."""
+        ...
+
+    def grant_permission(
+        self,
+        request: Request,
+        current_user: AuthenticatedSubject,
+        user_id: str,
+        permission: PermissionGrantRow,
+    ) -> MaybeAwaitable[UserRow]:
+        """Grant an app-defined capability and return the updated user row."""
+        ...
+
+    def revoke_permission(
+        self,
+        request: Request,
+        current_user: AuthenticatedSubject,
+        user_id: str,
+        permission: PermissionGrantRow,
+    ) -> MaybeAwaitable[UserRow]:
+        """Revoke an app-defined capability and return the updated user row."""
         ...
 
     def csrf_context(self, request: Request) -> MaybeAwaitable[CsrfContext]:

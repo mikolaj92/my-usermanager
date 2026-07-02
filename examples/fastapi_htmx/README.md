@@ -184,11 +184,11 @@ role/grant changes; audit logging; redirects; logout effects.
 - demo registration policy via `?registration=closed` for denial testing
 - demo current user selected from local in-memory data
 - demo admin requirement callback before user-management mutations
-- no role/grant editor and no production audit logging
+- demo-only in-memory role/capability grant callbacks and no production audit logging
 - passkey service and passkey hooks backed by in-memory scaffolding only
 
 The adapter composition does not provide production sessions, does not provide production CSRF validation,
-does not provide persistence, does not provide audit logging, does not provide role or grant editors,
+does not provide persistence, does not provide audit logging, does not provide production role/grant policy,
 and does not provide a production admin policy. The only adapter-owned cookies are the documented
 my-auth WebAuthn challenge cookies (`passkey_challenge` and `passkey_register_name`) used by
 `my_auth.fastapi.PasskeyAuthRouter`; adapters must not claim production app session/cookie ownership.

@@ -8,13 +8,25 @@ from typing import Final
 from fastapi import HTTPException, status
 from my_auth import PasskeyUser
 
-from my_usermanager.adapters.fastapi_htmx import UserRow
+from my_usermanager.adapters.fastapi_htmx import (
+    CapabilityOption,
+    ExternalIdentityRow,
+    PermissionGrantRow,
+    UserRow,
+)
 from my_usermanager.subjects import AuthenticatedSubject
 
 DEMO_ADMIN_ID: Final = "demo-user"
 DEMO_UNSAFE_USER_ID: Final = "unsafe/id space\"quote'<tag>&tail"
 DEMO_CSRF_HEADER: Final = "X-Demo-CSRF"
 DEMO_CSRF_MARKER: Final = "demo-noop-csrf"
+_DEMO_CAPABILITY: Final = CapabilityOption(
+    permission="workflow.run",
+    label="Run demo workflow",
+    description="Demo-only scoped capability.",
+    scope_type="workflow",
+    scope_id="demo-workflow",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +37,8 @@ class _DemoUser:
     email: str
     admin: bool = False
     disabled: bool = False
+    roles: tuple[str, ...] = ()
+    permissions: tuple[PermissionGrantRow, ...] = ()
 
 
 def _all_demo_users() -> tuple[_DemoUser, ...]:
@@ -52,9 +66,59 @@ def _demo_user_rows() -> tuple[UserRow, ...]:
     return tuple(_user_row(user) for user in _DEMO_USERS.values())
 
 
+def _demo_role_options() -> tuple[str, ...]:
+    return ("member", "admin")
+
+
+def _demo_capability_options() -> tuple[CapabilityOption, ...]:
+    return (_DEMO_CAPABILITY,)
+
+
 def _set_demo_user_disabled(user_id: str, *, disabled: bool) -> UserRow:
     user = _require_demo_user(user_id)
     updated = replace(user, disabled=disabled)
+    _DEMO_USERS[user.user_id] = updated
+    return _user_row(updated)
+
+
+def _grant_demo_role(user_id: str, role_name: str) -> UserRow:
+    user = _require_demo_user(user_id)
+    roles = tuple(sorted({*user.roles, role_name}))
+    updated = replace(user, roles=roles, admin=user.admin or role_name == "admin")
+    _DEMO_USERS[user.user_id] = updated
+    return _user_row(updated)
+
+
+def _revoke_demo_role(user_id: str, role_name: str) -> UserRow:
+    user = _require_demo_user(user_id)
+    roles = tuple(role for role in user.roles if role != role_name)
+    updated = replace(user, roles=roles, admin=user.admin and role_name != "admin")
+    _DEMO_USERS[user.user_id] = updated
+    return _user_row(updated)
+
+
+def _grant_demo_permission(
+    user_id: str,
+    permission: PermissionGrantRow,
+) -> UserRow:
+    user = _require_demo_user(user_id)
+    permissions = tuple(sorted({*user.permissions, permission}, key=_permission_key))
+    updated = replace(user, permissions=permissions)
+    _DEMO_USERS[user.user_id] = updated
+    return _user_row(updated)
+
+
+def _revoke_demo_permission(
+    user_id: str,
+    permission: PermissionGrantRow,
+) -> UserRow:
+    user = _require_demo_user(user_id)
+    permissions = tuple(
+        grant
+        for grant in user.permissions
+        if _permission_key(grant) != _permission_key(permission)
+    )
+    updated = replace(user, permissions=permissions)
     _DEMO_USERS[user.user_id] = updated
     return _user_row(updated)
 
@@ -90,12 +154,22 @@ def _initial_users() -> dict[str, _DemoUser]:
             display_name="Demo Administrator",
             email="admin@example.invalid",
             admin=True,
+            roles=("admin",),
         ),
         "auditor-user": _DemoUser(
             user_id="auditor-user",
             username="auditor",
             display_name="Audit Reviewer",
             email="auditor@example.invalid",
+            roles=("member",),
+            permissions=(
+                PermissionGrantRow(
+                    permission=_DEMO_CAPABILITY.permission,
+                    label=_DEMO_CAPABILITY.label,
+                    scope_type=_DEMO_CAPABILITY.scope_type,
+                    scope_id=_DEMO_CAPABILITY.scope_id,
+                ),
+            ),
         ),
         DEMO_UNSAFE_USER_ID: _DemoUser(
             user_id=DEMO_UNSAFE_USER_ID,
@@ -129,6 +203,14 @@ def _user_row(user: _DemoUser) -> UserRow:
         email=user.email,
         disabled=user.disabled,
         is_admin=user.admin,
+        roles=user.roles,
+        permissions=user.permissions,
+        external_identities=(
+            ExternalIdentityRow(
+                provider="demo-passkey",
+                subject=f"demo:{user.user_id}",
+            ),
+        ),
     )
 
 
@@ -145,3 +227,11 @@ def _require_demo_user(user_id: str) -> _DemoUser:
 def _user_id_from_display_name(display_name: str) -> str:
     parts = [character if character.isalnum() else "-" for character in display_name]
     return "".join(parts).strip("-").casefold() or "registered-user"
+
+
+def _permission_key(permission: PermissionGrantRow) -> tuple[str, str, str]:
+    return (
+        permission.permission,
+        permission.scope_type or "",
+        permission.scope_id or "",
+    )

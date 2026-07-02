@@ -4,10 +4,42 @@
     <div class="um-muted"><code>{{ user.user_id }}</code></div>
   </td>
   <td>{{ user.email or "—" }}</td>
-  <td><span class="badge">{% if user.is_admin %}Admin{% else %}User{% endif %}</span></td>
+  <td>
+    <div class="um-stack um-gap-xs">
+      <div class="um-cluster">
+        <span class="badge">{% if user.is_admin %}Admin{% else %}User{% endif %}</span>
+        {% for role in user.roles %}
+          <span class="badge">{{ role }}</span>
+        {% endfor %}
+      </div>
+      {% if user.permissions %}
+        <div class="um-stack um-gap-xs">
+          {% for permission in user.permissions %}
+            <span class="badge">
+              {{ permission.label }}
+              {% if permission.scope_type and permission.scope_id %}
+                <span class="um-muted">({{ permission.scope_type }}:{{ permission.scope_id }})</span>
+              {% endif %}
+            </span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </td>
+  <td>
+    {% if user.external_identities %}
+      <div class="um-stack um-gap-xs">
+        {% for identity in user.external_identities %}
+          <code>{{ identity.provider }}:{{ identity.subject }}</code>
+        {% endfor %}
+      </div>
+    {% else %}
+      <span class="um-muted">—</span>
+    {% endif %}
+  </td>
   <td><span class="badge">{% if user.disabled %}Disabled{% else %}Active{% endif %}</span></td>
   <td>
-    <div class="um-cluster">
+    <div class="um-stack">
       {% if user.disabled %}
         <form
           method="post"
@@ -41,6 +73,91 @@
           <button class="btn btn-destructive" type="submit">Disable</button>
         </form>
       {% endif %}
+      {% if role_options %}
+        <form
+          method="post"
+          action="{{ config.grant_role_path }}"
+          hx-post="{{ config.grant_role_path }}"
+          hx-target="#user-row-{{ user.row_key }}"
+          hx-swap="outerHTML"
+        >
+          <input type="hidden" name="user_id" value="{{ user.user_id }}">
+          {% for name, value in csrf_inputs %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <label>
+            <span class="sr-only">Grant role</span>
+            <select name="role_name">
+              {% for role in role_options %}
+                <option value="{{ role }}">{{ role }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button class="btn btn-secondary" type="submit">Grant role</button>
+        </form>
+      {% endif %}
+      {% for role in user.roles %}
+        <form
+          method="post"
+          action="{{ config.revoke_role_path }}"
+          hx-post="{{ config.revoke_role_path }}"
+          hx-target="#user-row-{{ user.row_key }}"
+          hx-swap="outerHTML"
+        >
+          <input type="hidden" name="user_id" value="{{ user.user_id }}">
+          <input type="hidden" name="role_name" value="{{ role }}">
+          {% for name, value in csrf_inputs %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <button class="btn btn-secondary" type="submit">Revoke {{ role }}</button>
+        </form>
+      {% endfor %}
+      {% if capability_options %}
+        {% for capability in capability_options %}
+          <form
+            method="post"
+            action="{{ config.grant_permission_path }}"
+            hx-post="{{ config.grant_permission_path }}"
+            hx-target="#user-row-{{ user.row_key }}"
+            hx-swap="outerHTML"
+          >
+            <input type="hidden" name="user_id" value="{{ user.user_id }}">
+            <input type="hidden" name="permission" value="{{ capability.permission }}">
+            {% if capability.scope_type %}
+              <input type="hidden" name="scope_type" value="{{ capability.scope_type }}">
+            {% endif %}
+            {% if capability.scope_id %}
+              <input type="hidden" name="scope_id" value="{{ capability.scope_id }}">
+            {% endif %}
+            {% for name, value in csrf_inputs %}
+              <input type="hidden" name="{{ name }}" value="{{ value }}">
+            {% endfor %}
+            <button class="btn btn-secondary" type="submit">Grant {{ capability.label }}</button>
+          </form>
+        {% endfor %}
+      {% endif %}
+      {% for permission in user.permissions %}
+        <form
+          method="post"
+          action="{{ config.revoke_permission_path }}"
+          hx-post="{{ config.revoke_permission_path }}"
+          hx-target="#user-row-{{ user.row_key }}"
+          hx-swap="outerHTML"
+        >
+          <input type="hidden" name="user_id" value="{{ user.user_id }}">
+          <input type="hidden" name="permission" value="{{ permission.permission }}">
+          {% if permission.scope_type %}
+            <input type="hidden" name="scope_type" value="{{ permission.scope_type }}">
+          {% endif %}
+          {% if permission.scope_id %}
+            <input type="hidden" name="scope_id" value="{{ permission.scope_id }}">
+          {% endif %}
+          {% for name, value in csrf_inputs %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <button class="btn btn-secondary" type="submit">Revoke {{ permission.label }}</button>
+        </form>
+      {% endfor %}
       <span id="user-{{ user.row_key }}-indicator" class="htmx-indicator um-muted" aria-live="polite">
         Updating row.
       </span>
