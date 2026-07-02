@@ -183,6 +183,26 @@ principal = projection.to_session_principal(user, extra_claims={"report": "full"
 
 The default projection always includes `is_admin`, plus principal roles and permissions for the requested scope. Compute it once during login, call it from `refresh_session_principal` on each request, or recompute/revoke host sessions after grant changes.
 
+## Admin grant service
+
+Use `GrantAdminService` behind admin routes or HTML views to keep grant mutation rules consistent:
+
+```python
+from my_usermanager import GrantAdminService, Permission, Scope, UserQuery
+
+admin_service = GrantAdminService(users=user_store, roles=role_store, grants=grant_store)
+rows = admin_service.list_users(limit=100, query=UserQuery())
+
+result = admin_service.grant_permission(
+    actor_id=current_user.user_id,
+    target_user_id="user_123",
+    permission=Permission("workflows.run"),
+    scope=Scope.scoped("workflow", workflow_id),
+)
+```
+
+The service returns typed row and mutation result objects for route handlers to render or audit. Duplicate and missing grants keep the store-level errors, while unsafe self-demotion and last-active-admin removal raise `UnsafeGrantMutationError`.
+
 ## Session principal helpers
 
 The core package exposes a typed `SessionPrincipal` that hosts can write into a
