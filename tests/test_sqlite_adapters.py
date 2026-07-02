@@ -1,3 +1,4 @@
+# pyright: reportUnusedCallResult=false
 """Tests for SQLite-backed store implementations."""
 
 from __future__ import annotations
