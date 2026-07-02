@@ -225,6 +225,37 @@ def account(user: Annotated[SessionPrincipal, Depends(require_user)]):
     return {"user_id": user.user_id}
 ```
 
+Authorization policies can read projected session data or use a live
+`GrantClaimsProjector` for scoped grant checks:
+
+```python
+from my_usermanager import Permission, Scope
+from my_usermanager.adapters.fastapi import (
+    AuthorizationResponses,
+    require_claim,
+    require_owner_or_admin,
+    require_permission,
+    require_role,
+    require_scoped_permission,
+)
+
+require_admin = require_role("admin")
+require_app_access = require_claim(
+    "has_app_access",
+    responses=AuthorizationResponses.redirects(
+        login_url="/login",
+        forbidden_url="/request-access",
+    ),
+)
+require_workflow_run = require_scoped_permission(
+    Permission("workflows.run"),
+    Scope.scoped("workflow", workflow_id),
+    projector=grant_claims_projector,
+)
+require_owner = require_owner_or_admin(lambda request: request.path_params["user_id"])
+require_read = require_permission("users.read")
+```
+
 Malformed session payloads are treated as unauthenticated. The host still owns
 session lifetime, cookie settings, CSRF, login/logout routes, and persistence.
 
