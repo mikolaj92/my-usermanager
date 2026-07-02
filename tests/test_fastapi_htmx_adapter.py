@@ -102,7 +102,8 @@ def test_public_api_resources_and_static_contracts() -> None:
 
         adapter = importlib.import_module({ADAPTER_MODULE!r})
         public_api = (
-            "CsrfContext", "UserManagerUiConfig", "UserManagerUiHooks",
+            "CapabilityOption", "CsrfContext", "ExternalIdentityRow",
+            "PermissionGrantRow", "UserManagerUiConfig", "UserManagerUiHooks",
             "UserManagerUiRouter", "UserRow", "create_usermanager_ui_router",
             "row_key_from_user_id", "usermanager_ui_static_files",
         )
@@ -113,9 +114,17 @@ def test_public_api_resources_and_static_contracts() -> None:
             assert hasattr(class_, "__slots__")
             return tuple(field.name for field in fields(class_))
         expected_fields = {{
+            adapter.CapabilityOption: (
+                "permission", "label", "description", "scope_type", "scope_id",
+            ),
+            adapter.ExternalIdentityRow: ("provider", "subject"),
+            adapter.PermissionGrantRow: (
+                "permission", "label", "scope_type", "scope_id",
+            ),
             adapter.UserRow: (
                 "user_id", "row_key", "username", "display_name", "email",
-                "disabled", "is_admin",
+                "disabled", "is_admin", "roles", "permissions",
+                "external_identities",
             ),
             adapter.CsrfContext: ("hidden_inputs", "headers"),
             adapter.UserManagerUiRouter: (
@@ -123,8 +132,10 @@ def test_public_api_resources_and_static_contracts() -> None:
             ),
             adapter.UserManagerUiConfig: (
                 "account_path", "users_path", "disable_user_path",
-                "enable_user_path", "static_mount_path", "static_url_path",
-                "login_url", "template_override_directory", "template_loader",
+                "enable_user_path", "grant_role_path", "revoke_role_path",
+                "grant_permission_path", "revoke_permission_path",
+                "static_mount_path", "static_url_path", "login_url",
+                "template_override_directory", "template_loader",
             ),
         }}
         for class_, names in expected_fields.items():
@@ -139,6 +150,8 @@ def test_public_api_resources_and_static_contracts() -> None:
         config = adapter.UserManagerUiConfig()
         defaults = (
             "/account", "/admin/users", "/admin/users/disable", "/admin/users/enable",
+            "/admin/users/grant-role", "/admin/users/revoke-role",
+            "/admin/users/grant-permission", "/admin/users/revoke-permission",
             "/usermanager/ui/static", "/usermanager/ui/static", "/auth/login",
             None, None,
         )
@@ -154,8 +167,18 @@ def test_public_api_resources_and_static_contracts() -> None:
             "get_current_user": ("self", "request"),
             "require_admin": ("self", "request", "current_user"),
             "list_users": ("self", "request", "current_user"),
+            "role_options": ("self", "request", "current_user"),
+            "capability_options": ("self", "request", "current_user"),
             "set_user_disabled": (
                 "self", "request", "current_user", "user_id", "disabled"
+            ),
+            "grant_role": ("self", "request", "current_user", "user_id", "role_name"),
+            "revoke_role": ("self", "request", "current_user", "user_id", "role_name"),
+            "grant_permission": (
+                "self", "request", "current_user", "user_id", "permission",
+            ),
+            "revoke_permission": (
+                "self", "request", "current_user", "user_id", "permission",
             ),
             "csrf_context": ("self", "request"),
             "after_user_disabled_changed": ("self", "request", "current_user", "row"),
@@ -182,8 +205,8 @@ def test_public_api_resources_and_static_contracts() -> None:
 
         source_root = Path("src/my_usermanager/adapters/fastapi_htmx")
         forbidden = (
-            "request.session", "set_cookie(", "grant_role(",
-            "grant_permission(", "ADMIN_ROLE_NAME",
+            "request.session", "set_cookie(", "GrantAdminService(",
+            "MemoryGrantStore(", "ADMIN_ROLE_NAME",
         )
         assert source_root.is_dir()
         for source_path in source_root.rglob("*.py"):
@@ -216,8 +239,12 @@ def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
             r'''(?:id|hx-target|hx-post|action)\\s*=\\s*["']([^"']+)["']'''
         )
 
-        counts = dict.fromkeys(("current", "admin", "listed", "csrf", "passkeys"), 0)
+        counts = dict.fromkeys(
+            ("current", "admin", "listed", "roles", "capabilities", "csrf", "passkeys"),
+            0,
+        )
         disabled_changes, after_changes = [], []
+        role_changes, permission_changes = [], []
 
         def current_user(request):
             counts["current"] += 1; return AuthenticatedSubject(
@@ -234,14 +261,66 @@ def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
                 "username": "unsafe-user", "display_name": "Unsafe User",
                 "email": "unsafe@example.invalid", "disabled": disabled,
                 "is_admin": False,
+                "roles": ("member",),
+                "permissions": (
+                    adapter.PermissionGrantRow(
+                        permission="workflow.run",
+                        label="Run workflow",
+                        scope_type="workflow",
+                        scope_id="wf-1",
+                    ),
+                ),
+                "external_identities": (
+                    adapter.ExternalIdentityRow(
+                        provider="test", subject="subject-1"
+                    ),
+                ),
             }}
             return adapter.UserRow(**values)
 
         def list_users(request, current_user):
             counts["listed"] += 1; return (row(False),)
 
+        def role_options(request, current_user):
+            counts["roles"] += 1; return ("member", "admin")
+
+        def capability_options(request, current_user):
+            counts["capabilities"] += 1
+            return (
+                adapter.CapabilityOption(
+                    permission="workflow.run",
+                    label="Run workflow",
+                    scope_type="workflow",
+                    scope_id="wf-1",
+                ),
+            )
+
         def set_disabled(request, current_user, user_id, disabled):
             disabled_changes.append((user_id, disabled)); return row(disabled)
+
+        def grant_role(request, current_user, user_id, role_name):
+            role_changes.append(("grant", user_id, role_name)); return row(False)
+
+        def revoke_role(request, current_user, user_id, role_name):
+            role_changes.append(("revoke", user_id, role_name)); return row(False)
+
+        def grant_permission(request, current_user, user_id, permission):
+            permission_changes.append(
+                (
+                    "grant", user_id, permission.permission,
+                    permission.scope_type, permission.scope_id,
+                )
+            )
+            return row(False)
+
+        def revoke_permission(request, current_user, user_id, permission):
+            permission_changes.append(
+                (
+                    "revoke", user_id, permission.permission,
+                    permission.scope_type, permission.scope_id,
+                )
+            )
+            return row(False)
 
         def csrf_context(request):
             counts["csrf"] += 1
@@ -261,7 +340,10 @@ def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
 
         hooks = SimpleNamespace(
             get_current_user=current_user, require_admin=require_admin,
-            list_users=list_users, set_user_disabled=set_disabled,
+            list_users=list_users, role_options=role_options,
+            capability_options=capability_options, set_user_disabled=set_disabled,
+            grant_role=grant_role, revoke_role=revoke_role,
+            grant_permission=grant_permission, revoke_permission=revoke_permission,
             csrf_context=csrf_context, after_user_disabled_changed=after_changed,
             render_passkey_panel=passkey_panel,
         )
@@ -284,6 +366,32 @@ def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
             client.get(config.users_path),
             client.post(config.disable_user_path, data={{"user_id": unsafe_id}}),
             client.post(config.enable_user_path, data={{"user_id": unsafe_id}}),
+            client.post(
+                config.grant_role_path,
+                data={{"user_id": unsafe_id, "role_name": "member"}},
+            ),
+            client.post(
+                config.revoke_role_path,
+                data={{"user_id": unsafe_id, "role_name": "member"}},
+            ),
+            client.post(
+                config.grant_permission_path,
+                data={{
+                    "user_id": unsafe_id,
+                    "permission": "workflow.run",
+                    "scope_type": "workflow",
+                    "scope_id": "wf-1",
+                }},
+            ),
+            client.post(
+                config.revoke_permission_path,
+                data={{
+                    "user_id": unsafe_id,
+                    "permission": "workflow.run",
+                    "scope_type": "workflow",
+                    "scope_id": "wf-1",
+                }},
+            ),
         )
         for response in responses:
             content_type = response.headers.get("content-type", "")
@@ -293,6 +401,8 @@ def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
         assert {{
             config.account_path, config.users_path,
             config.disable_user_path, config.enable_user_path,
+            config.grant_role_path, config.revoke_role_path,
+            config.grant_permission_path, config.revoke_permission_path,
         }} <= paths
         assert all(
             "{{user_id}}" not in path and unsafe_id not in path for path in paths
@@ -301,6 +411,8 @@ def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
         html = "\\n".join(response.text for response in responses)
         assert 'name="user_id"' in html
         assert "quote" in html and "&lt;tag&gt;&amp;tail" in html
+        assert "member" in html and "Run workflow" in html
+        assert "test:subject-1" in html
         assert (
             '<input type="hidden" name="csrf" value="&lt;token&amp;value&gt;">'
             in html
@@ -316,9 +428,17 @@ def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
         assert re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", key) is not None
         assert counts["current"] >= 4 and counts["admin"] >= 3
         assert counts["listed"] >= 1 and counts["csrf"] >= 1
+        assert counts["roles"] >= 1 and counts["capabilities"] >= 1
         assert counts["passkeys"] >= 1
         assert disabled_changes == [(unsafe_id, True), (unsafe_id, False)]
         assert after_changes == [unsafe_id, unsafe_id]
+        assert role_changes == [
+            ("grant", unsafe_id, "member"), ("revoke", unsafe_id, "member")
+        ]
+        assert permission_changes == [
+            ("grant", unsafe_id, "workflow.run", "workflow", "wf-1"),
+            ("revoke", unsafe_id, "workflow.run", "workflow", "wf-1"),
+        ]
         """,
     )
     # When: account, admin list, disable, and enable routes are exercised.

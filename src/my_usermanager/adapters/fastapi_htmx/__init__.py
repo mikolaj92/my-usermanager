@@ -8,7 +8,10 @@ _OPTIONAL_IMPORT_ROOTS: Final = frozenset({"fastapi", "jinja2", "starlette"})
 
 try:
     from my_usermanager.adapters.fastapi_htmx.config import (
+        CapabilityOption,
         CsrfContext,
+        ExternalIdentityRow,
+        PermissionGrantRow,
         UserManagerUiConfig,
         UserManagerUiRouter,
         UserRow,
@@ -29,7 +32,10 @@ except ModuleNotFoundError as exc:
     raise
 
 __all__: Final = (
+    "CapabilityOption",
     "CsrfContext",
+    "ExternalIdentityRow",
+    "PermissionGrantRow",
     "UserManagerUiConfig",
     "UserManagerUiHooks",
     "UserManagerUiRouter",

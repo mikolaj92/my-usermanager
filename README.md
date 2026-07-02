@@ -335,9 +335,9 @@ hosts that need to wire static files manually.
 
 `UserManagerUiHooks` is the host callback seam. The adapter calls hooks for
 current-user lookup, admin authorization, user listing, disabled-state changes,
-CSRF metadata, post-mutation side effects, and optional passkey-panel HTML. It
-does not create application users, sessions, roles, grants, audit records, or
-cookies itself.
+role and app-defined capability options, grant/revoke mutations, CSRF metadata,
+post-mutation side effects, and optional passkey-panel HTML. It does not create
+application users, sessions, roles, grants, audit records, or cookies itself.
 
 ### Host-owned security responsibilities
 

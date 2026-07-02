@@ -16,6 +16,35 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
+class CapabilityOption:
+    """App-defined capability option rendered by the generic grant form."""
+
+    permission: str
+    label: str
+    description: str | None = None
+    scope_type: str | None = None
+    scope_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalIdentityRow:
+    """Linked external identity rendered in the user row."""
+
+    provider: str
+    subject: str
+
+
+@dataclass(frozen=True, slots=True)
+class PermissionGrantRow:
+    """Permission grant rendered in the user row."""
+
+    permission: str
+    label: str
+    scope_type: str | None = None
+    scope_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class UserRow:
     """Host-supplied user row rendered by the reusable admin UI."""
 
@@ -26,6 +55,9 @@ class UserRow:
     email: str | None
     disabled: bool
     is_admin: bool
+    roles: tuple[str, ...] = ()
+    permissions: tuple[PermissionGrantRow, ...] = ()
+    external_identities: tuple[ExternalIdentityRow, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +76,10 @@ class UserManagerUiConfig:
     users_path: str = "/admin/users"
     disable_user_path: str = "/admin/users/disable"
     enable_user_path: str = "/admin/users/enable"
+    grant_role_path: str = "/admin/users/grant-role"
+    revoke_role_path: str = "/admin/users/revoke-role"
+    grant_permission_path: str = "/admin/users/grant-permission"
+    revoke_permission_path: str = "/admin/users/revoke-permission"
     static_mount_path: str = "/usermanager/ui/static"
     static_url_path: str = "/usermanager/ui/static"
     login_url: str = "/auth/login"
