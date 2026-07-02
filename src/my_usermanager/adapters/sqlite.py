@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import UTC, datetime
-from typing import ClassVar, Final
+from typing import ClassVar, Final, cast
 
 from my_usermanager.models import (
     AuditEvent,
@@ -109,11 +109,24 @@ CREATE TABLE IF NOT EXISTS um_audit_events (
 _LIMIT_FIELD: Final = "limit"
 _OFFSET_FIELD: Final = "offset"
 _PAGE_ERROR_MESSAGE: Final = "must be greater than or equal to zero"
+_ROW_STR_ERROR: Final = "expected SQLite column to be str"
+_ROW_OPTIONAL_STR_ERROR: Final = "expected SQLite column to be str or None"
+_ROW_INT_ERROR: Final = "expected SQLite column to be int"
+_METADATA_OBJECT_ERROR: Final = "expected metadata to be an object"
+_METADATA_STRING_ERROR: Final = "expected metadata keys and values to be strings"
+_INSERT_IDENTITY_SQL: Final = """
+INSERT OR IGNORE INTO um_external_identities
+(provider, subject, user_id) VALUES (?, ?, ?)
+"""
+_SELECT_IDENTITY_USER_SQL: Final = """
+SELECT user_id FROM um_external_identities
+WHERE provider = ? AND subject = ?
+"""
 
 
 def create_tables(conn: sqlite3.Connection) -> None:
     """Create all my-usermanager tables if they do not exist."""
-    conn.executescript(_CREATE_TABLES_SQL)
+    _ = conn.executescript(_CREATE_TABLES_SQL)
     conn.commit()
 
 
@@ -133,21 +146,59 @@ def _scope_from_row(scope_type: str | None, scope_id: str | None) -> Scope:
     return Scope(scope_type=scope_type or None, scope_id=scope_id or None)
 
 
+def _fetchone_row(cursor: sqlite3.Cursor) -> sqlite3.Row | None:
+    return cast("sqlite3.Row | None", cursor.fetchone())
+
+
+def _fetchall_rows(cursor: sqlite3.Cursor) -> list[sqlite3.Row]:
+    return cast("list[sqlite3.Row]", cursor.fetchall())
+
+
+def _row_object(row: sqlite3.Row, field: str | int) -> object:
+    return cast("object", row[field])
+
+
+def _row_str(row: sqlite3.Row, field: str | int) -> str:
+    value = _row_object(row, field)
+    if not isinstance(value, str):
+        raise TypeError(_ROW_STR_ERROR)
+    return value
+
+
+def _row_optional_str(row: sqlite3.Row, field: str | int) -> str | None:
+    value = _row_object(row, field)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError(_ROW_OPTIONAL_STR_ERROR)
+    return value
+
+
+def _row_int(row: sqlite3.Row, field: str | int) -> int:
+    value = _row_object(row, field)
+    if not isinstance(value, int):
+        raise TypeError(_ROW_INT_ERROR)
+    return value
+
+
 def _user_from_row(
     row: sqlite3.Row,
     identities: frozenset[ExternalIdentity],
 ) -> User:
     return User(
-        user_id=row["user_id"],
+        user_id=_row_str(row, "user_id"),
         external_identities=identities,
-        username=row["username"],
-        first_name=row["first_name"],
-        last_name=row["last_name"],
-        display_name=row["display_name"],
-        email=row["email"],
-        disabled=bool(row["disabled"]),
-        system=bool(row["system"]),
-        scope=_scope_from_row(row["scope_type"], row["scope_id"]),
+        username=_row_optional_str(row, "username"),
+        first_name=_row_optional_str(row, "first_name"),
+        last_name=_row_optional_str(row, "last_name"),
+        display_name=_row_optional_str(row, "display_name"),
+        email=_row_optional_str(row, "email"),
+        disabled=bool(_row_int(row, "disabled")),
+        system=bool(_row_int(row, "system")),
+        scope=_scope_from_row(
+            _row_optional_str(row, "scope_type"),
+            _row_optional_str(row, "scope_id"),
+        ),
     )
 
 
@@ -155,12 +206,18 @@ def _load_identities(
     conn: sqlite3.Connection,
     user_id: str,
 ) -> frozenset[ExternalIdentity]:
-    rows = conn.execute(
-        "SELECT provider, subject FROM um_external_identities WHERE user_id = ?",
-        (user_id,),
-    ).fetchall()
+    rows = _fetchall_rows(
+        conn.execute(
+            "SELECT provider, subject FROM um_external_identities WHERE user_id = ?",
+            (user_id,),
+        )
+    )
     return frozenset(
-        ExternalIdentity(provider=r["provider"], subject=r["subject"]) for r in rows
+        ExternalIdentity(
+            provider=_row_str(row, "provider"),
+            subject=_row_str(row, "subject"),
+        )
+        for row in rows
     )
 
 
@@ -169,22 +226,21 @@ def _save_identities(
     user_id: str,
     identities: frozenset[ExternalIdentity],
 ) -> None:
-    conn.execute("DELETE FROM um_external_identities WHERE user_id = ?", (user_id,))
-    conn.executemany(
-        "INSERT OR IGNORE INTO um_external_identities "
-        "(provider, subject, user_id) VALUES (?, ?, ?)",
+    _ = conn.execute("DELETE FROM um_external_identities WHERE user_id = ?", (user_id,))
+    _ = conn.executemany(
+        _INSERT_IDENTITY_SQL,
         [(i.provider, i.subject, user_id) for i in identities],
     )
 
 
 def _grant_from_row(row: sqlite3.Row) -> Grant:
-    scope = _scope_from_row(row["scope_type"], row["scope_id"])
-    role_name: str = row["role_name"]
-    permission_name: str = row["permission_name"]
+    scope = _scope_from_row(_row_str(row, "scope_type"), _row_str(row, "scope_id"))
+    role_name = _row_str(row, "role_name")
+    permission_name = _row_str(row, "permission_name")
     if role_name:
-        return Grant.for_role(row["user_id"], role_name, scope)
+        return Grant.for_role(_row_str(row, "user_id"), role_name, scope)
     return Grant.for_permission(
-        row["user_id"],
+        _row_str(row, "user_id"),
         Permission(permission_name),
         scope,
     )
@@ -207,23 +263,35 @@ def _grant_sort_key(grant: Grant) -> tuple[str, str, str, str, str]:
 
 
 def _audit_from_row(row: sqlite3.Row) -> AuditEvent:
-    ts = datetime.fromisoformat(row["timestamp"])
+    ts = datetime.fromisoformat(_row_str(row, "timestamp"))
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=UTC)
-    metadata: dict[str, str] = json.loads(row["metadata"]) if row["metadata"] else {}
+    metadata_text = _row_str(row, "metadata")
+    metadata: dict[str, str] = {}
+    if metadata_text:
+        metadata_obj = cast("object", json.loads(metadata_text))
+        if not isinstance(metadata_obj, dict):
+            raise TypeError(_METADATA_OBJECT_ERROR)
+        for key, value in cast("dict[object, object]", metadata_obj).items():
+            if not isinstance(key, str) or not isinstance(value, str):
+                raise TypeError(_METADATA_STRING_ERROR)
+            metadata[key] = value
     return AuditEvent(
-        event_id=row["event_id"],
+        event_id=_row_str(row, "event_id"),
         timestamp=ts,
-        actor_id=row["actor_id"],
-        action=row["action"],
-        target_type=row["target_type"],
-        target_id=row["target_id"],
-        scope=_scope_from_row(row["scope_type"], row["scope_id"]),
-        result=row["result"],
-        reason=row["reason"],
-        request_id=row["request_id"],
-        ip_address=row["ip_address"],
-        user_agent=row["user_agent"],
+        actor_id=_row_str(row, "actor_id"),
+        action=_row_str(row, "action"),
+        target_type=_row_str(row, "target_type"),
+        target_id=_row_str(row, "target_id"),
+        scope=_scope_from_row(
+            _row_optional_str(row, "scope_type"),
+            _row_optional_str(row, "scope_id"),
+        ),
+        result=_row_str(row, "result"),
+        reason=_row_optional_str(row, "reason"),
+        request_id=_row_optional_str(row, "request_id"),
+        ip_address=_row_optional_str(row, "ip_address"),
+        user_agent=_row_optional_str(row, "user_agent"),
         metadata=metadata,
     )
 
@@ -245,13 +313,13 @@ def _matches_user_query_sql(query: UserQuery) -> tuple[str, list[object]]:
             params.extend([query.scope.scope_type, query.scope.scope_id])
     if query.text is not None:
         needle = f"%{query.text.casefold()}%"
-        clauses.append(
-            "(lower(user_id) LIKE ? OR lower(coalesce(username,'')) LIKE ?"
-            " OR lower(coalesce(first_name,'')) LIKE ?"
-            " OR lower(coalesce(last_name,'')) LIKE ?"
-            " OR lower(coalesce(display_name,'')) LIKE ?"
-            " OR lower(coalesce(email,'')) LIKE ?)"
-        )
+        clauses.append("""
+(lower(user_id) LIKE ? OR lower(coalesce(username,'')) LIKE ?
+OR lower(coalesce(first_name,'')) LIKE ?
+OR lower(coalesce(last_name,'')) LIKE ?
+OR lower(coalesce(display_name,'')) LIKE ?
+OR lower(coalesce(email,'')) LIKE ?)
+""")
         params.extend([needle] * 6)
     where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     return where, params
@@ -328,12 +396,12 @@ class SQLiteUserStore:
     def __init__(self, conn: sqlite3.Connection) -> None:
         """Bind the store to an open SQLite connection."""
         conn.row_factory = sqlite3.Row
-        self._conn = conn
+        self._conn: sqlite3.Connection = conn
 
     def create(self, user: User) -> User:
         """Store a new user or raise DuplicateUserError."""
         try:
-            self._conn.execute(
+            _ = self._conn.execute(
                 """INSERT INTO um_users
                    (user_id, username, first_name, last_name, display_name,
                     email, disabled, system, scope_type, scope_id)
@@ -360,9 +428,9 @@ class SQLiteUserStore:
     def get(self, user_id: str) -> User | None:
         """Return a user by id or None when missing."""
         checked = validate_identifier(user_id, field_name="user_id")
-        row = self._conn.execute(
-            "SELECT * FROM um_users WHERE user_id = ?", (checked,)
-        ).fetchone()
+        row = _fetchone_row(
+            self._conn.execute("SELECT * FROM um_users WHERE user_id = ?", (checked,))
+        )
         if row is None:
             return None
         return _user_from_row(row, _load_identities(self._conn, checked))
@@ -398,24 +466,26 @@ class SQLiteUserStore:
         _validate_page(limit=limit, offset=offset)
         where, params = _matches_user_query_sql(query)
         # `where` comes from fixed clauses with all values bound as parameters.
-        statement = (
-            f"SELECT * FROM um_users {where} "  # noqa: S608
-            "ORDER BY user_id LIMIT ? OFFSET ?"
+        statement = f"SELECT * FROM um_users {where} ORDER BY user_id LIMIT ? OFFSET ?"  # noqa: S608
+        rows = _fetchall_rows(
+            self._conn.execute(
+                statement,
+                (*params, limit, offset),
+            )
         )
-        rows = self._conn.execute(
-            statement,
-            (*params, limit, offset),
-        ).fetchall()
         return tuple(
-            _user_from_row(r, _load_identities(self._conn, r["user_id"])) for r in rows
+            _user_from_row(row, _load_identities(self._conn, _row_str(row, "user_id")))
+            for row in rows
         )
 
     def count_active(self) -> int:
         """Return the number of non-disabled users."""
-        row = self._conn.execute(
-            "SELECT COUNT(*) FROM um_users WHERE disabled = 0"
-        ).fetchone()
-        return int(row[0])
+        row = _fetchone_row(
+            self._conn.execute("SELECT COUNT(*) FROM um_users WHERE disabled = 0")
+        )
+        if row is None:
+            return 0
+        return _row_int(row, 0)
 
     # ------------------------------------------------------------------
     # ExternalIdentityUserStore protocol
@@ -423,14 +493,15 @@ class SQLiteUserStore:
 
     def resolve_external_identity(self, identity: ExternalIdentity) -> User | None:
         """Return the linked user or None when the identity is unlinked."""
-        row = self._conn.execute(
-            "SELECT user_id FROM um_external_identities "
-            "WHERE provider = ? AND subject = ?",
-            (identity.provider, identity.subject),
-        ).fetchone()
+        row = _fetchone_row(
+            self._conn.execute(
+                _SELECT_IDENTITY_USER_SQL,
+                (identity.provider, identity.subject),
+            )
+        )
         if row is None:
             return None
-        return self.get(row["user_id"])
+        return self.get(_row_str(row, "user_id"))
 
     def link_external_identity(
         self,
@@ -439,20 +510,23 @@ class SQLiteUserStore:
         identity: ExternalIdentity,
     ) -> User:
         """Link an external identity to an existing user or raise on conflict."""
-        existing_row = self._conn.execute(
-            "SELECT user_id FROM um_external_identities "
-            "WHERE provider = ? AND subject = ?",
-            (identity.provider, identity.subject),
-        ).fetchone()
-        if existing_row is not None and existing_row["user_id"] != user_id:
+        existing_row = _fetchone_row(
+            self._conn.execute(
+                _SELECT_IDENTITY_USER_SQL,
+                (identity.provider, identity.subject),
+            )
+        )
+        existing_user_id = (
+            None if existing_row is None else _row_str(existing_row, "user_id")
+        )
+        if existing_user_id is not None and existing_user_id != user_id:
             raise ExternalIdentityConflictError(
                 identity=identity,
-                existing_user_id=existing_row["user_id"],
+                existing_user_id=existing_user_id,
                 requested_user_id=user_id,
             )
-        self._conn.execute(
-            "INSERT OR IGNORE INTO um_external_identities "
-            "(provider, subject, user_id) VALUES (?, ?, ?)",
+        _ = self._conn.execute(
+            _INSERT_IDENTITY_SQL,
             (identity.provider, identity.subject, user_id),
         )
         self._conn.commit()
@@ -478,7 +552,7 @@ class SQLiteRoleStore:
 
     def __init__(self) -> None:
         """Create a role store containing only built-in roles."""
-        self._roles = dict(BUILTIN_ROLES)
+        self._roles: dict[str, Role] = dict(BUILTIN_ROLES)
 
     def get(self, role_name: str) -> Role | None:
         """Return a role by name or None when missing."""
@@ -503,13 +577,13 @@ class SQLiteGrantStore:
     def __init__(self, conn: sqlite3.Connection) -> None:
         """Bind the store to an open SQLite connection."""
         conn.row_factory = sqlite3.Row
-        self._conn = conn
+        self._conn: sqlite3.Connection = conn
 
     def add_role_grant(self, user_id: str, role_name: str, scope: Scope) -> Grant:
         """Store a role grant or raise DuplicateGrantError."""
         grant = Grant.for_role(user_id, role_name, scope)
         try:
-            self._conn.execute(
+            _ = self._conn.execute(
                 """INSERT INTO um_grants
                    (user_id, role_name, permission_name, scope_type, scope_id)
                    VALUES (?, ?, '', ?, ?)""",
@@ -543,7 +617,7 @@ class SQLiteGrantStore:
         """Store a direct permission grant or raise DuplicateGrantError."""
         grant = Grant.for_permission(user_id, permission, scope)
         try:
-            self._conn.execute(
+            _ = self._conn.execute(
                 """INSERT INTO um_grants
                    (user_id, role_name, permission_name, scope_type, scope_id)
                    VALUES (?, '', ?, ?, ?)""",
@@ -581,10 +655,10 @@ class SQLiteGrantStore:
     def list_grants_for_user(self, user_id: str) -> tuple[Grant, ...]:
         """Return all grants for a user in deterministic order."""
         checked = validate_identifier(user_id, field_name="user_id")
-        rows = self._conn.execute(
-            "SELECT * FROM um_grants WHERE user_id = ?", (checked,)
-        ).fetchall()
-        grants = [_grant_from_row(r) for r in rows]
+        rows = _fetchall_rows(
+            self._conn.execute("SELECT * FROM um_grants WHERE user_id = ?", (checked,))
+        )
+        grants = [_grant_from_row(row) for row in rows]
         return tuple(sorted(grants, key=_grant_sort_key))
 
 
@@ -601,12 +675,12 @@ class SQLiteAuditStore:
     def __init__(self, conn: sqlite3.Connection) -> None:
         """Bind the store to an open SQLite connection."""
         conn.row_factory = sqlite3.Row
-        self._conn = conn
+        self._conn: sqlite3.Connection = conn
 
     def append(self, event: AuditEvent) -> AuditEvent:
         """Append an audit event or raise DuplicateAuditEventError."""
         try:
-            self._conn.execute(
+            _ = self._conn.execute(
                 """INSERT INTO um_audit_events
                    (event_id, timestamp, actor_id, action, target_type, target_id,
                     scope_type, scope_id, result, reason, request_id, ip_address,
@@ -646,11 +720,12 @@ class SQLiteAuditStore:
         where, params = _matches_audit_filters_sql(filters)
         # `where` comes from fixed clauses with all values bound as parameters.
         statement = (
-            f"SELECT * FROM um_audit_events {where} "  # noqa: S608
-            "ORDER BY rowid LIMIT ? OFFSET ?"
+            f"SELECT * FROM um_audit_events {where} ORDER BY rowid LIMIT ? OFFSET ?"  # noqa: S608
         )
-        rows = self._conn.execute(
-            statement,
-            (*params, limit, offset),
-        ).fetchall()
-        return tuple(_audit_from_row(r) for r in rows)
+        rows = _fetchall_rows(
+            self._conn.execute(
+                statement,
+                (*params, limit, offset),
+            )
+        )
+        return tuple(_audit_from_row(row) for row in rows)
