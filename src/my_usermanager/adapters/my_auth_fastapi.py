@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
 from typing import TYPE_CHECKING, Final, Protocol, TypeGuard, override
@@ -15,10 +15,13 @@ from my_usermanager.adapters.my_auth import (
 )
 from my_usermanager.models import (
     ExternalIdentity,
+    Permission,
     User,
     ValidationError,
     validate_external_subject,
 )
+from my_usermanager.sessions import SessionClaimValue, SessionPrincipal
+from my_usermanager.subjects import ExternalIdentityNotFoundError
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -35,9 +38,11 @@ __all__: Final[tuple[str, ...]] = (
     "build_after_login_identity_linker",
     "build_after_register_identity_linker",
     "build_get_auth_user",
+    "build_login_session_principal_writer",
     "build_make_registration_user",
     "build_make_registration_user_with_identity_link",
     "require_passkey_route_hooks",
+    "user_to_session_principal",
 )
 
 _FASTAPI_IMPORT_NAME: Final = "my_auth.fastapi"
@@ -45,6 +50,11 @@ _MY_AUTH_FASTAPI_INSTALL_TARGET: Final = "my-auth[fastapi]"
 
 type AccessPolicy = Callable[[User], bool]
 type PasskeyProfileResolver = Callable[[User], PasskeyUserProfile | None]
+type SessionPrincipalBuilder = Callable[[User], SessionPrincipal]
+type SessionPrincipalWriter[ResponseT, RequestT] = Callable[
+    [ResponseT, RequestT, SessionPrincipal],
+    object,
+]
 
 
 class PasskeyRouteHooksLike(Protocol):
@@ -226,6 +236,43 @@ def build_make_registration_user_with_identity_link[RequestT](
     return make_registration_user
 
 
+def user_to_session_principal(
+    user: User,
+    *,
+    roles: Iterable[str] = (),
+    permissions: Iterable[Permission] = (),
+    claims: Mapping[str, SessionClaimValue] | None = None,
+) -> SessionPrincipal:
+    """Build a typed session principal from a linked local user."""
+    return SessionPrincipal(
+        user_id=user.user_id,
+        username=user.username,
+        display_name=user.display_name,
+        roles=frozenset(roles),
+        permissions=frozenset(permissions),
+        external_identities=user.external_identities,
+        claims={} if claims is None else claims,
+    )
+
+
+def build_login_session_principal_writer[ResponseT, RequestT](
+    store: ExternalIdentityUserStore,
+    write_principal: SessionPrincipalWriter[ResponseT, RequestT],
+    principal_builder: SessionPrincipalBuilder = user_to_session_principal,
+) -> Callable[[ResponseT, RequestT, PasskeyUserLike], None]:
+    """Build a PasskeyRouteHooks.login callback that writes a session principal."""
+
+    def login(
+        response: ResponseT,
+        request: RequestT,
+        user: PasskeyUserLike,
+    ) -> None:
+        local_user = _require_linked_user(store, user)
+        _ = write_principal(response, request, principal_builder(local_user))
+
+    return login
+
+
 def build_after_register_identity_linker[RequestT, CredentialT: PasskeyCredentialLike](
     store: ExternalIdentityUserStore,
 ) -> Callable[[RequestT, PasskeyUserLike, CredentialT], None]:
@@ -238,6 +285,18 @@ def build_after_login_identity_linker[RequestT, CredentialT: PasskeyCredentialLi
 ) -> Callable[[RequestT, PasskeyUserLike, CredentialT], None]:
     """Build an after_login hook that refreshes only the identity link."""
     return _build_identity_linker(store)
+
+
+def _require_linked_user(
+    store: ExternalIdentityUserStore,
+    user: PasskeyUserLike,
+) -> User:
+    subject = passkey_user_to_authenticated_subject(user)
+    identity = subject.external_identity()
+    local_user = store.resolve_external_identity(identity)
+    if local_user is None:
+        raise ExternalIdentityNotFoundError(identity)
+    return local_user
 
 
 def _build_identity_linker[RequestT, CredentialT: PasskeyCredentialLike](

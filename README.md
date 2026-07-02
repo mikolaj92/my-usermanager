@@ -84,14 +84,17 @@ identity = subject.external_identity()
 Install both optional extras from the public repository when using these helpers: `my-usermanager[myauth,fastapi]`.
 
 ```python
+from my_usermanager import write_session_principal
 from my_usermanager.adapters.my_auth_fastapi import (
     PasskeyRegistrationLink,
     PasskeyUserProfile,
     build_after_login_identity_linker,
     build_after_register_identity_linker,
     build_get_auth_user,
+    build_login_session_principal_writer,
     build_make_registration_user_with_identity_link,
     require_passkey_route_hooks,
+    user_to_session_principal,
 )
 
 
@@ -108,6 +111,14 @@ def registration_policy(request, display_name: str) -> PasskeyRegistrationLink:
     )
 
 
+def write_login_principal(response, request, principal):
+    write_session_principal(request.session, principal)
+
+
+def project_principal(user):
+    return user_to_session_principal(user, claims=project_claims(user))
+
+
 PasskeyRouteHooks = require_passkey_route_hooks()
 hooks = PasskeyRouteHooks(
     get_session_user=get_session_user,  # host session lookup
@@ -116,7 +127,11 @@ hooks = PasskeyRouteHooks(
         store,
         registration_policy,
     ),
-    login=login,  # host writes its own session
+    login=build_login_session_principal_writer(
+        store,
+        write_login_principal,
+        principal_builder=project_principal,
+    ),
     logout=logout,  # host clears its own session
     registration_allowed=registration_allowed,
     after_register=build_after_register_identity_linker(store),
@@ -124,7 +139,7 @@ hooks = PasskeyRouteHooks(
 )
 ```
 
-The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. Registration/provisioning must be an explicit host decision.
+The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. The login helper only turns an already-linked local user into a `SessionPrincipal`; the host still owns the actual session write and any claim projection. Registration/provisioning must be an explicit host decision.
 
 ## Session principal helpers
 
