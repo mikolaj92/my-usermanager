@@ -33,7 +33,7 @@ def test_my_auth_fastapi_identity_contract_is_reusable(
     # When: the shared contract exercises the FastAPI identity-linking adapter.
     assert_my_auth_fastapi_identity_contract()
 
-    # Then: registration/login identity links are explicit, idempotent, and grant-free.
+    # Then: each registration/login link is explicit, idempotent, and grant-free.
 
 
 def import_fake_my_auth(name: str, _package: str | None = None) -> FakeMyAuthModule:

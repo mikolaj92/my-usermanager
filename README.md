@@ -141,6 +141,15 @@ hooks = PasskeyRouteHooks(
 
 The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. The login helper only turns an already-linked local user into a `SessionPrincipal`; the host still owns the actual session write and any claim projection. Registration/provisioning must be an explicit host decision.
 
+Identity-linking checklist for host apps:
+
+- Provision or choose the local `User` in host code before returning `PasskeyRegistrationLink`.
+- Link `ExternalIdentity(provider="my-auth", subject=PasskeyUser.user_id)` explicitly; never infer grants from passkey registration or login.
+- Wire `after_register` and `after_login` through the identity-linker helpers so refreshes are idempotent and credential/user mismatches fail closed.
+- Build sessions only from an already-linked local user, then project roles, permissions, and claims from the app's grant stores.
+
+Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
+
 ## Grant claim projection
 
 Use `GrantClaimsProjector` to collapse stored roles, direct permissions, and app-defined mappings into a session principal:

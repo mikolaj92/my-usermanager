@@ -33,7 +33,8 @@ _PROVIDER: Final = "my-auth"
 def assert_my_auth_fastapi_identity_contract() -> None:
     """Assert identity-linking hooks stay explicit, idempotent, and grant-free."""
     _assert_registration_linking_is_explicit()
-    _assert_after_hooks_link_without_grants()
+    _assert_after_register_links_without_grants()
+    _assert_after_login_links_without_grants()
     _assert_existing_identity_link_is_preserved()
     _assert_credential_user_mismatch_is_rejected()
 
@@ -128,19 +129,31 @@ def _assert_registration_linking_is_explicit() -> None:
     _require_grant_free(grant_store, user_id=_LOCAL_USER_ID)
 
 
-def _assert_after_hooks_link_without_grants() -> None:
+def _assert_after_register_links_without_grants() -> None:
     store = _ContractExternalIdentityStore((User(user_id=_PASSKEY_USER_ID),))
     grant_store = MemoryGrantStore()
     passkey_user = _passkey_user(_PASSKEY_USER_ID)
     credential = _ContractCredential(user_id=_PASSKEY_USER_ID)
-    request = _ContractRequest(trace_id=_TRACE_ID)
     identity = ExternalIdentity(provider=_PROVIDER, subject=_PASSKEY_USER_ID)
 
     after_register = build_after_register_identity_linker(store)
+
+    after_register(_ContractRequest(trace_id=_TRACE_ID), passkey_user, credential)
+
+    _require_linked_user(store, identity=identity, user_id=_PASSKEY_USER_ID)
+    _require_grant_free(grant_store, user_id=_PASSKEY_USER_ID)
+
+
+def _assert_after_login_links_without_grants() -> None:
+    store = _ContractExternalIdentityStore((User(user_id=_PASSKEY_USER_ID),))
+    grant_store = MemoryGrantStore()
+    passkey_user = _passkey_user(_PASSKEY_USER_ID)
+    credential = _ContractCredential(user_id=_PASSKEY_USER_ID)
+    identity = ExternalIdentity(provider=_PROVIDER, subject=_PASSKEY_USER_ID)
+
     after_login = build_after_login_identity_linker(store)
 
-    after_register(request, passkey_user, credential)
-    after_login(request, passkey_user, credential)
+    after_login(_ContractRequest(trace_id=_TRACE_ID), passkey_user, credential)
 
     _require_linked_user(store, identity=identity, user_id=_PASSKEY_USER_ID)
     _require_grant_free(grant_store, user_id=_PASSKEY_USER_ID)
