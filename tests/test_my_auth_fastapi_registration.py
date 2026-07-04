@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
+
+import pytest
 
 from my_usermanager.adapters import my_auth as my_auth_adapter
 from my_usermanager.adapters import my_auth_fastapi as fastapi_adapter
-from my_usermanager.memory import MemoryGrantStore
+from my_usermanager.memory import MemoryGrantStore, MemoryRoleStore
 from my_usermanager.models import ExternalIdentity, User
+from my_usermanager.permissions import PermissionRegistry
 from my_usermanager.subjects import ExternalIdentityConflictError
-
-if TYPE_CHECKING:
-    import pytest
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,3 +181,107 @@ def test_after_login_uses_existing_external_identity_link_for_local_user() -> No
     assert linked is not None
     assert linked.user_id == "local_user_123"
     assert linked.external_identities == frozenset({identity})
+
+
+def test_registration_link_is_idempotent_without_implicit_access(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(my_auth_adapter, "import_module", import_fake_my_auth)
+    store = FakeExternalIdentityUserStore(users=(User(user_id="local_user_123"),))
+    grants = MemoryGrantStore()
+    roles = MemoryRoleStore()
+    registry = PermissionRegistry()
+    before_roles = roles.list()
+    before_permissions = registry.permissions()
+
+    def registration_policy(
+        _request: FakeRequest,
+        display_name: str,
+    ) -> fastapi_adapter.PasskeyRegistrationLink:
+        return fastapi_adapter.PasskeyRegistrationLink(
+            local_user_id="local_user_123",
+            profile=fastapi_adapter.PasskeyUserProfile(
+                user_id="passkey_user_123",
+                user_handle=b"linked-handle",
+                name="passkey_user_123",
+                display_name=display_name,
+            ),
+        )
+
+    make_registration_user = (
+        fastapi_adapter.build_make_registration_user_with_identity_link(
+            store,
+            registration_policy,
+        )
+    )
+
+    first = make_registration_user(FakeRequest(trace_id="first"), "Passkey User")
+    second = make_registration_user(FakeRequest(trace_id="second"), "Passkey User")
+
+    identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
+    linked = store.resolve_external_identity(identity)
+    assert first == second
+    assert linked is not None
+    assert linked.user_id == "local_user_123"
+    assert grants.list_grants_for_user("local_user_123") == ()
+    assert roles.list() == before_roles
+    assert registry.permissions() == before_permissions
+
+
+def test_registration_link_reports_existing_identity_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(my_auth_adapter, "import_module", import_fake_my_auth)
+    identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
+    store = FakeExternalIdentityUserStore(
+        users=(User(user_id="existing_user"), User(user_id="new_user")),
+    )
+    _ = store.link_external_identity(user_id="existing_user", identity=identity)
+
+    def registration_policy(
+        _request: FakeRequest,
+        _display_name: str,
+    ) -> fastapi_adapter.PasskeyRegistrationLink:
+        return fastapi_adapter.PasskeyRegistrationLink(
+            local_user_id="new_user",
+            profile=fastapi_adapter.PasskeyUserProfile(
+                user_id="passkey_user_123",
+                user_handle=b"linked-handle",
+                name="passkey_user_123",
+            ),
+        )
+
+    make_registration_user = (
+        fastapi_adapter.build_make_registration_user_with_identity_link(
+            store,
+            registration_policy,
+        )
+    )
+
+    with pytest.raises(ExternalIdentityConflictError):
+        _ = make_registration_user(FakeRequest(trace_id="register"), "Passkey User")
+
+    linked = store.resolve_external_identity(identity)
+    assert linked is not None
+    assert linked.user_id == "existing_user"
+
+
+def test_after_register_rejects_credential_user_mismatch_without_linking() -> None:
+    store = FakeExternalIdentityUserStore(users=(User(user_id="passkey_user_123"),))
+    grants = MemoryGrantStore()
+    after_register = fastapi_adapter.build_after_register_identity_linker(store)
+
+    with pytest.raises(fastapi_adapter.PasskeyCredentialUserMismatchError):
+        after_register(
+            FakeRequest(trace_id="register"),
+            FakePasskeyUser(
+                user_id="passkey_user_123",
+                user_handle=b"linked-handle",
+                name="Passkey User",
+            ),
+            FakePasskeyCredential(user_id="other_passkey_user"),
+        )
+
+    identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
+    assert store.resolve_external_identity(identity) is None
+    assert grants.list_grants_for_user("passkey_user_123") == ()

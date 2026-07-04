@@ -141,6 +141,14 @@ hooks = PasskeyRouteHooks(
 
 The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. The login helper only turns an already-linked local user into a `SessionPrincipal`; the host still owns the actual session write and any claim projection. Registration/provisioning must be an explicit host decision.
 
+When wiring `my-auth` with `my-usermanager`, host apps should verify this checklist:
+
+- `get_auth_user` resolves only an existing `ExternalIdentity(provider="my-auth", subject=passkey_user_id)` link for an enabled, policy-allowed local user.
+- Registration creates or chooses the local `User` through host policy before returning a `PasskeyRegistrationLink`.
+- `after_register` and `after_login` link only the reported passkey identity and reject credential/user mismatches.
+- Existing external identity links remain stable and conflict handling stays in the host-owned user store.
+- Role, permission, admin grant, session, audit, and recovery policies remain explicit host responsibilities.
+
 ## Grant claim projection
 
 Use `GrantClaimsProjector` to collapse stored roles, direct permissions, and app-defined mappings into a session principal:
