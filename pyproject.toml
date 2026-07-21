@@ -39,7 +39,7 @@ fastapi-htmx = [
     "jinja2>=3.1",
 ]
 myauth = [
-    "my-auth @ git+https://github.com/mikolaj92/my-auth",
+    "my-auth @ git+https://github.com/mikolaj92/my-auth.git@v0.2.0",
 ]
 sqlite = []
 
