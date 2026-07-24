@@ -297,10 +297,16 @@ def _um_grants_is_legacy_canonical(conn: sqlite3.Connection) -> bool:
         else "".join(str(sql_row[0]).upper().split())
     )
     return (
-        "PRIMARY KEY(USER_ID,ROLE_NAME,PERMISSION_NAME,SCOPE_TYPE,SCOPE_ID)" in sql
+        "PRIMARYKEY(USER_ID,ROLE_NAME,PERMISSION_NAME,SCOPE_TYPE,SCOPE_ID)" in sql
         and "REFERENCES" not in sql
         and "CHECK((ROLE_NAME='')!=(PERMISSION_NAME=''))" in sql
     )
+
+
+def _um_audit_events_needs_rebuild(conn: sqlite3.Connection) -> bool:
+    """Return whether v2 audit storage uses the released explicit rowid layout."""
+    rows = conn.execute('PRAGMA table_info("um_audit_events")').fetchall()
+    return bool(rows and rows[0][1] == "rowid")
 
 
 def _um_audit_events_is_legacy_canonical(conn: sqlite3.Connection) -> bool:
@@ -345,7 +351,11 @@ def _um_audit_events_is_legacy_canonical(conn: sqlite3.Connection) -> bool:
         f'PRAGMA index_info("{index_name.replace(chr(34), chr(34) * 2)}")'
     ).fetchall()
     expected_cid = 1 if explicit_rowid else 0
-    if tuple(index_columns) != ((0, expected_cid, "event_id"),):
+    if len(index_columns) != 1 or tuple(index_columns[0]) != (
+        0,
+        expected_cid,
+        "event_id",
+    ):
         return False
 
     sql_row = conn.execute(
@@ -413,7 +423,7 @@ def inspect_sqlite_schema(  # noqa: PLR0911
     )
 
 
-def migrate_sqlite_schema(  # noqa: C901
+def migrate_sqlite_schema(  # noqa: C901, PLR0912
     conn: sqlite3.Connection,
     *,
     transaction_mode: Literal["standalone", "external"] = "standalone",
@@ -431,6 +441,18 @@ def migrate_sqlite_schema(  # noqa: C901
     try:
         state = inspect_sqlite_schema(conn)
         if state == "current":
+            needs_grants_rebuild = _um_grants_is_legacy_canonical(conn)
+            needs_audit_rebuild = _um_audit_events_needs_rebuild(conn)
+            if needs_grants_rebuild or needs_audit_rebuild:
+                orphan_rows = _fetchall_rows(conn.execute(_ORPHAN_GRANTS_SQL))
+                orphans = [_row_str(row, 0) for row in orphan_rows]
+                if orphans:
+                    message = f"orphan grants refuse migration: {', '.join(orphans)}"
+                    raise RuntimeError(message)  # noqa: TRY301
+                if needs_grants_rebuild:
+                    _rebuild_grants_table(conn)
+                if needs_audit_rebuild:
+                    _rebuild_audit_events_table(conn)
             if transaction_mode == "standalone":
                 conn.commit()
             return

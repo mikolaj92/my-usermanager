@@ -834,6 +834,87 @@ def test_implicit_rowid_legacy_audit_schema_migrates_without_losing_events() -> 
         conn.close()
 
 
+@pytest.mark.parametrize("row_factory", [None, sqlite3.Row], ids=["tuple", "row"])
+def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
+    row_factory: type[sqlite3.Row] | None,
+) -> None:
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = row_factory
+    try:
+        create_tables(conn)
+        conn.execute("INSERT INTO um_users(user_id) VALUES ('legacy-user')")
+        conn.execute(
+            "INSERT INTO um_grants(user_id, role_name) VALUES ('legacy-user', 'admin')"
+        )
+        conn.execute(
+            """INSERT INTO um_audit_events
+            (event_id, timestamp, actor_id, action, target_type, target_id, result)
+            VALUES ('legacy-event', '2025-01-01T00:00:00+00:00', 'actor', 'login',
+                    'user', 'legacy-user', 'success')"""
+        )
+        conn.commit()
+        conn.execute("DROP TABLE um_schema_version")
+        conn.execute("DROP TABLE um_grants")
+        conn.execute("DROP TABLE um_audit_events")
+        conn.execute(
+            """
+            CREATE TABLE um_grants (
+                user_id TEXT NOT NULL,
+                role_name TEXT NOT NULL DEFAULT '',
+                permission_name TEXT NOT NULL DEFAULT '',
+                scope_type TEXT NOT NULL DEFAULT '', scope_id TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (user_id, role_name, permission_name, scope_type, scope_id),
+                CHECK ((role_name = '') != (permission_name = ''))
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE um_audit_events (
+                rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL UNIQUE,
+                timestamp TEXT NOT NULL, actor_id TEXT NOT NULL, action TEXT NOT NULL,
+                target_type TEXT NOT NULL, target_id TEXT NOT NULL, scope_type TEXT,
+                scope_id TEXT, result TEXT NOT NULL, reason TEXT, request_id TEXT,
+                ip_address TEXT, user_agent TEXT, metadata TEXT NOT NULL DEFAULT '{}'
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO um_grants(user_id, role_name) VALUES ('legacy-user', 'admin')"
+        )
+        conn.execute(
+            """INSERT INTO um_audit_events
+            (event_id, timestamp, actor_id, action, target_type, target_id, result)
+            VALUES ('legacy-event', '2025-01-01T00:00:00+00:00', 'actor', 'login',
+                    'user', 'legacy-user', 'success')"""
+        )
+        conn.execute("CREATE TABLE um_schema_version (version INTEGER NOT NULL)")
+        conn.execute("INSERT INTO um_schema_version(version) VALUES (2)")
+        conn.commit()
+
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+        sqlite_adapter.migrate_sqlite_schema(conn)
+
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+        assert conn.execute("SELECT COUNT(*) FROM um_grants").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM um_audit_events").fetchone()[0] == 1
+        assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert (
+            conn.execute("PRAGMA foreign_key_list(um_grants)").fetchone()[2]
+            == "um_users"
+        )
+        grant_sql = cast(
+            "str",
+            conn.execute(
+                "SELECT sql FROM sqlite_master WHERE name = 'um_grants'"
+            ).fetchone()[0],
+        )
+        assert "CHECK ((role_name = '') != (permission_name = ''))" in grant_sql
+    finally:
+        conn.close()
+
+
 def test_audit_schema_lookalike_is_rejected() -> None:
     conn = sqlite3.connect(":memory:")
     try:
