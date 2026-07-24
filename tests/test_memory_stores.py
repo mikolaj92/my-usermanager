@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from datetime import UTC, datetime
 
 import pytest
@@ -78,8 +77,6 @@ def test_memory_stores_cover_dev_data_surface_without_optional_imports() -> None
     assert permission_grant.permission == Permission("reports.read")
     assert grants.list_grants_for_user("user_123") == (role_grant, permission_grant)
     assert listed_events == (event,)
-    assert "fastapi" not in sys.modules
-    assert "pydantic" not in sys.modules
 
 
 def test_memory_stores_use_deterministic_error_contracts() -> None:

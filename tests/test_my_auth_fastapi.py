@@ -1,25 +1,24 @@
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import sys
 from dataclasses import dataclass, replace
 from textwrap import dedent
-from typing import TYPE_CHECKING, ClassVar, NoReturn
+from typing import TYPE_CHECKING, ClassVar, NoReturn, cast
 
 import pytest
 
 from my_usermanager.adapters import my_auth as my_auth_adapter
 from my_usermanager.adapters import my_auth_fastapi as fastapi_adapter
-from my_usermanager.memory import MemoryGrantStore, MemoryRoleStore
 from my_usermanager.models import ExternalIdentity, Permission, User
-from my_usermanager.permissions import PermissionRegistry
 from my_usermanager.subjects import (
     ExternalIdentityConflictError,
     ExternalIdentityNotFoundError,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 
     from my_usermanager.sessions import SessionPrincipal
 
@@ -104,8 +103,18 @@ def import_fake_optional_module(
     raise ModuleNotFoundError(name=name)
 
 
-def raise_missing_fastapi(_name: str, _package: str | None = None) -> NoReturn:
+def raise_missing_transitive_fastapi(
+    _name: str, _package: str | None = None
+) -> NoReturn:
     raise ModuleNotFoundError(name="fastapi")
+
+
+def raise_missing_my_auth(_name: str, _package: str | None = None) -> NoReturn:
+    raise ModuleNotFoundError(name="my_auth")
+
+
+def raise_missing_my_auth_fastapi(_name: str, _package: str | None = None) -> NoReturn:
+    raise ModuleNotFoundError(name="my_auth.fastapi")
 
 
 def profile_for_linked_user(user: User) -> fastapi_adapter.PasskeyUserProfile | None:
@@ -140,7 +149,7 @@ def test_core_and_optional_helper_import_do_not_load_optional_dependencies() -> 
         import my_usermanager
         import my_usermanager.adapters.my_auth_fastapi
 
-        assert my_usermanager.__version__ == "0.1.0"
+        assert my_usermanager.__version__ == "0.3.0"
         assert "my_auth" not in sys.modules
         assert "my_auth.fastapi" not in sys.modules
         assert "fastapi" not in sys.modules
@@ -162,20 +171,44 @@ def test_core_and_optional_helper_import_do_not_load_optional_dependencies() -> 
     assert completed.stderr == ""
 
 
-def test_fastapi_dependency_guard_reports_actionable_missing_dependency(
+def test_fastapi_dependency_guard_preserves_transitive_missing_dependency(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Given: my_auth.fastapi cannot import its FastAPI runtime dependency.
-    monkeypatch.setattr(fastapi_adapter, "import_module", raise_missing_fastapi)
+    # Given: my_auth.fastapi imports successfully enough to report a transitive failure.
+    monkeypatch.setattr(
+        fastapi_adapter,
+        "import_module",
+        raise_missing_transitive_fastapi,
+    )
 
-    # When / Then: requiring PasskeyRouteHooks raises a typed actionable error.
+    # When / Then: the original transitive import failure is preserved.
+    with pytest.raises(ModuleNotFoundError) as exc_info:
+        _ = fastapi_adapter.require_passkey_route_hooks()
+    assert exc_info.value.name == "fastapi"
+
+
+@pytest.mark.parametrize(
+    ("missing_import", "importer"),
+    [
+        ("my_auth", raise_missing_my_auth),
+        ("my_auth.fastapi", raise_missing_my_auth_fastapi),
+    ],
+)
+def test_fastapi_dependency_guard_translates_missing_my_auth_modules(
+    monkeypatch: pytest.MonkeyPatch,
+    missing_import: str,
+    importer: Callable[[str, str | None], NoReturn],
+) -> None:
+    # Given: the requested my-auth module itself is unavailable.
+    monkeypatch.setattr(fastapi_adapter, "import_module", importer)
+
+    # When / Then: callers receive the actionable public dependency error.
     with pytest.raises(
         fastapi_adapter.MissingMyAuthFastAPIDependencyError,
         match=r"my-auth\[fastapi\]",
     ) as exc_info:
         _ = fastapi_adapter.require_passkey_route_hooks()
-    assert exc_info.value.import_name == "my_auth.fastapi"
-    assert exc_info.value.missing_import_name == "fastapi"
+    assert exc_info.value.missing_import_name == missing_import
 
 
 def test_fastapi_dependency_guard_returns_passkey_route_hooks_type(
@@ -189,6 +222,28 @@ def test_fastapi_dependency_guard_returns_passkey_route_hooks_type(
 
     # Then: callers receive the PasskeyRouteHooks type without constructing routers.
     assert route_hooks_type is FakePasskeyRouteHooks
+
+
+@pytest.mark.parametrize("local_user_id", ["", " local_user", "local user"])
+def test_registration_link_validates_local_user_id_as_identifier(
+    local_user_id: str,
+) -> None:
+    # Given: a registration decision with a malformed local user identifier.
+    profile = fastapi_adapter.PasskeyUserProfile(
+        user_id="passkey_user_123",
+        user_handle=b"new-handle",
+        name="new_passkey_user",
+    )
+
+    # When / Then: the public profile validation error is consistent.
+    with pytest.raises(
+        fastapi_adapter.InvalidPasskeyUserProfileError,
+        match=r"local_user_id:",
+    ):
+        _ = fastapi_adapter.PasskeyRegistrationLink(
+            local_user_id=local_user_id,
+            profile=profile,
+        )
 
 
 def test_get_auth_user_returns_passkey_user_for_linked_enabled_user_under_policy(
@@ -273,21 +328,12 @@ def test_get_auth_user_returns_none_for_mismatched_profile_user_id(
     assert get_auth_user("passkey_user_123") is None
 
 
-def test_make_registration_user_requires_explicit_policy_and_does_not_grant(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # Given: caller-owned registration policy and authorization stores.
+def test_prepare_registration_does_not_grant(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fastapi_adapter, "import_module", import_fake_optional_module)
     monkeypatch.setattr(my_auth_adapter, "import_module", import_fake_optional_module)
-    grants = MemoryGrantStore()
-    roles = MemoryRoleStore()
-    registry = PermissionRegistry()
-    before_roles = roles.list()
-    before_permissions = registry.permissions()
 
     def registration_policy(
-        request: FakeRequest,
-        display_name: str,
+        request: FakeRequest, display_name: str
     ) -> fastapi_adapter.PasskeyUserProfile:
         assert request.trace_id == "req_123"
         return fastapi_adapter.PasskeyUserProfile(
@@ -297,23 +343,15 @@ def test_make_registration_user_requires_explicit_policy_and_does_not_grant(
             display_name=display_name,
         )
 
-    make_registration_user = fastapi_adapter.build_make_registration_user(
-        registration_policy,
+    passkey_user = fastapi_adapter.build_prepare_registration(registration_policy)(
+        FakeRequest(trace_id="req_123"), "New User"
     )
-
-    # When: my-auth asks for a registration user.
-    passkey_user = make_registration_user(FakeRequest(trace_id="req_123"), "New User")
-
-    # Then: only explicit profile data is returned; access state is untouched.
     assert passkey_user == FakePasskeyUser(
         user_id="new_passkey_user",
         user_handle=b"new-handle",
         name="new_passkey_user",
         display_name="New User",
     )
-    assert grants.list_grants_for_user("new_passkey_user") == ()
-    assert roles.list() == before_roles
-    assert registry.permissions() == before_permissions
 
 
 def test_user_to_session_principal_projects_profile_identity_and_claims() -> None:
@@ -372,38 +410,90 @@ def test_login_session_principal_writer_resolves_linked_user_and_writes_session(
             ),
         )
 
-    login: Callable[[str, str, FakePasskeyUser], None] = (
-        fastapi_adapter.build_login_session_principal_writer(
-            store,
-            write_principal,
-            principal_builder=(
-                lambda linked_user: fastapi_adapter.user_to_session_principal(
-                    linked_user,
-                    claims={"is_member": True},
-                )
-            ),
-        )
+    login = fastapi_adapter.build_login_session_principal_writer(
+        store,
+        write_principal,
+        principal_builder=(
+            lambda linked_user: fastapi_adapter.user_to_session_principal(
+                linked_user,
+                claims={"is_member": True},
+            )
+        ),
     )
 
     # When: my-auth invokes PasskeyRouteHooks.login.
-    login(
-        "response",
-        "request",
-        FakePasskeyUser(
-            user_id="passkey_user_123",
-            user_handle=b"linked-handle",
-            name="Passkey User",
-        ),
+    assert (
+        login(
+            "response",
+            "request",
+            FakePasskeyUser(
+                user_id="passkey_user_123",
+                user_handle=b"linked-handle",
+                name="Passkey User",
+            ),
+        )
+        is None
     )
 
     # Then: only the host writer mutates session state.
     assert written == [("response", "request", "local_user_123", True)]
 
 
+def test_login_session_principal_writer_awaits_async_session_writer() -> None:
+    # Given: a linked local user and an async host-owned session writer.
+    identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
+    user = User(
+        user_id="local_user_123",
+        external_identities=frozenset({identity}),
+        username="alice",
+    )
+    store = FakeExternalIdentityUserStore(users=(user,))
+    _ = store.link_external_identity(user_id="local_user_123", identity=identity)
+    written: list[tuple[str, str, str]] = []
+
+    async def write_principal(
+        response: str,
+        request: str,
+        principal: SessionPrincipal,
+    ) -> None:
+        written.append((response, request, principal.user_id))
+
+    login = fastapi_adapter.build_login_session_principal_writer(
+        store,
+        write_principal,
+    )
+
+    async def invoke_login() -> None:
+        # When: a my-auth-compatible hook invocation awaits the returned value.
+        await cast(
+            "Awaitable[None]",
+            login(
+                "response",
+                "request",
+                FakePasskeyUser(
+                    user_id="passkey_user_123",
+                    user_handle=b"linked-handle",
+                    name="Passkey User",
+                ),
+            ),
+        )
+
+    asyncio.run(invoke_login())
+
+    # Then: the async writer was awaited and received the projected principal.
+    assert written == [("response", "request", "local_user_123")]
+
+
 def test_login_session_principal_writer_requires_existing_identity_link() -> None:
     # Given: no local link for the my-auth passkey subject.
-    store = FakeExternalIdentityUserStore(users=())
-    login: Callable[[str, str, FakePasskeyUser], None] = (
+    identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
+    user = User(
+        user_id="local_user_123",
+        external_identities=frozenset({identity}),
+        username="alice",
+    )
+    store = FakeExternalIdentityUserStore(users=(user,))
+    login: Callable[[str, str, FakePasskeyUser], None | Awaitable[None]] = (
         fastapi_adapter.build_login_session_principal_writer(
             store,
             lambda _response, _request, _principal: None,
@@ -412,7 +502,7 @@ def test_login_session_principal_writer_requires_existing_identity_link() -> Non
 
     # When / Then: the helper fails with the existing typed identity error.
     with pytest.raises(ExternalIdentityNotFoundError):
-        login(
+        _ = login(
             "response",
             "request",
             FakePasskeyUser(

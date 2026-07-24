@@ -14,6 +14,7 @@ from examples.fastapi_htmx.demo_users import (
     _all_demo_users,
     _ensure_demo_user,
     _passkey_user_from_demo,
+    _user_id_from_display_name,
 )
 
 if TYPE_CHECKING:
@@ -83,18 +84,14 @@ class _DemoPasskeyService:
         flow_id: str,
         credential: Mapping[str, _CredentialValue],
     ) -> PasskeyCredential:
-        user = self._registration_users.get(flow_id, _DEMO_PASSKEY_USERS[DEMO_ADMIN_ID])
-        passkey = PasskeyCredential(
+        user = self._registration_users.pop(flow_id, _DEMO_PASSKEY_USERS[DEMO_ADMIN_ID])
+        return PasskeyCredential(
             credential_id=_credential_id(
-                flow_id,
-                credential,
-                user.user_id != DEMO_ADMIN_ID,
+                flow_id, credential, user.user_id != DEMO_ADMIN_ID
             ),
             user_id=user.user_id,
             public_key=b"demo-public-key",
         )
-        _DEMO_PASSKEY_USERS[user.user_id] = user
-        return passkey
 
 
 def _demo_passkey_service() -> _DemoPasskeyService:
@@ -104,7 +101,7 @@ def _demo_passkey_service() -> _DemoPasskeyService:
 def _passkey_hooks() -> PasskeyRouteHooks:
     return PasskeyRouteHooks(
         get_session_user=_get_session_user,
-        make_registration_user=_make_registration_user,
+        make_registration_user=_prepare_registration,
         get_auth_user=_get_auth_user,
         login=_login,
         logout=_logout,
@@ -128,9 +125,21 @@ def _get_session_user(request: Request) -> PasskeyUser | None:
     return _DEMO_PASSKEY_USERS[DEMO_ADMIN_ID]
 
 
-def _make_registration_user(_request: Request, display_name: str) -> PasskeyUser:
-    user = _ensure_demo_user(display_name)
-    _DEMO_PASSKEY_USERS[user.user_id] = user
+def _prepare_registration(_request: Request, display_name: str) -> PasskeyUser:
+    user_id = _user_id_from_display_name(display_name)
+    return PasskeyUser(
+        user_id=user_id,
+        user_handle=f"demo-handle:{user_id}".encode(),
+        name=user_id,
+        display_name=display_name,
+    )
+
+
+def _complete_registration(_request: Request, result: PasskeyCredential) -> PasskeyUser:
+    user = _DEMO_PASSKEY_USERS.get(result.user_id)
+    if user is None:
+        user = _passkey_user_from_demo(_ensure_demo_user(result.user_id))
+        _DEMO_PASSKEY_USERS[user.user_id] = user
     return user
 
 

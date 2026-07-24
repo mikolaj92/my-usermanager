@@ -59,7 +59,7 @@ def test_core_import_and_adapter_package_import_do_not_load_optional_dependencie
         import my_usermanager
         import my_usermanager.adapters
 
-        assert my_usermanager.__version__ == "0.1.0"
+        assert my_usermanager.__version__ == "0.3.0"
         assert "my_auth" not in sys.modules
         assert "fastapi" not in sys.modules
         assert "pydantic" not in sys.modules
@@ -96,23 +96,20 @@ def test_my_auth_dependency_guard_reports_actionable_missing_dependency(
     assert "github.com/mikolaj92/my-auth" in str(exc_info.value)
 
 
-def test_my_auth_dependency_guard_reports_actionable_runtime_dependency(
+def test_my_auth_dependency_guard_preserves_transitive_missing_dependency(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Given: my-auth itself cannot import one of its runtime dependencies.
+    # Given: my_auth itself cannot import one of its runtime dependencies.
     monkeypatch.setattr(
         my_auth_adapter,
         "import_module",
         raise_missing_my_auth_runtime_dependency,
     )
 
-    # When / Then: the guard still raises the adapter's actionable typed error.
-    with pytest.raises(
-        my_auth_adapter.MissingMyAuthDependencyError,
-        match=r"my-usermanager\[myauth\]",
-    ) as exc_info:
+    # When / Then: the original transitive import failure is preserved.
+    with pytest.raises(ModuleNotFoundError) as exc_info:
         _ = my_auth_adapter.require_my_auth()
-    assert exc_info.value.import_name == "my_auth"
+    assert exc_info.value.name == "webauthn"
 
 
 def test_passkey_user_maps_to_my_auth_external_identity() -> None:

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from fastapi.responses import HTMLResponse
-
 from examples.fastapi_htmx.demo_users import (
     DEMO_ADMIN_ID,
     DEMO_CSRF_HEADER,
@@ -24,6 +22,8 @@ from examples.fastapi_htmx.demo_users import (
 from my_usermanager.adapters.fastapi_htmx import (
     CapabilityOption,
     CsrfContext,
+    CsrfProtection,
+    PasskeyPanel,
     PermissionGrantRow,
     UserRow,
 )
@@ -32,6 +32,20 @@ if TYPE_CHECKING:
     from fastapi import Request
 
     from my_usermanager.subjects import AuthenticatedSubject
+
+
+class _DemoCsrfProtection:
+    def token(self, _request: Request) -> str:
+        return DEMO_CSRF_MARKER
+
+    def validate(self, _request: Request, submitted_token: str) -> None:
+        if submitted_token != DEMO_CSRF_MARKER:
+            error = "invalid demo CSRF token"
+            raise ValueError(error)
+
+
+def _demo_csrf_protection() -> CsrfProtection:
+    return _DemoCsrfProtection()
 
 
 class _UserManagerHooks:
@@ -130,8 +144,8 @@ class _UserManagerHooks:
         self,
         _request: Request,
         _current_user: AuthenticatedSubject,
-    ) -> HTMLResponse:
-        return HTMLResponse(_PASSKEY_PANEL_HTML)
+    ) -> PasskeyPanel:
+        return PasskeyPanel(template_name="auth/_integration_panel.html", context={})
 
 
 def _usermanager_hooks() -> _UserManagerHooks:
@@ -142,19 +156,4 @@ def _demo_csrf_token(_request: Request) -> str:
     return DEMO_CSRF_MARKER
 
 
-_PASSKEY_PANEL_HTML: Final = """
-<article class="card um-card um-stack" aria-labelledby="demo-passkey-panel-title">
-  <div class="um-stack-tight">
-    <p class="badge">Passkeys</p>
-    <h2 id="demo-passkey-panel-title">Passkey UI composition</h2>
-    <p class="um-muted">
-      This account page receives passkey HTML through render_passkey_panel,
-      while my-auth owns the reusable passkey forms and JSON endpoints.
-    </p>
-  </div>
-  <div class="um-cluster">
-    <a class="btn btn-secondary" href="/auth/login">Open passkey login</a>
-    <a class="btn btn-ghost" href="/auth/register">Open passkey registration</a>
-  </div>
-</article>
-"""
+_PASSKEY_PANEL_HTML: Final = ""

@@ -1,20 +1,28 @@
 # pyright: reportUnusedCallResult=false
 """Tests for SQLite-backed store implementations."""
 
-from __future__ import annotations
-
+import importlib
 import sqlite3
+import threading
+from collections.abc import Callable, Generator
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
+if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
+
+from my_usermanager.adapters import sqlite as sqlite_adapter
+from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
 from my_usermanager.adapters.sqlite import (
     SQLiteAuditStore,
     SQLiteGrantStore,
     SQLiteRoleStore,
     SQLiteUserStore,
     create_tables,
+    migrate_sqlite_schema,
 )
 from my_usermanager.models import (
     AuditEvent,
@@ -42,8 +50,8 @@ from my_usermanager.subjects import (
     ExternalIdentityUserStore,
 )
 
-if TYPE_CHECKING:
-    from collections.abc import Generator
+_INJECTED_MY_AUTH_FAILURE = "injected my-auth migration failure"
+_INJECTED_COMMIT_FAILURE = "injected commit failure"
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +77,7 @@ def user_store(conn: sqlite3.Connection) -> SQLiteUserStore:
 
 @pytest.fixture
 def grant_store(conn: sqlite3.Connection) -> SQLiteGrantStore:
+    SQLiteUserStore(conn).create(User(user_id="user_123"))
     return SQLiteGrantStore(conn)
 
 
@@ -470,3 +479,571 @@ def test_audit_store_filters_by_actor(audit_store: SQLiteAuditStore) -> None:
         filters=AuditFilters(actor_id="other_actor"),
     )
     assert filtered == (other,)
+
+
+def test_auth_database_operation_stores_can_cross_request_threads(
+    tmp_path: Path,
+) -> None:
+    """Path-owned operation stores remain usable from TestClient threads."""
+    database = SQLiteAuthDatabase(tmp_path / "auth.db")
+    conn = sqlite3.connect(tmp_path / "auth.db")
+    conn.execute("PRAGMA foreign_keys = ON")
+    create_tables(conn)
+    conn.close()
+
+    stores = database.stores()
+    stores.users.create(User(user_id="thread-user", username="thread-user"))
+    errors: list[BaseException] = []
+
+    def read_user() -> None:
+        try:
+            assert stores.users.get("thread-user") is not None
+        except AssertionError as exc:
+            errors.append(exc)
+
+    thread = threading.Thread(target=read_user)
+    thread.start()
+    thread.join()
+    stores.close()
+    assert errors == []
+
+
+def test_auth_database_caller_stores_commit_mutations_and_preserve_connection(
+    conn: sqlite3.Connection,
+) -> None:
+    """Caller-owned stores commit each mutation without closing the connection."""
+    database = SQLiteAuthDatabase(conn)
+    stores = database.stores()
+
+    stores.users.create(User(user_id="store-user"))
+    grant = stores.grants.add_role_grant("store-user", "admin", Scope.global_())
+    assert conn.in_transaction is False
+    assert conn.execute(
+        "SELECT user_id FROM um_users WHERE user_id = 'store-user'"
+    ).fetchone() == ("store-user",)
+    assert conn.execute("SELECT user_id, role_name FROM um_grants").fetchone() == (
+        "store-user",
+        "admin",
+    )
+
+    assert (
+        stores.grants.remove_role_grant("store-user", "admin", Scope.global_()) == grant
+    )
+    assert conn.in_transaction is False
+    stores.close()
+    assert conn.execute("SELECT COUNT(*) FROM um_users").fetchone() == (1,)
+
+
+def test_auth_database_caller_stores_refuse_pending_transaction(
+    conn: sqlite3.Connection,
+) -> None:
+    """Stores refuse creation and mutation rather than owning caller work."""
+    conn.execute("CREATE TABLE caller_pending (value TEXT NOT NULL)")
+    conn.execute("INSERT INTO caller_pending (value) VALUES ('pending')")
+    database = SQLiteAuthDatabase(conn)
+
+    with pytest.raises(RuntimeError, match="transaction"):
+        database.stores()
+    assert conn.in_transaction
+    assert conn.execute("SELECT value FROM caller_pending").fetchone() == ("pending",)
+
+    conn.rollback()
+    stores = database.stores()
+    conn.execute("BEGIN")
+    with pytest.raises(RuntimeError, match="transaction"):
+        stores.users.create(User(user_id="not-written"))
+    assert conn.in_transaction
+    conn.rollback()
+    assert stores.users.get("not-written") is None
+
+
+def test_auth_database_initialize_rolls_back_um_when_my_auth_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed my-auth migration rolls back the preceding UM schema write."""
+
+    class FailingAuthSchema:
+        @staticmethod
+        def inspect_sqlite_schema(_connection: sqlite3.Connection) -> object:
+            return type("Inspection", (), {"state": "empty"})()
+
+        @staticmethod
+        def ensure_sqlite_schema(
+            connection: sqlite3.Connection, *, transaction_mode: str
+        ) -> None:
+            assert transaction_mode == "external"
+            connection.execute("CREATE TABLE my_auth_schema (schema_version INTEGER)")
+            raise RuntimeError(_INJECTED_MY_AUTH_FAILURE)
+
+    def import_failing_auth_schema(name: str) -> object:
+        assert name == "my_auth.sqlite_schema"
+        return FailingAuthSchema
+
+    monkeypatch.setattr(importlib, "import_module", import_failing_auth_schema)
+    conn = sqlite3.connect(":memory:")
+    try:
+        with pytest.raises(RuntimeError, match=_INJECTED_MY_AUTH_FAILURE):
+            SQLiteAuthDatabase(conn).initialize()
+
+        table_rows = cast(
+            "list[tuple[object, ...]]",
+            cast(
+                "object",
+                conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall(),
+            ),
+        )
+        tables = {row[0] for row in table_rows}
+        assert not tables.intersection(
+            {"my_auth_schema", "um_schema_version", "um_users", "um_grants"}
+        )
+    finally:
+        conn.close()
+
+
+@pytest.mark.parametrize(
+    ("ddl", "extra_rows"),
+    [
+        ("CREATE TABLE um_schema_version (version INTEGER)", ()),
+        (
+            "CREATE TABLE um_schema_version (version INTEGER NOT NULL, extra TEXT)",
+            (),
+        ),
+        ("CREATE TABLE um_schema_version (version INTEGER NOT NULL PRIMARY KEY)", ()),
+        ("CREATE TABLE um_schema_version (version INTEGER NOT NULL)", (2,)),
+    ],
+    ids=("nullable", "extra-column", "unexpected-primary-key", "multiple-rows"),
+)
+def test_malformed_metadata_schema_is_unsupported_without_initialize_mutation(
+    ddl: str,
+    extra_rows: tuple[int, ...],
+) -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        create_tables(conn)
+        conn.execute("DROP TABLE um_schema_version")
+        conn.execute(ddl)
+        conn.executemany(
+            "INSERT INTO um_schema_version(version) VALUES (?)",
+            [(version,) for version in (2, *extra_rows)],
+        )
+        conn.commit()
+        before = conn.execute(
+            "SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name"
+        ).fetchall()
+
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "unsupported"
+        with pytest.raises(RuntimeError, match="unsupported"):
+            SQLiteAuthDatabase(conn).initialize()
+        assert (
+            conn.execute(
+                "SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name"
+            ).fetchall()
+            == before
+        )
+    finally:
+        conn.close()
+
+
+def test_concurrent_migrations_stamp_schema_once(tmp_path: Path) -> None:
+    database = tmp_path / "shared.sqlite"
+    setup = sqlite3.connect(database)
+    try:
+        create_tables(setup)
+        setup.execute("DROP TABLE um_schema_version")
+        setup.commit()
+    finally:
+        setup.close()
+
+    barrier = threading.Barrier(2)
+    errors: list[BaseException] = []
+
+    def migrate() -> None:
+        connection = sqlite3.connect(database, timeout=5)
+        try:
+            barrier.wait()
+            migrate_sqlite_schema(connection)
+        except Exception as error:  # noqa: BLE001
+            errors.append(error)
+        finally:
+            connection.close()
+
+    threads = [threading.Thread(target=migrate) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
+    check = sqlite3.connect(database)
+    try:
+        assert check.execute(
+            "SELECT COUNT(*), MIN(version), MAX(version) FROM um_schema_version"
+        ).fetchone() == (1, 2, 2)
+    finally:
+        check.close()
+
+
+def test_legacy_audit_schema_migrates_without_losing_events() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        create_tables(conn)
+        conn.execute("DROP TABLE um_schema_version")
+        conn.execute("DROP TABLE um_audit_events")
+        conn.execute(
+            """
+            CREATE TABLE um_audit_events (
+                rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL UNIQUE,
+                timestamp TEXT NOT NULL, actor_id TEXT NOT NULL, action TEXT NOT NULL,
+                target_type TEXT NOT NULL, target_id TEXT NOT NULL, scope_type TEXT,
+                scope_id TEXT, result TEXT NOT NULL, reason TEXT, request_id TEXT,
+                ip_address TEXT, user_agent TEXT, metadata TEXT NOT NULL DEFAULT '{}'
+            )
+            """
+        )
+        conn.execute(
+            """INSERT INTO um_audit_events
+            (event_id, timestamp, actor_id, action, target_type, target_id,
+             scope_type, scope_id, result, reason, request_id, ip_address,
+             user_agent, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "legacy-event",
+                "2025-01-01T00:00:00+00:00",
+                "actor",
+                "login",
+                "user",
+                "user-1",
+                None,
+                None,
+                "success",
+                None,
+                None,
+                None,
+                None,
+                "{}",
+            ),
+        )
+        conn.commit()
+
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "canonical_unversioned"
+        sqlite_adapter.migrate_sqlite_schema(conn)
+
+        assert conn.execute("SELECT event_id FROM um_audit_events").fetchall() == [
+            ("legacy-event",)
+        ]
+        audit_columns = cast(
+            "list[tuple[object, ...]]",
+            cast(
+                "object", conn.execute("PRAGMA table_info(um_audit_events)").fetchall()
+            ),
+        )
+        assert tuple(row[1] for row in audit_columns) == (
+            "event_id",
+            "timestamp",
+            "actor_id",
+            "action",
+            "target_type",
+            "target_id",
+            "scope_type",
+            "scope_id",
+            "result",
+            "reason",
+            "request_id",
+            "ip_address",
+            "user_agent",
+            "metadata",
+        )
+    finally:
+        conn.close()
+
+
+def test_implicit_rowid_legacy_audit_schema_migrates_without_losing_events() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        create_tables(conn)
+        conn.execute("DROP TABLE um_schema_version")
+        conn.execute("DROP TABLE um_audit_events")
+        conn.execute(
+            """
+            CREATE TABLE um_audit_events (
+                event_id TEXT NOT NULL UNIQUE,
+                timestamp TEXT NOT NULL, actor_id TEXT NOT NULL, action TEXT NOT NULL,
+                target_type TEXT NOT NULL, target_id TEXT NOT NULL, scope_type TEXT,
+                scope_id TEXT, result TEXT NOT NULL, reason TEXT, request_id TEXT,
+                ip_address TEXT, user_agent TEXT, metadata TEXT NOT NULL DEFAULT '{}'
+            )
+            """
+        )
+        conn.execute(
+            """INSERT INTO um_audit_events
+            (event_id, timestamp, actor_id, action, target_type, target_id,
+             scope_type, scope_id, result, reason, request_id, ip_address,
+             user_agent, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "implicit-event",
+                "2025-01-01T00:00:00+00:00",
+                "actor",
+                "login",
+                "user",
+                "user-1",
+                None,
+                None,
+                "success",
+                None,
+                None,
+                None,
+                None,
+                "{}",
+            ),
+        )
+        conn.commit()
+
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "canonical_unversioned"
+        sqlite_adapter.migrate_sqlite_schema(conn)
+
+        assert conn.execute("SELECT event_id FROM um_audit_events").fetchall() == [
+            ("implicit-event",)
+        ]
+        audit_columns = cast(
+            "list[tuple[object, ...]]",
+            cast(
+                "object", conn.execute("PRAGMA table_info(um_audit_events)").fetchall()
+            ),
+        )
+        assert tuple(row[1] for row in audit_columns) == (
+            "event_id",
+            "timestamp",
+            "actor_id",
+            "action",
+            "target_type",
+            "target_id",
+            "scope_type",
+            "scope_id",
+            "result",
+            "reason",
+            "request_id",
+            "ip_address",
+            "user_agent",
+            "metadata",
+        )
+    finally:
+        conn.close()
+
+
+def test_audit_schema_lookalike_is_rejected() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        create_tables(conn)
+        conn.execute("DROP TABLE um_schema_version")
+        conn.execute("DROP TABLE um_audit_events")
+        conn.execute(
+            """
+            CREATE TABLE um_audit_events (
+                event_id TEXT NOT NULL UNIQUE,
+                timestamp TEXT NOT NULL, actor_id TEXT NOT NULL, action TEXT NOT NULL,
+                target_type TEXT NOT NULL, target_id TEXT NOT NULL, scope_type TEXT,
+                scope_id TEXT, result TEXT NOT NULL, reason TEXT, request_id TEXT,
+                ip_address TEXT, user_agent TEXT, metadata TEXT NOT NULL DEFAULT '{}',
+                CHECK (event_id <> '')
+            )
+            """
+        )
+        conn.commit()
+
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "unsupported"
+        with pytest.raises(RuntimeError, match="unsupported"):
+            sqlite_adapter.migrate_sqlite_schema(conn)
+    finally:
+        conn.close()
+
+    class FailingCommitConnection:
+        in_transaction: bool = False
+        fail_commit: bool
+
+        def __init__(self) -> None:
+            self.fail_commit = True
+
+        def commit(self) -> None:
+            if self.fail_commit:
+                raise RuntimeError(_INJECTED_COMMIT_FAILURE)
+
+        def rollback(self) -> None:
+            return None
+
+    connection = FailingCommitConnection()
+    mutation = cast(
+        "Callable[[sqlite3.Connection, str], AbstractContextManager[None]]",
+        sqlite_adapter._mutation,  # pyright: ignore[reportPrivateUsage]
+    )
+    with (
+        pytest.raises(RuntimeError, match=_INJECTED_COMMIT_FAILURE),
+        mutation(cast("sqlite3.Connection", cast("object", connection)), "operation"),
+    ):
+        pass
+    connection.fail_commit = False
+    with mutation(cast("sqlite3.Connection", cast("object", connection)), "operation"):
+        pass
+
+
+def test_auth_database_initializes_caller_connection_with_foreign_keys() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        database = SQLiteAuthDatabase(conn)
+        database.initialize()
+        assert conn.execute("PRAGMA foreign_keys").fetchone() == (1,)
+        conn.execute("INSERT INTO um_users(user_id) VALUES ('cascade-user')")
+        conn.execute(
+            "INSERT INTO um_grants(user_id, role_name) VALUES ('cascade-user', 'admin')"
+        )
+        conn.execute("DELETE FROM um_users WHERE user_id = 'cascade-user'")
+        assert conn.execute("SELECT * FROM um_grants").fetchall() == []
+    finally:
+        conn.close()
+
+
+def test_auth_database_transaction_refuses_pending_caller_transaction() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.execute("CREATE TABLE pending (value TEXT NOT NULL)")
+        conn.execute("INSERT INTO pending(value) VALUES ('keep')")
+        with (
+            pytest.raises(RuntimeError, match="transaction"),
+            SQLiteAuthDatabase(conn).transaction(),
+        ):
+            pass
+        assert conn.execute("SELECT value FROM pending").fetchone() == ("keep",)
+        conn.rollback()
+    finally:
+        conn.close()
+
+
+def test_external_store_requires_caller_transaction(conn: sqlite3.Connection) -> None:
+    store = SQLiteUserStore(conn, transaction_mode="external")
+    with pytest.raises(RuntimeError, match="transaction"):
+        store.create(User(user_id="not-written"))
+    assert conn.execute("SELECT * FROM um_users").fetchall() == []
+
+    conn.execute("BEGIN")
+    store.create(User(user_id="caller-owned"))
+    assert conn.in_transaction
+    conn.rollback()
+
+
+def test_create_tables_external_rejects_foreign_keys_off_without_schema_changes() -> (
+    None
+):
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("BEGIN")
+
+        with pytest.raises(RuntimeError, match="foreign keys"):
+            create_tables(conn, transaction_mode="external")
+
+        assert conn.execute("PRAGMA foreign_keys").fetchone() == (0,)
+        query = "SELECT name FROM sqlite_master WHERE type = 'table'"
+        query += " AND name LIKE 'um_%'"
+        assert conn.execute(query).fetchall() == []
+        conn.rollback()
+    finally:
+        conn.close()
+
+
+def test_create_tables_external_accepts_active_foreign_keys() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("BEGIN")
+
+        create_tables(conn, transaction_mode="external")
+
+        assert conn.in_transaction
+        assert conn.execute("PRAGMA foreign_keys").fetchone() == (1,)
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (2,)
+        conn.rollback()
+        assert (
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE name = 'um_schema_version'"
+            ).fetchone()
+            is None
+        )
+    finally:
+        conn.close()
+
+
+def test_migrate_sqlite_schema_external_rejects_foreign_keys_off_without_changes() -> (
+    None
+):
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+        create_tables(conn)
+        conn.execute("DROP TABLE um_schema_version")
+        conn.commit()
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("BEGIN")
+
+        with pytest.raises(RuntimeError, match="foreign keys"):
+            migrate_sqlite_schema(conn, transaction_mode="external")
+
+        assert conn.execute("PRAGMA foreign_keys").fetchone() == (0,)
+        assert (
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE name = 'um_schema_version'"
+            ).fetchone()
+            is None
+        )
+        conn.rollback()
+    finally:
+        conn.close()
+
+
+def test_migrate_sqlite_schema_external_accepts_active_foreign_keys() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+        create_tables(conn)
+        conn.execute("DROP TABLE um_schema_version")
+        conn.commit()
+        conn.execute("BEGIN")
+
+        migrate_sqlite_schema(conn, transaction_mode="external")
+
+        assert conn.in_transaction
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (2,)
+        conn.rollback()
+        assert (
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE name = 'um_schema_version'"
+            ).fetchone()
+            is None
+        )
+    finally:
+        conn.close()
+
+
+def test_operation_connection_locks_cleanup_after_closed_connections(
+    tmp_path: Path,
+) -> None:
+    """Closed path-owned operation connections do not retain one lock each."""
+
+    database_path = tmp_path / "locks.db"
+    setup = sqlite3.connect(database_path)
+    create_tables(setup)
+    setup.close()
+    connection_locks_guard = sqlite_adapter._CONNECTION_LOCKS_GUARD  # pyright: ignore[reportPrivateUsage]
+    connection_locks = sqlite_adapter._CONNECTION_LOCKS  # pyright: ignore[reportPrivateUsage]
+    with connection_locks_guard:
+        connection_locks.clear()
+
+    database = SQLiteAuthDatabase(database_path)
+    for index in range(20):
+        stores = database.stores()
+        stores.users.create(User(user_id=f"lock-user-{index}"))
+        stores.close()
+
+    assert len(connection_locks) <= 1

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "my-usermanager"
-version = "0.1.0"
+version = "0.3.0"
 description = "Framework-neutral user management and authorization for Python applications."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -35,13 +35,13 @@ fastapi = [
     "pydantic>=2.10",
 ]
 fastapi-htmx = [
+    "app-factory[fastapi]>=0.4",
     "fastapi>=0.115",
     "jinja2>=3.1",
 ]
 myauth = [
-    "my-auth @ git+https://github.com/mikolaj92/my-auth.git@v0.2.0",
+    "my-auth>=0.3,<0.4",
 ]
-sqlite = []
 
 [dependency-groups]
 dev = [
@@ -64,6 +64,10 @@ exclude = [
 [tool.hatch.build.targets.wheel.force-include]
 "src/my_usermanager/adapters/fastapi_htmx/templates" = "my_usermanager/adapters/fastapi_htmx/templates"
 "src/my_usermanager/adapters/fastapi_htmx/static" = "my_usermanager/adapters/fastapi_htmx/static"
+
+[tool.uv.sources]
+app-factory = { path = "../../app-factory" }
+my-auth = { path = "../my-auth" }
 
 [tool.hatch.metadata]
 allow-direct-references = true

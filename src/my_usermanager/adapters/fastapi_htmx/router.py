@@ -1,305 +1,267 @@
+# ruff: noqa: TRY003, EM101, ANN202, BLE001, PLR0913
 """FastAPI routes for the reusable server-rendered user-manager UI."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Request
+from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse
 
 from my_usermanager.adapters.fastapi_htmx.auth import (
-    Authenticated,
     Denied,
     admin_user,
     current_user,
 )
 from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.config import (
-    CapabilityOption,
     CsrfContext,
+    PasskeyPanel,
     PermissionGrantRow,
+    UserManagerUi,
     UserManagerUiConfig,
+    UserManagerUiConflict,
     UserManagerUiRouter,
     UserRow,
 )
 from my_usermanager.adapters.fastapi_htmx.forms import (
     FormError,
-    GrantForm,
     MutationForm,
     read_grant_form,
     read_mutation_form,
 )
-from my_usermanager.adapters.fastapi_htmx.responses import error_response, response_text
+from my_usermanager.adapters.fastapi_htmx.protocols import (  # noqa: TC001
+    UserManagerUiHooks,
+)
+from my_usermanager.adapters.fastapi_htmx.responses import error_response
 from my_usermanager.adapters.fastapi_htmx.rows import safe_row
-from my_usermanager.adapters.fastapi_htmx.static import usermanager_ui_static_files
+from my_usermanager.adapters.fastapi_htmx.static import (
+    ensure_static_mount_available,
+    usermanager_ui_static_files,
+)
 from my_usermanager.adapters.fastapi_htmx.templates import create_template_environment
 
 if TYPE_CHECKING:
     from fastapi.responses import Response
     from jinja2 import Environment
 
-    from my_usermanager.adapters.fastapi_htmx.protocols import UserManagerUiHooks
     from my_usermanager.subjects import AuthenticatedSubject
+
+
+def install_usermanager_ui(
+    app: FastAPI,
+    *,
+    platform: AppFactoryUi,
+    hooks: UserManagerUiHooks,
+    config: UserManagerUiConfig | None = None,
+) -> UserManagerUi:
+    """Install the user-manager routes and shared platform UI assets."""
+    selected = config or UserManagerUiConfig()
+    installed_platform = getattr(app.state, "app_factory_ui", None)
+    if installed_platform != platform:
+        raise UserManagerUiConflict("app-factory UI platform is not installed")
+    existing = getattr(app.state, "usermanager_ui", None)
+    if isinstance(existing, UserManagerUi):
+        if (
+            existing.platform is not platform
+            or existing.config != selected
+            or existing.hooks is not hooks
+        ):
+            raise UserManagerUiConflict(
+                "a different usermanager UI is already installed"
+            )
+        return existing
+    environment = create_template_environment()
+    _ = install_app_factory_ui(
+        app,
+        environments=[environment],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    result = create_usermanager_ui_router(
+        config=selected, hooks=hooks, environment=environment
+    )
+    ensure_static_mount_available(app, result.static_mount_path)
+    app.include_router(result.router)
+    app.mount(result.static_mount_path, result.static_files, name="my-usermanager-ui")
+    installed = UserManagerUi(
+        result.router,
+        result.static_mount_path,
+        result.static_files,
+        platform,
+        selected,
+        hooks,
+    )
+    app.state.usermanager_ui = installed
+    return installed
+
+
+def _csrf_inputs(
+    config: UserManagerUiConfig, request: Request, context: CsrfContext
+) -> tuple[tuple[str, str], ...]:
+    """Merge host fields while reserving the authoritative csrf field."""
+    inputs = tuple(
+        (name, value) for name, value in context.hidden_inputs if name != "csrf"
+    )
+    protection = config.csrf_protection
+    if protection is None:
+        return inputs
+    return (*inputs, ("csrf", protection.token(request)))
 
 
 def create_usermanager_ui_router(  # noqa: C901
     *,
     config: UserManagerUiConfig,
     hooks: UserManagerUiHooks,
+    environment: Environment | None = None,
 ) -> UserManagerUiRouter:
-    """Create account/admin routes and packaged static files for host mounting."""
-    templates = create_template_environment(config)
+    """Create enabled account/admin routes and packaged static files."""
+    templates = environment or create_template_environment()
     router = APIRouter()
 
     async def account(request: Request) -> Response:
         auth = await current_user(request, config, hooks)
-        match auth:
-            case Denied(response=response):
-                return response
-            case Authenticated(current_user=authenticated_user):
-                panel = await _passkey_panel_html(
-                    templates,
-                    request,
-                    hooks,
-                    authenticated_user,
-                )
-                html = templates.get_template("account/index.html").render(
-                    request=request,
-                    config=config,
-                    current_user=authenticated_user,
-                    passkey_panel_html=panel,
-                    static_url_path=config.static_url_path,
-                )
-                return HTMLResponse(html)
+        if isinstance(auth, Denied):
+            return auth.response
+        panel = await resolve(hooks.render_passkey_panel(request, auth.current_user))
+        panel_html = _render_panel(templates, request, auth.current_user, panel)
+        html = templates.get_template("account/index.html").render(
+            request=request,
+            config=config,
+            current_user=auth.current_user,
+            passkey_panel_html=panel_html,
+            static_url_path=config.static_url_path,
+        )
+        return HTMLResponse(html)
 
     async def users(request: Request) -> Response:
         auth = await admin_user(request, config, hooks)
-        match auth:
-            case Denied(response=response):
-                return response
-            case Authenticated(current_user=authenticated_user):
-                csrf = await resolve(hooks.csrf_context(request))
-                rows = tuple(
-                    safe_row(row)
-                    for row in await resolve(
-                        hooks.list_users(request, authenticated_user),
+        if isinstance(auth, Denied):
+            return auth.response
+        csrf = await resolve(hooks.csrf_context(request))
+        html = templates.get_template("users/list.html").render(
+            request=request,
+            config=config,
+            current_user=auth.current_user,
+            users=tuple(
+                safe_row(row)
+                for row in await resolve(hooks.list_users(request, auth.current_user))
+            ),
+            role_options=tuple(
+                await resolve(hooks.role_options(request, auth.current_user))
+            ),
+            capability_options=tuple(
+                await resolve(hooks.capability_options(request, auth.current_user))
+            ),
+            csrf=csrf,
+            csrf_inputs=_csrf_inputs(config, request, csrf),
+            static_url_path=config.static_url_path,
+        )
+        return HTMLResponse(html)
+
+    if config.account_enabled:
+        router.add_api_route(config.account_path, account, methods=["GET"])
+    if config.admin_enabled:
+
+        async def mutation(request: Request, kind: str) -> Response:
+            auth = await admin_user(request, config, hooks)
+            if isinstance(auth, Denied):
+                return auth.response
+            if kind in {"disable", "enable"}:
+                form = await read_mutation_form(request)
+            else:
+                form = await read_grant_form(
+                    request,
+                    value_field="role_name"
+                    if kind in {"grant-role", "revoke-role"}
+                    else "permission",
+                )
+            if isinstance(form, FormError):
+                return error_response(form.status_code, form.title, form.message)
+            csrf_error = await _validate_csrf(request, config, form.csrf_token)
+            if csrf_error is not None:
+                return csrf_error
+            if isinstance(form, MutationForm):
+                changed = await resolve(
+                    hooks.set_user_disabled(
+                        request, auth.current_user, form.user_id, kind == "disable"
                     )
                 )
-                html = templates.get_template("users/list.html").render(
-                    request=request,
-                    config=config,
-                    current_user=authenticated_user,
-                    users=rows,
-                    role_options=await _role_options(
-                        request,
-                        hooks,
-                        authenticated_user,
-                    ),
-                    capability_options=await _capability_options(
-                        request,
-                        hooks,
-                        authenticated_user,
-                    ),
-                    csrf=csrf,
-                    csrf_inputs=csrf.hidden_inputs,
-                    static_url_path=config.static_url_path,
+                await resolve(
+                    hooks.after_user_disabled_changed(
+                        request, auth.current_user, changed
+                    )
                 )
-                return HTMLResponse(html)
+            elif kind in {"grant-role", "revoke-role"}:
+                callback = (
+                    hooks.grant_role if kind == "grant-role" else hooks.revoke_role
+                )
+                changed = await resolve(
+                    callback(request, auth.current_user, form.user_id, form.value)
+                )
+            else:
+                permission = PermissionGrantRow(
+                    form.value, form.value, form.scope_type, form.scope_id
+                )
+                callback = (
+                    hooks.grant_permission
+                    if kind == "grant-permission"
+                    else hooks.revoke_permission
+                )
+                changed = await resolve(
+                    callback(request, auth.current_user, form.user_id, permission)
+                )
+            csrf = await resolve(hooks.csrf_context(request))
+            return await _row_response(
+                templates, request, config, hooks, auth.current_user, changed, csrf
+            )
 
-    async def disable(request: Request) -> Response:
-        return await _change_disabled(templates, request, config, hooks, disabled=True)
+        def make_mutation_endpoint(kind: str):
+            async def endpoint(request: Request) -> Response:
+                return await mutation(request, kind)
 
-    async def enable(request: Request) -> Response:
-        return await _change_disabled(templates, request, config, hooks, disabled=False)
+            return endpoint
 
-    async def grant_role(request: Request) -> Response:
-        return await _change_role(templates, request, config, hooks, grant=True)
-
-    async def revoke_role(request: Request) -> Response:
-        return await _change_role(templates, request, config, hooks, grant=False)
-
-    async def grant_permission(request: Request) -> Response:
-        return await _change_permission(templates, request, config, hooks, grant=True)
-
-    async def revoke_permission(request: Request) -> Response:
-        return await _change_permission(templates, request, config, hooks, grant=False)
-
-    router.add_api_route(config.account_path, account, methods=["GET"])
-    router.add_api_route(config.users_path, users, methods=["GET"])
-    router.add_api_route(config.disable_user_path, disable, methods=["POST"])
-    router.add_api_route(config.enable_user_path, enable, methods=["POST"])
-    router.add_api_route(config.grant_role_path, grant_role, methods=["POST"])
-    router.add_api_route(config.revoke_role_path, revoke_role, methods=["POST"])
-    router.add_api_route(
-        config.grant_permission_path,
-        grant_permission,
-        methods=["POST"],
-    )
-    router.add_api_route(
-        config.revoke_permission_path,
-        revoke_permission,
-        methods=["POST"],
-    )
+        for path, kind in (
+            (config.users_path, "users"),
+            (config.disable_user_path, "disable"),
+            (config.enable_user_path, "enable"),
+            (config.grant_role_path, "grant-role"),
+            (config.revoke_role_path, "revoke-role"),
+            (config.grant_permission_path, "grant-permission"),
+            (config.revoke_permission_path, "revoke-permission"),
+        ):
+            if kind == "users":
+                router.add_api_route(path, users, methods=["GET"])
+            else:
+                router.add_api_route(
+                    path, make_mutation_endpoint(kind), methods=["POST"]
+                )
     return UserManagerUiRouter(
-        router=router,
-        static_mount_path=config.static_mount_path,
-        static_files=usermanager_ui_static_files(),
+        router, config.static_mount_path, usermanager_ui_static_files()
     )
 
 
-async def _change_disabled(
-    templates: Environment,
-    request: Request,
-    config: UserManagerUiConfig,
-    hooks: UserManagerUiHooks,
-    *,
-    disabled: bool,
-) -> Response:
-    auth = await admin_user(request, config, hooks)
-    match auth:
-        case Denied(response=response):
-            return response
-        case Authenticated(current_user=authenticated_user):
-            form = await read_mutation_form(request)
-            match form:
-                case FormError(status_code=status_code, title=title, message=message):
-                    return error_response(status_code, title, message)
-                case MutationForm(user_id=user_id):
-                    changed = await resolve(
-                        hooks.set_user_disabled(
-                            request,
-                            authenticated_user,
-                            user_id,
-                            disabled,
-                        ),
-                    )
-                    await resolve(
-                        hooks.after_user_disabled_changed(
-                            request,
-                            authenticated_user,
-                            changed,
-                        ),
-                    )
-                    csrf = await resolve(hooks.csrf_context(request))
-                    return await _row_response(
-                        templates,
-                        request,
-                        config,
-                        hooks,
-                        authenticated_user,
-                        changed,
-                        csrf,
-                    )
+async def _validate_csrf(
+    request: Request, config: UserManagerUiConfig, submitted_token: str | None
+) -> HTMLResponse | None:
+    """Validate CSRF before invoking any mutation callback."""
+    protection = config.csrf_protection
+    if protection is None or submitted_token is None:
+        return error_response(
+            403, "CSRF validation failed", "A valid CSRF token is required."
+        )
+    try:
+        _ = await resolve(protection.validate(request, submitted_token))
+    except Exception:
+        return error_response(
+            403, "CSRF validation failed", "A valid CSRF token is required."
+        )
+    return None
 
 
-async def _change_role(
-    templates: Environment,
-    request: Request,
-    config: UserManagerUiConfig,
-    hooks: UserManagerUiHooks,
-    *,
-    grant: bool,
-) -> Response:
-    auth = await admin_user(request, config, hooks)
-    match auth:
-        case Denied(response=response):
-            return response
-        case Authenticated(current_user=authenticated_user):
-            form = await read_grant_form(request, value_field="role_name")
-            match form:
-                case FormError(status_code=status_code, title=title, message=message):
-                    return error_response(status_code, title, message)
-                case GrantForm(user_id=user_id, value=role_name):
-                    if grant:
-                        changed = await resolve(
-                            hooks.grant_role(
-                                request,
-                                authenticated_user,
-                                user_id,
-                                role_name,
-                            ),
-                        )
-                    else:
-                        changed = await resolve(
-                            hooks.revoke_role(
-                                request,
-                                authenticated_user,
-                                user_id,
-                                role_name,
-                            ),
-                        )
-                    csrf = await resolve(hooks.csrf_context(request))
-                    return await _row_response(
-                        templates,
-                        request,
-                        config,
-                        hooks,
-                        authenticated_user,
-                        changed,
-                        csrf,
-                    )
-
-
-async def _change_permission(
-    templates: Environment,
-    request: Request,
-    config: UserManagerUiConfig,
-    hooks: UserManagerUiHooks,
-    *,
-    grant: bool,
-) -> Response:
-    auth = await admin_user(request, config, hooks)
-    match auth:
-        case Denied(response=response):
-            return response
-        case Authenticated(current_user=authenticated_user):
-            form = await read_grant_form(request, value_field="permission")
-            match form:
-                case FormError(status_code=status_code, title=title, message=message):
-                    return error_response(status_code, title, message)
-                case GrantForm(
-                    user_id=user_id,
-                    value=permission,
-                    scope_type=scope_type,
-                    scope_id=scope_id,
-                ):
-                    permission_row = PermissionGrantRow(
-                        permission=permission,
-                        label=permission,
-                        scope_type=scope_type,
-                        scope_id=scope_id,
-                    )
-                    if grant:
-                        changed = await resolve(
-                            hooks.grant_permission(
-                                request,
-                                authenticated_user,
-                                user_id,
-                                permission_row,
-                            ),
-                        )
-                    else:
-                        changed = await resolve(
-                            hooks.revoke_permission(
-                                request,
-                                authenticated_user,
-                                user_id,
-                                permission_row,
-                            ),
-                        )
-                    csrf = await resolve(hooks.csrf_context(request))
-                    return await _row_response(
-                        templates,
-                        request,
-                        config,
-                        hooks,
-                        authenticated_user,
-                        changed,
-                        csrf,
-                    )
-
-
-async def _row_response(  # noqa: PLR0913
+async def _row_response(
     templates: Environment,
     request: Request,
     config: UserManagerUiConfig,
@@ -312,40 +274,24 @@ async def _row_response(  # noqa: PLR0913
         request=request,
         config=config,
         user=safe_row(row),
-        role_options=await _role_options(request, hooks, current_user),
-        capability_options=await _capability_options(request, hooks, current_user),
+        role_options=tuple(await resolve(hooks.role_options(request, current_user))),
+        capability_options=tuple(
+            await resolve(hooks.capability_options(request, current_user))
+        ),
         csrf=csrf,
-        csrf_inputs=csrf.hidden_inputs,
+        csrf_inputs=_csrf_inputs(config, request, csrf),
     )
     return HTMLResponse(html)
 
 
-async def _role_options(
-    request: Request,
-    hooks: UserManagerUiHooks,
-    current_user: AuthenticatedSubject,
-) -> tuple[str, ...]:
-    return tuple(await resolve(hooks.role_options(request, current_user)))
-
-
-async def _capability_options(
-    request: Request,
-    hooks: UserManagerUiHooks,
-    current_user: AuthenticatedSubject,
-) -> tuple[CapabilityOption, ...]:
-    return tuple(await resolve(hooks.capability_options(request, current_user)))
-
-
-async def _passkey_panel_html(
+def _render_panel(
     templates: Environment,
     request: Request,
-    hooks: UserManagerUiHooks,
     current_user: AuthenticatedSubject,
+    panel: PasskeyPanel | None,
 ) -> str:
-    panel = await resolve(hooks.render_passkey_panel(request, current_user))
+    """Render a named packaged template with merged safe context."""
     if panel is None:
-        return templates.get_template("auth/_integration_panel.html").render(
-            request=request,
-            current_user=current_user,
-        )
-    return response_text(panel)
+        panel = PasskeyPanel("auth/_integration_panel.html", {})
+    context = {"request": request, "current_user": current_user, **dict(panel.context)}
+    return templates.get_template(panel.template_name).render(**context)

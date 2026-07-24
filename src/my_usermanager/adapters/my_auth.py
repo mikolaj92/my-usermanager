@@ -114,7 +114,7 @@ def require_my_auth() -> PasskeyUserFactory:
     try:
         module = import_module(_IMPORT_NAME)
     except ModuleNotFoundError as exc:
-        if exc.name is not None:
+        if exc.name == _IMPORT_NAME:
             raise MissingMyAuthDependencyError from exc
         raise
     if not _has_passkey_user(module):

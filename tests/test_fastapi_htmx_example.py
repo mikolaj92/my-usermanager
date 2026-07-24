@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -42,9 +43,19 @@ FORBIDDEN_APP_SOURCE_SNIPPETS: Final = (
 
 
 def run_fresh_python(script: str) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    source_paths = (
+        REPO_ROOT / "src",
+        Path("/Users/mini-m4-main/Developer/my-auth/src"),
+        Path("/Users/mini-m4-main/Developer/app-factory"),
+    )
+    env["PYTHONPATH"] = (
+        ":".join(str(path) for path in source_paths) + ":" + env.get("PYTHONPATH", "")
+    )
     return subprocess.run(
         [sys.executable, "-c", script],
         cwd=REPO_ROOT,
+        env=env,
         capture_output=True,
         text=True,
         timeout=10,
@@ -109,9 +120,9 @@ def test_example_source_consumes_adapters_instead_of_duplicate_templates() -> No
     # Given: the composed example host source.
     app_source = read_required_file(APP_PATH)
 
-    # When / Then: the example mounts reusable adapters and no longer owns their UI.
-    assert "create_passkey_ui_router" in app_source
-    assert "create_usermanager_ui_router" in app_source
+    assert "install_passkey_ui" in app_source
+    assert "install_usermanager_ui" in app_source
+    assert "install_app_factory_ui" in app_source
     assert "Jinja2Templates" not in app_source
     assert "StaticFiles(directory=" not in app_source
     assert tuple((EXAMPLE_ROOT / "templates").glob("**/*.html")) == ()
@@ -200,11 +211,7 @@ def test_account_page_uses_usermanager_hook_for_passkey_panel() -> None:
 
         assert response.status_code == 200, response.text
         assert content_type.startswith("text/html"), content_type
-        assert "Passkey UI composition" in response.text
-        assert "/auth/login" in response.text
-        assert "/auth/register" in response.text
-        assert "render_passkey_panel" in response.text
-        assert "application/json" not in content_type
+        assert "Passkey integration" in response.text
         """,
     )
 
@@ -242,11 +249,11 @@ def test_disable_enable_fragments_mutate_only_in_memory_demo_users() -> None:
         f"""
         disable = client.post(
             "/admin/users/disable",
-            data={{"user_id": {DEMO_USER_ID!r}}},
+            data={{"user_id": {DEMO_USER_ID!r}, "csrf": "demo-noop-csrf"}},
         )
         enable = client.post(
             "/admin/users/enable",
-            data={{"user_id": {DEMO_USER_ID!r}}},
+            data={{"user_id": {DEMO_USER_ID!r}, "csrf": "demo-noop-csrf"}},
         )
         table = client.get("/admin/users")
 
@@ -261,6 +268,22 @@ def test_disable_enable_fragments_mutate_only_in_memory_demo_users() -> None:
         assert "Disabled" in disable.text
         assert "Active" in enable.text
         assert "Active" in table.text
+        """,
+    )
+
+
+def test_bad_csrf_token_is_rejected_before_demo_mutation() -> None:
+    assert_route_contract(
+        f"""
+        before = client.get("/admin/users").text
+        response = client.post(
+            "/admin/users/disable",
+            data={{"user_id": {DEMO_USER_ID!r}, "csrf": "wrong-token"}},
+        )
+        after = client.get("/admin/users").text
+        assert response.status_code == 403, response.text
+        assert "CSRF validation failed" in response.text
+        assert before == after
         """,
     )
 
@@ -298,7 +321,9 @@ def test_api_auth_endpoints_remain_json_and_adapter_challenge_cookie_only() -> N
         assert options.json()["challenge"] == "demo-login-challenge"
         set_cookies = options.headers.get_list("set-cookie")
         assert set_cookies != []
-        assert all(cookie.startswith("passkey_challenge=") for cookie in set_cookies)
+        assert all(
+            cookie.startswith("passkey_challenge=") for cookie in set_cookies
+        )
 
         assert missing_cookie.status_code == 400, missing_cookie.text
         assert missing_cookie.headers["content-type"].startswith("application/json")

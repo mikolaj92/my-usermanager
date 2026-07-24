@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable
 from inspect import isawaitable
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from my_usermanager.adapters.fastapi_htmx.protocols import MaybeAwaitable
+type MaybeAwaitable[T] = T | Awaitable[T]
 
 
 async def resolve[T](value: MaybeAwaitable[T]) -> T:

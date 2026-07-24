@@ -3,11 +3,11 @@
 This directory is a no-build FastAPI host app that composes two reusable UI
 adapters instead of implementing reusable auth or user-management UI itself:
 
-- `my_auth.fastapi_htmx.create_passkey_ui_router(...)` provides the passkey
-  login and registration pages plus `/api/auth/*` JSON WebAuthn endpoints.
-- `my_usermanager.adapters.fastapi_htmx.create_usermanager_ui_router(...)`
-  provides the account page, admin users page, and HTMX user-row fragments.
-
+- `my_auth.fastapi_htmx.install_passkey_ui(...)` installs passkey login and
+  registration pages plus `/api/auth/*` JSON WebAuthn endpoints.
+- `my_usermanager.adapters.fastapi_htmx.install_usermanager_ui(...)` installs
+  the account page, admin users page, and HTMX user-row fragments.
+  Both installers receive the same `AppFactoryUi` platform.
 The example remains an optional consumer. Importing or installing core
 `my_usermanager` does not import FastAPI, Jinja, Pydantic, `my_auth`, HTMX,
 Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler.
@@ -46,40 +46,24 @@ uv run --no-sync \
   pytest tests/test_fastapi_htmx_example.py
 ```
 
-## Adapter composition API
-
-The passkey UI comes from `my_auth.fastapi_htmx`:
+The passkey UI uses the typed installer contracts:
 
 ```python
-from my_auth.fastapi_htmx import (
-    PasskeyUiConfig,
-    PasskeyUiRouter,
-    create_passkey_ui_router,
-    passkey_ui_static_files,
-)
+from app_factory.fastapi import install_app_factory_ui
+from my_auth.fastapi_htmx import PasskeyUiConfig, install_passkey_ui
+from my_usermanager.adapters.fastapi_htmx import UserManagerUiConfig, install_usermanager_ui
 
-passkey_ui: PasskeyUiRouter = create_passkey_ui_router(
-    service=_demo_passkey_service(),
-    hooks=_passkey_hooks(),
-    config=PasskeyUiConfig(
-        paths=PASSKEY_PATHS,
-        csrf_header_name=DEMO_CSRF_HEADER,
-        csrf_token=_demo_csrf_token,
-    ),
-)
-app.include_router(passkey_ui.router)
-app.mount(
-    passkey_ui.static_mount_path,
-    passkey_ui.static_files,
-    name="my_auth_fastapi_htmx_static",
-)
+platform = install_app_factory_ui(app, environments=())
+install_passkey_ui(app, platform=platform, service=service, hooks=passkey_hooks,
+                   config=PasskeyUiConfig(paths=PASSKEY_PATHS))
+install_usermanager_ui(app, platform=platform, hooks=usermanager_hooks,
+                       config=UserManagerUiConfig(csrf_protection=csrf))
 ```
 
-`create_passkey_ui_router` returns `router`, `static_mount_path`, and
-`static_files`. `passkey_ui_static_files()` is the public helper when a host
-needs to create the packaged static mount directly. `PasskeyAuthRouter` still
-owns the `/api/auth/*` JSON endpoints; the UI adapter supplies Jinja render
-hooks and static files only.
+The host supplies typed `PasskeyPanel` and `CsrfProtection` implementations.
+The latter validates submitted tokens before any user-management mutation.
+The adapters own their routers, templates, and static mounts; hosts do not
+call legacy `create_*` router factories or manually mount adapter static files.
 
 The account/admin UI comes from `my_usermanager.adapters.fastapi_htmx`:
 
@@ -190,8 +174,9 @@ role/grant changes; audit logging; redirects; logout effects.
 The adapter composition does not provide production sessions, does not provide production CSRF validation,
 does not provide persistence, does not provide audit logging, does not provide production role/grant policy,
 and does not provide a production admin policy. The only adapter-owned cookies are the documented
-my-auth WebAuthn challenge cookies (`passkey_challenge` and `passkey_register_name`) used by
-`my_auth.fastapi.PasskeyAuthRouter`; adapters must not claim production app session/cookie ownership.
+my-auth WebAuthn challenge cookies (`passkey_authentication_challenge` and
+`passkey_registration_challenge`) used by `my_auth.fastapi.PasskeyAuthRouter`;
+adapters must not claim production app session/cookie ownership.
 
 WebAuthn requires a secure browser context: HTTPS in production or a local
 secure context such as localhost during development. Browsers without WebAuthn
