@@ -7,11 +7,10 @@ from typing import TYPE_CHECKING, ClassVar, Final, Never, override
 
 from my_usermanager.adapters.my_auth_fastapi import (
     PasskeyCredentialUserMismatchError,
-    PasskeyRegistrationLink,
     PasskeyUserProfile,
     build_after_login_identity_linker,
     build_after_register_identity_linker,
-    build_make_registration_user_with_identity_link,
+    build_prepare_registration,
 )
 from my_usermanager.memory import MemoryGrantStore
 from my_usermanager.models import ExternalIdentity, User
@@ -101,31 +100,14 @@ class _ContractExternalIdentityStore:
 
 
 def _assert_registration_linking_is_explicit() -> None:
-    store = _ContractExternalIdentityStore((User(user_id=_LOCAL_USER_ID),))
-    grant_store = MemoryGrantStore()
-
     def registration_policy(
-        _request: _ContractRequest,
-        display_name: str,
-    ) -> PasskeyRegistrationLink:
-        return PasskeyRegistrationLink(
-            local_user_id=_LOCAL_USER_ID,
-            profile=_profile(_PASSKEY_USER_ID, display_name=display_name),
-        )
+        _request: _ContractRequest, display_name: str
+    ) -> PasskeyUserProfile:
+        return _profile(_PASSKEY_USER_ID, display_name=display_name)
 
-    make_registration_user = build_make_registration_user_with_identity_link(
-        store,
-        registration_policy,
-    )
-    passkey_user = make_registration_user(
-        _ContractRequest(trace_id=_TRACE_ID),
-        "Contract User",
-    )
-    identity = ExternalIdentity(provider=_PROVIDER, subject=_PASSKEY_USER_ID)
-
+    prepare = build_prepare_registration(registration_policy)
+    passkey_user = prepare(_ContractRequest(trace_id=_TRACE_ID), "Contract User")
     _require_equal(passkey_user.user_id, _PASSKEY_USER_ID, "unexpected passkey user")
-    _require_linked_user(store, identity=identity, user_id=_LOCAL_USER_ID)
-    _require_grant_free(grant_store, user_id=_LOCAL_USER_ID)
 
 
 def _assert_after_hooks_link_without_grants() -> None:
@@ -201,21 +183,12 @@ def _profile(user_id: str, *, display_name: str) -> PasskeyUserProfile:
 
 def _passkey_user(user_id: str) -> PasskeyUserLike:
     def registration_policy(
-        _request: _ContractRequest,
-        display_name: str,
-    ) -> PasskeyRegistrationLink:
-        return PasskeyRegistrationLink(
-            local_user_id=user_id,
-            profile=_profile(user_id, display_name=display_name),
-        )
+        _request: _ContractRequest, _display_name: str
+    ) -> PasskeyUserProfile:
+        return _profile(user_id, display_name="Contract User")
 
-    make_registration_user = build_make_registration_user_with_identity_link(
-        _ContractExternalIdentityStore((User(user_id=user_id),)),
-        registration_policy,
-    )
-    return make_registration_user(
-        _ContractRequest(trace_id=_TRACE_ID),
-        "Contract User",
+    return build_prepare_registration(registration_policy)(
+        _ContractRequest(trace_id=_TRACE_ID), "Contract User"
     )
 
 

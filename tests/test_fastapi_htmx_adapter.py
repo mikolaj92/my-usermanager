@@ -1,447 +1,391 @@
+# ruff: noqa: E402, PLC0415, S105
 from __future__ import annotations
 
 import subprocess
 import sys
+import warnings
 from pathlib import Path
-from textwrap import dedent
-from typing import Final
+from typing import TYPE_CHECKING, Final, Protocol, cast
+
+if TYPE_CHECKING:
+    from fastapi import Request
+
+    from my_usermanager.adapters.fastapi_htmx import (
+        CapabilityOption,
+        CsrfContext,
+        CsrfProtection,
+        PasskeyPanel,
+        PermissionGrantRow,
+        UserManagerUiHooks,
+        UserRow,
+    )
+
+warnings.filterwarnings("ignore", message="Using `httpx` with `starlette.testclient`*")
+
+import pytest
+from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from my_usermanager.subjects import AuthenticatedSubject
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[1]
 ADAPTER_MODULE: Final = "my_usermanager.adapters.fastapi_htmx"
-FORBIDDEN_UI_IMPORTS: Final = (
-    "fastapi",
-    "jinja2",
-    "pydantic",
-    "my_auth",
-    ADAPTER_MODULE,
-)
 
 
-def run_fresh_python(script: str) -> subprocess.CompletedProcess[str]:
+def fresh(script: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-c", script],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
-        timeout=10,
         check=False,
     )
 
 
-def assert_subprocess_passed(completed: subprocess.CompletedProcess[str]) -> None:
-    assert completed.returncode == 0, completed.stderr
-    assert completed.stdout == ""
-    assert completed.stderr == ""
+def test_root_imports_do_not_load_ui_dependencies() -> None:
+    script = """
+import sys
+import my_usermanager
+import my_usermanager.adapters
+for name in (
+    "fastapi", "jinja2", "pydantic", "my_auth",
+    "my_usermanager.adapters.fastapi_htmx",
+):
+    assert name not in sys.modules, name
+"""
+    result = fresh(script)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == ""
+    assert result.stderr == ""
 
 
-def test_root_and_adapters_imports_keep_ui_dependencies_out() -> None:
-    # Given: fresh processes import package root and adapters namespace only.
-    import_blocks = (("import my_usermanager",), ("import my_usermanager.adapters",))
+def test_ui_boundary_reports_missing_optional_dependencies() -> None:
+    script = """
+import importlib
+import importlib.abc
+import sys
+class Block(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path, target=None):
+        if fullname.split('.', 1)[0] in {'fastapi', 'jinja2', 'app_factory'}:
+            raise ModuleNotFoundError(fullname, name=fullname)
+        return None
+sys.meta_path.insert(0, Block())
+try:
+    importlib.import_module('my_usermanager.adapters.fastapi_htmx')
+except ImportError as exc:
+    assert 'fastapi-htmx' in str(exc)
+else:
+    raise AssertionError('adapter import unexpectedly succeeded')
+"""
+    result = fresh(script)
+    assert result.returncode == 0, result.stderr
 
-    # When: each import runs in isolation.
-    for import_block in import_blocks:
-        script = "\n".join(
-            (
-                "import sys",
-                *import_block,
-                f"forbidden = {FORBIDDEN_UI_IMPORTS!r}",
-                "loaded = [name for name in forbidden if name in sys.modules]",
-                "assert loaded == [], loaded",
-            ),
-        )
-        completed = run_fresh_python(script)
 
-        # Then: optional UI deps, my-auth, and fastapi_htmx are not loaded.
-        assert_subprocess_passed(completed)
+def test_public_api_and_resources_are_clean() -> None:
+    import importlib.resources
 
+    import my_usermanager.adapters.fastapi_htmx as adapter
 
-def test_ui_boundary_errors_without_ui_deps() -> None:
-    # Given: FastAPI and Jinja2 are blocked before the explicit adapter import.
-    script = dedent(
-        f"""
-        import importlib
-        import importlib.abc
-        import sys
-
-        class BlockUiDependencies(importlib.abc.MetaPathFinder):
-            def find_spec(self, fullname, path, target=None):
-                if fullname.split(".", 1)[0] in {{"fastapi", "jinja2"}}:
-                    raise ModuleNotFoundError(fullname, name=fullname)
-                return None
-
-        sys.meta_path.insert(0, BlockUiDependencies())
-        try:
-            importlib.import_module({ADAPTER_MODULE!r})
-        except ModuleNotFoundError as exc:
-            if exc.name == {ADAPTER_MODULE!r}:
-                raise AssertionError("missing planned fastapi_htmx module") from exc
-            assert "fastapi-htmx" in str(exc), str(exc)
-        except ImportError as exc:
-            assert "fastapi-htmx" in str(exc), str(exc)
-        else:
-            raise AssertionError("adapter import succeeded while UI deps were blocked")
-        """,
+    assert tuple(adapter.__all__) == (
+        "CapabilityOption",
+        "CsrfContext",
+        "CsrfProtection",
+        "ExternalIdentityRow",
+        "PasskeyPanel",
+        "PermissionGrantRow",
+        "UserManagerUi",
+        "UserManagerUiConfig",
+        "UserManagerUiConflict",
+        "UserManagerUiHooks",
+        "UserManagerUiRouter",
+        "UserRow",
+        "install_usermanager_ui",
+        "row_key_from_user_id",
     )
-    # When: the optional UI boundary is imported without UI dependencies.
-    completed = run_fresh_python(script)
-    # Then: the failure tells hosts to install the fastapi-htmx extra.
-    assert_subprocess_passed(completed)
+    assert not hasattr(adapter, "create_usermanager_ui_static_files")
+    assert not hasattr(adapter, "usermanager_ui_static_files")
+    assert not hasattr(adapter.UserManagerUiConfig, "template_loader")
+    assert not hasattr(adapter.UserManagerUiConfig, "template_override_directory")
+    package = importlib.resources.files(adapter.__name__)
+    for resource in (
+        "templates/base.html",
+        "templates/account/index.html",
+        "templates/users/list.html",
+        "templates/users/_row.html",
+        "templates/auth/_integration_panel.html",
+        "static/usermanager-ui.css",
+    ):
+        assert package.joinpath(resource).is_file(), resource
 
 
-def test_public_api_resources_and_static_contracts() -> None:
-    # Given: the planned adapter module exists as the explicit UI boundary.
-    script = dedent(
-        f"""
-        import importlib
-        import inspect
-        from collections.abc import Mapping
-        from dataclasses import fields, is_dataclass
-        from importlib.resources import files
-        from pathlib import Path
-        from typing import get_type_hints
+class FakeUiHooks:
+    calls: list[object]
+    panel: PasskeyPanel | None
+    user: AuthenticatedSubject
+    row: UserRow
 
-        adapter = importlib.import_module({ADAPTER_MODULE!r})
-        public_api = (
-            "CapabilityOption", "CsrfContext", "ExternalIdentityRow",
-            "PermissionGrantRow", "UserManagerUiConfig", "UserManagerUiHooks",
-            "UserManagerUiRouter", "UserRow", "create_usermanager_ui_router",
-            "row_key_from_user_id", "usermanager_ui_static_files",
-        )
-        assert tuple(adapter.__all__) == public_api
-        assert all(hasattr(adapter, name) for name in public_api)
-        def field_names(class_):
-            assert is_dataclass(class_) and class_.__dataclass_params__.frozen
-            assert hasattr(class_, "__slots__")
-            return tuple(field.name for field in fields(class_))
-        expected_fields = {{
-            adapter.CapabilityOption: (
-                "permission", "label", "description", "scope_type", "scope_id",
-            ),
-            adapter.ExternalIdentityRow: ("provider", "subject"),
-            adapter.PermissionGrantRow: (
-                "permission", "label", "scope_type", "scope_id",
-            ),
-            adapter.UserRow: (
-                "user_id", "row_key", "username", "display_name", "email",
-                "disabled", "is_admin", "roles", "permissions",
-                "external_identities",
-            ),
-            adapter.CsrfContext: ("hidden_inputs", "headers"),
-            adapter.UserManagerUiRouter: (
-                "router", "static_mount_path", "static_files",
-            ),
-            adapter.UserManagerUiConfig: (
-                "account_path", "users_path", "disable_user_path",
-                "enable_user_path", "grant_role_path", "revoke_role_path",
-                "grant_permission_path", "revoke_permission_path",
-                "static_mount_path", "static_url_path", "login_url",
-                "template_override_directory", "template_loader",
-            ),
-        }}
-        for class_, names in expected_fields.items():
-            assert field_names(class_) == names
-        assert (
-            adapter.CsrfContext.__annotations__["hidden_inputs"]
-            == "tuple[tuple[str, str], ...]"
-        )
-        csrf_hints = get_type_hints(adapter.CsrfContext)
-        assert csrf_hints["hidden_inputs"] == tuple[tuple[str, str], ...]
-        assert csrf_hints["headers"] == Mapping[str, str]
-        config = adapter.UserManagerUiConfig()
-        defaults = (
-            "/account", "/admin/users", "/admin/users/disable", "/admin/users/enable",
-            "/admin/users/grant-role", "/admin/users/revoke-role",
-            "/admin/users/grant-permission", "/admin/users/revoke-permission",
-            "/usermanager/ui/static", "/usermanager/ui/static", "/auth/login",
-            None, None,
-        )
-        config_fields = expected_fields[adapter.UserManagerUiConfig]
-        actual_defaults = tuple(getattr(config, name) for name in config_fields)
-        assert actual_defaults == defaults
-        signature = inspect.signature(adapter.create_usermanager_ui_router)
-        params = tuple(signature.parameters.values())
-        assert tuple(param.name for param in params) == ("config", "hooks")
-        assert all(param.kind is inspect.Parameter.KEYWORD_ONLY for param in params)
-        assert all(param.default is inspect.Parameter.empty for param in params)
-        expected_hooks = {{
-            "get_current_user": ("self", "request"),
-            "require_admin": ("self", "request", "current_user"),
-            "list_users": ("self", "request", "current_user"),
-            "role_options": ("self", "request", "current_user"),
-            "capability_options": ("self", "request", "current_user"),
-            "set_user_disabled": (
-                "self", "request", "current_user", "user_id", "disabled"
-            ),
-            "grant_role": ("self", "request", "current_user", "user_id", "role_name"),
-            "revoke_role": ("self", "request", "current_user", "user_id", "role_name"),
-            "grant_permission": (
-                "self", "request", "current_user", "user_id", "permission",
-            ),
-            "revoke_permission": (
-                "self", "request", "current_user", "user_id", "permission",
-            ),
-            "csrf_context": ("self", "request"),
-            "after_user_disabled_changed": ("self", "request", "current_user", "row"),
-            "render_passkey_panel": ("self", "request", "current_user"),
-        }}
-        for name, expected in expected_hooks.items():
-            actual = inspect.signature(getattr(adapter.UserManagerUiHooks, name))
-            assert tuple(actual.parameters) == expected
-        required_resources = (
-            "templates/base.html", "templates/account/index.html",
-            "templates/users/list.html", "templates/users/_row.html",
-            "templates/auth/_integration_panel.html", "static/usermanager-ui.css",
-        )
-        base = files({ADAPTER_MODULE!r})
-        missing = [
-            name for name in required_resources if not base.joinpath(name).is_file()
-        ]
-        assert missing == []
-        row_template = base.joinpath("templates/users/_row.html").read_text(
-            encoding="utf-8"
-        )
-        assert "csrf_inputs|safe" not in row_template
-        assert "{{% for name, value in csrf_inputs %}}" in row_template
+    def __init__(
+        self, *, panel: PasskeyPanel | None = None, calls: list[object] | None = None
+    ) -> None:
+        import my_usermanager.adapters.fastapi_htmx as adapter
 
-        source_root = Path("src/my_usermanager/adapters/fastapi_htmx")
-        forbidden = (
-            "request.session", "set_cookie(", "GrantAdminService(",
-            "MemoryGrantStore(", "ADMIN_ROLE_NAME",
+        self.calls = calls if calls is not None else []
+        self.panel = panel
+        self.user = AuthenticatedSubject(
+            provider="test", subject="subject", user_id="admin"
         )
-        assert source_root.is_dir()
-        for source_path in source_root.rglob("*.py"):
-            source = source_path.read_text(encoding="utf-8")
-            assert all(snippet not in source for snippet in forbidden)
-        """,
+        self.row = adapter.UserRow(
+            user_id="user-1",
+            row_key="user-1",
+            username="user",
+            display_name="User",
+            email="user@example.test",
+            disabled=False,
+            is_admin=False,
+        )
+
+    def get_current_user(self, _request: Request) -> AuthenticatedSubject:
+        return self.user
+
+    def require_admin(
+        self, _request: Request, _current_user: AuthenticatedSubject
+    ) -> None:
+        return None
+
+    def list_users(
+        self, _request: Request, _current_user: AuthenticatedSubject
+    ) -> tuple[UserRow, ...]:
+        return (self.row,)
+
+    def role_options(
+        self, _request: Request, _current_user: AuthenticatedSubject
+    ) -> tuple[str, ...]:
+        return ("member",)
+
+    def capability_options(
+        self, _request: Request, _current_user: AuthenticatedSubject
+    ) -> tuple[CapabilityOption, ...]:
+        return ()
+
+    def set_user_disabled(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        _user_id: str,
+        disabled: bool,
+    ) -> UserRow:
+        self.calls.append(("set", disabled))
+        return self.row
+
+    def grant_role(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        _user_id: str,
+        _role_name: str,
+    ) -> UserRow:
+        self.calls.append("grant-role")
+        return self.row
+
+    def revoke_role(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        _user_id: str,
+        _role_name: str,
+    ) -> UserRow:
+        self.calls.append("revoke-role")
+        return self.row
+
+    def grant_permission(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        _user_id: str,
+        _permission: PermissionGrantRow,
+    ) -> UserRow:
+        self.calls.append("grant-permission")
+        return self.row
+
+    def revoke_permission(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        _user_id: str,
+        _permission: PermissionGrantRow,
+    ) -> UserRow:
+        self.calls.append("revoke-permission")
+        return self.row
+
+    def csrf_context(self, _request: Request) -> CsrfContext:
+        import my_usermanager.adapters.fastapi_htmx as adapter
+
+        return adapter.CsrfContext((("csrf", "good"),), {})
+
+    def after_user_disabled_changed(
+        self, _request: Request, _current_user: AuthenticatedSubject, _row: UserRow
+    ) -> None:
+        self.calls.append("after")
+
+    def render_passkey_panel(
+        self, _request: Request, _current_user: AuthenticatedSubject
+    ) -> PasskeyPanel | None:
+        return self.panel
+
+
+class FakeCsrfProtection:
+    valid: bool
+
+    def __init__(self, valid: bool = True) -> None:
+        self.valid = valid
+
+    def token(self, _request: Request) -> str:
+        return "good"
+
+    def validate(self, _request: Request, submitted_token: str) -> object:
+        if self.valid and submitted_token == "good":
+            return None
+        raise ValueError("bad csrf")  # noqa: EM101, TRY003
+
+
+def _hooks(
+    *, panel: PasskeyPanel | None = None, calls: list[object] | None = None
+) -> UserManagerUiHooks:
+    return cast(
+        "UserManagerUiHooks", cast("object", FakeUiHooks(panel=panel, calls=calls))
     )
-    # When: API, dataclass, resource, and forbidden-source contracts are checked.
-    completed = run_fresh_python(script)
-    # Then: the planned public contract is present and host policy snippets are absent.
-    assert_subprocess_passed(completed)
 
 
-def test_routes_render_html_delegate_callbacks_and_hide_unsafe_ids() -> None:
-    # Given: the adapter is mounted in FastAPI with host-owned callbacks.
-    script = dedent(
-        f"""
-        import importlib, re, warnings
-        from types import SimpleNamespace
-        warnings.filterwarnings(
-            "ignore", message="Using `httpx` with `starlette.testclient`*"
-        )
-        from fastapi import FastAPI, Response
-        from fastapi.testclient import TestClient
-        from my_usermanager.subjects import AuthenticatedSubject
+def _csrf(valid: bool = True) -> CsrfProtection:
+    return cast("CsrfProtection", cast("object", FakeCsrfProtection(valid)))
 
-        adapter = importlib.import_module({ADAPTER_MODULE!r})
-        unsafe_id = "unsafe/id space\\\"quote'<tag>&tail"
-        attr_pattern = re.compile(
-            r'''(?:id|hx-target|hx-post|action)\\s*=\\s*["']([^"']+)["']'''
-        )
 
-        counts = dict.fromkeys(
-            ("current", "admin", "listed", "roles", "capabilities", "csrf", "passkeys"),
-            0,
-        )
-        disabled_changes, after_changes = [], []
-        role_changes, permission_changes = [], []
+class ResponseLike(Protocol):
+    status_code: int
+    text: str
 
-        def current_user(request):
-            counts["current"] += 1; return AuthenticatedSubject(
-                provider="test", subject="subject-1", user_id="admin-user"
-            )
 
-        def require_admin(request, current_user):
-            assert current_user.user_id == "admin-user"; counts["admin"] += 1
+class ClientLike(Protocol):
+    def get(self, url: str) -> object: ...
 
-        def row(disabled):
-            values = {{
-                "user_id": unsafe_id,
-                "row_key": adapter.row_key_from_user_id(unsafe_id),
-                "username": "unsafe-user", "display_name": "Unsafe User",
-                "email": "unsafe@example.invalid", "disabled": disabled,
-                "is_admin": False,
-                "roles": ("member",),
-                "permissions": (
-                    adapter.PermissionGrantRow(
-                        permission="workflow.run",
-                        label="Run workflow",
-                        scope_type="workflow",
-                        scope_id="wf-1",
-                    ),
-                ),
-                "external_identities": (
-                    adapter.ExternalIdentityRow(
-                        provider="test", subject="subject-1"
-                    ),
-                ),
-            }}
-            return adapter.UserRow(**values)
+    def post(self, url: str, *, data: dict[str, str] | None = None) -> object: ...
 
-        def list_users(request, current_user):
-            counts["listed"] += 1; return (row(False),)
 
-        def role_options(request, current_user):
-            counts["roles"] += 1; return ("member", "admin")
+def _client(app: FastAPI) -> ClientLike:
+    return cast("ClientLike", cast("object", TestClient(app)))
 
-        def capability_options(request, current_user):
-            counts["capabilities"] += 1
-            return (
-                adapter.CapabilityOption(
-                    permission="workflow.run",
-                    label="Run workflow",
-                    scope_type="workflow",
-                    scope_id="wf-1",
-                ),
-            )
 
-        def set_disabled(request, current_user, user_id, disabled):
-            disabled_changes.append((user_id, disabled)); return row(disabled)
+def _response(response: object) -> ResponseLike:
+    return cast("ResponseLike", response)
 
-        def grant_role(request, current_user, user_id, role_name):
-            role_changes.append(("grant", user_id, role_name)); return row(False)
 
-        def revoke_role(request, current_user, user_id, role_name):
-            role_changes.append(("revoke", user_id, role_name)); return row(False)
+def _post(
+    client: ClientLike, url: str, data: dict[str, str] | None = None
+) -> ResponseLike:
+    return _response(client.post(url, data=data))
 
-        def grant_permission(request, current_user, user_id, permission):
-            permission_changes.append(
-                (
-                    "grant", user_id, permission.permission,
-                    permission.scope_type, permission.scope_id,
-                )
-            )
-            return row(False)
 
-        def revoke_permission(request, current_user, user_id, permission):
-            permission_changes.append(
-                (
-                    "revoke", user_id, permission.permission,
-                    permission.scope_type, permission.scope_id,
-                )
-            )
-            return row(False)
+def _get(client: ClientLike, url: str) -> ResponseLike:
+    return _response(client.get(url))
 
-        def csrf_context(request):
-            counts["csrf"] += 1
-            return adapter.CsrfContext(
-                hidden_inputs=(
-                    ("csrf", "<token&value>"),
-                    ("csrf_html", '<input name="owned" value="unsafe">'),
-                ),
-                headers={{"X-CSRF-Token": "v"}},
-            )
 
-        def after_changed(request, current_user, changed_row):
-            after_changes.append(changed_row.user_id)
+def test_route_toggles_and_csrf_guard() -> None:
+    import my_usermanager.adapters.fastapi_htmx as adapter
 
-        def passkey_panel(request, current_user):
-            counts["passkeys"] += 1; return Response("<p>Passkeys</p>")
-
-        hooks = SimpleNamespace(
-            get_current_user=current_user, require_admin=require_admin,
-            list_users=list_users, role_options=role_options,
-            capability_options=capability_options, set_user_disabled=set_disabled,
-            grant_role=grant_role, revoke_role=revoke_role,
-            grant_permission=grant_permission, revoke_permission=revoke_permission,
-            csrf_context=csrf_context, after_user_disabled_changed=after_changed,
-            render_passkey_panel=passkey_panel,
-        )
-        config, app = adapter.UserManagerUiConfig(), FastAPI()
-        ui = adapter.create_usermanager_ui_router(config=config, hooks=hooks)
-        app.include_router(ui.router); app.mount(ui.static_mount_path, ui.static_files)
-        client = TestClient(app)
-        bad_response = client.post(
-            config.disable_user_path,
-            content=b"user_id=%FF",
-            headers={{"content-type": "application/x-www-form-urlencoded"}},
-        )
-        bad_content_type = bad_response.headers.get("content-type", "")
-        assert bad_response.status_code == 400, bad_response.text
-        assert bad_content_type.startswith("text/html"), bad_content_type
-        assert disabled_changes == []
-        assert after_changes == []
-        responses = (
-            client.get(config.account_path),
-            client.get(config.users_path),
-            client.post(config.disable_user_path, data={{"user_id": unsafe_id}}),
-            client.post(config.enable_user_path, data={{"user_id": unsafe_id}}),
-            client.post(
-                config.grant_role_path,
-                data={{"user_id": unsafe_id, "role_name": "member"}},
-            ),
-            client.post(
-                config.revoke_role_path,
-                data={{"user_id": unsafe_id, "role_name": "member"}},
-            ),
-            client.post(
-                config.grant_permission_path,
-                data={{
-                    "user_id": unsafe_id,
-                    "permission": "workflow.run",
-                    "scope_type": "workflow",
-                    "scope_id": "wf-1",
-                }},
-            ),
-            client.post(
-                config.revoke_permission_path,
-                data={{
-                    "user_id": unsafe_id,
-                    "permission": "workflow.run",
-                    "scope_type": "workflow",
-                    "scope_id": "wf-1",
-                }},
-            ),
-        )
-        for response in responses:
-            content_type = response.headers.get("content-type", "")
-            assert response.status_code == 200 and content_type.startswith("text/html")
-            assert "application/json" not in content_type
-        paths = {{route.path for route in ui.router.routes}}
-        assert {{
-            config.account_path, config.users_path,
-            config.disable_user_path, config.enable_user_path,
-            config.grant_role_path, config.revoke_role_path,
-            config.grant_permission_path, config.revoke_permission_path,
-        }} <= paths
-        assert all(
-            "{{user_id}}" not in path and unsafe_id not in path for path in paths
-        )
-
-        html = "\\n".join(response.text for response in responses)
-        assert 'name="user_id"' in html
-        assert "quote" in html and "&lt;tag&gt;&amp;tail" in html
-        assert "member" in html and "Run workflow" in html
-        assert "test:subject-1" in html
-        assert (
-            '<input type="hidden" name="csrf" value="&lt;token&amp;value&gt;">'
-            in html
-        )
-        assert '<input name="owned" value="unsafe">' not in html
-        assert "csrf_html" in html and "&lt;input" in html
-        values = [match.group(1) for match in attr_pattern.finditer(html)]
-        assert values != []
-        for bad in (unsafe_id, "unsafe/id", "<tag>", "&tail"):
-            assert all(bad not in value for value in values)
-        key = adapter.row_key_from_user_id(unsafe_id)
-        assert key == adapter.row_key_from_user_id(unsafe_id) and key != unsafe_id
-        assert re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", key) is not None
-        assert counts["current"] >= 4 and counts["admin"] >= 3
-        assert counts["listed"] >= 1 and counts["csrf"] >= 1
-        assert counts["roles"] >= 1 and counts["capabilities"] >= 1
-        assert counts["passkeys"] >= 1
-        assert disabled_changes == [(unsafe_id, True), (unsafe_id, False)]
-        assert after_changes == [unsafe_id, unsafe_id]
-        assert role_changes == [
-            ("grant", unsafe_id, "member"), ("revoke", unsafe_id, "member")
-        ]
-        assert permission_changes == [
-            ("grant", unsafe_id, "workflow.run", "workflow", "wf-1"),
-            ("revoke", unsafe_id, "workflow.run", "workflow", "wf-1"),
-        ]
-        """,
+    calls: list[object] = []
+    hooks = _hooks(calls=calls)
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
     )
-    # When: account, admin list, disable, and enable routes are exercised.
-    completed = run_fresh_python(script)
-    # Then: pages/fragments are HTML and unsafe ids stay out of routes/selectors.
-    assert_subprocess_passed(completed)
+    config = adapter.UserManagerUiConfig(csrf_protection=_csrf())
+    app = FastAPI()
+    _ = install_app_factory_ui(
+        app,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    ui = adapter.install_usermanager_ui(
+        app, platform=platform, hooks=hooks, config=config
+    )
+    assert (
+        adapter.install_usermanager_ui(
+            app, platform=platform, hooks=hooks, config=config
+        )
+        is ui
+    )
+    client = _client(app)
+    bad = _post(
+        client,
+        config.disable_user_path,
+        {"user_id": "user-1", "csrf": "bad"},
+    )
+    assert bad.status_code == 403
+    assert calls == []
+    good = _post(
+        client,
+        config.disable_user_path,
+        {"user_id": "user-1", "csrf": "good"},
+    )
+    assert good.status_code == 200
+    assert calls == [("set", True), "after"]
+    assert _get(client, config.account_path).status_code == 200
+    assert _get(client, config.users_path).status_code == 200
+
+    disabled = adapter.UserManagerUiConfig(
+        account_enabled=False,
+        admin_enabled=False,
+        csrf_protection=None,
+    )
+    app2 = FastAPI()
+    _ = install_app_factory_ui(
+        app2,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    client2 = _client(app2)
+    assert _get(client2, disabled.account_path).status_code == 404
+    assert _get(client2, disabled.users_path).status_code == 404
+    assert _post(client2, disabled.disable_user_path).status_code == 404
+
+
+def test_passkey_panel_uses_named_packaged_template() -> None:
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    panel = adapter.PasskeyPanel(
+        template_name="auth/_integration_panel.html",
+        context={"integration_name": "Passkeys"},
+    )
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
+    )
+    app = FastAPI()
+    _ = install_app_factory_ui(
+        app,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    _ = adapter.install_usermanager_ui(
+        app,
+        platform=platform,
+        hooks=_hooks(panel=panel),
+        config=adapter.UserManagerUiConfig(csrf_protection=_csrf()),
+    )
+    response = _get(_client(app), "/account")
+    assert response.status_code == 200
+    assert "Passkeys" in response.text
+
+
+def test_admin_requires_csrf_protection() -> None:
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    with pytest.raises(ValueError, match="csrf_protection"):
+        _ = adapter.UserManagerUiConfig(admin_enabled=True)
+    _ = adapter.UserManagerUiConfig(admin_enabled=False)

@@ -1,394 +1,222 @@
 # my-usermanager
 
-`my-usermanager` is a framework-neutral Python package for user management and authorization. It accepts an already-authenticated subject from a host application or authentication provider, then provides typed authorization and user-management primitives.
+`my-usermanager` is a framework-neutral Python package for user management and
+authorization. It accepts an already-authenticated subject from a host or
+authentication provider and provides typed users, external identities, roles,
+grants, claims, sessions, stores, and the `UserManager` facade.
 
-The core package includes immutable domain values, store protocols, in-memory contract implementations, and a safe `UserManager` facade. The facade enforces the package's default policy: administrators manage user access grants, while ordinary users can update only their own basic profile fields such as username, first name, last name, display name, and email.
+The core package is dependency-free and does not import FastAPI, Jinja,
+Pydantic, `my-auth`, or adapter resources as an import side effect.
 
-## Scope
+## Scope, install, and import paths
 
-- Core package import: `my_usermanager`
-- Distribution name: `my-usermanager`
-- Python: `>=3.12`
-- Tooling: `uv`, Hatchling, pytest, Ruff, basedpyright
-- License: MIT
-- Optional adapter modules:
-  - `my_usermanager.adapters.my_auth`
-  - `my_usermanager.adapters.my_auth_fastapi`
-  - `my_usermanager.adapters.fastapi_htmx`
-- Optional extras: `my-usermanager[myauth]`, `my-usermanager[fastapi]`,
-  `my-usermanager[fastapi-htmx]`
-
-The core package must stay framework neutral. Importing `my_usermanager` must
-not import FastAPI, Jinja, Pydantic, HTMX/static-template code, `my_auth`, or
-optional adapter modules as side effects. Importing `my_usermanager.adapters`
-also stays a clean namespace import; use explicit adapter imports.
-
-## Public OSS and install
-
-`my-usermanager` is public OSS under the MIT License at <https://github.com/mikolaj92/my-usermanager>. `my-auth` is also public OSS under the MIT License at <https://github.com/mikolaj92/my-auth>.
-
-No PyPI release is documented here. Install from the public GitHub repositories:
+- Distribution: `my-usermanager`; core import: `my_usermanager`
+- Python: `>=3.12`; license: MIT
+- Extras: `myauth`, `fastapi`, and `fastapi-htmx`
+- Explicit adapters: `my_usermanager.adapters.my_auth`,
+  `my_usermanager.adapters.my_auth_fastapi`,
+  `my_usermanager.adapters.my_auth_sqlite`,
+  `my_usermanager.adapters.fastapi_htmx`
 
 ```sh
 uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git"
-```
-
-Install the optional `my-auth` adapter extra from the same public repository:
-
-```sh
 uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git"
-```
-
-The `myauth` extra pulls `my-auth @ git+https://github.com/mikolaj92/my-auth`. Prefer a real release tag or commit pin for applications once one exists; do not rely on an invented tag.
-
-Install the optional FastAPI/Jinja/HTMX UI adapter extra when rendering the
-server-side user-management UI:
-
-```sh
+uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git"
 uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git"
 ```
 
-When composing with the passkey UI from `my-auth`, install both public MIT
-packages with their UI extras:
+For the shared passkey stack, install the `myauth` and UI extras plus the
+public `my-auth` UI extra:
 
 ```sh
-uv add "my-usermanager[fastapi-htmx,myauth] @ git+https://github.com/mikolaj92/my-usermanager.git"
+uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git"
 uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git"
 ```
 
-## `my-auth` adapter
-
-Install `my-usermanager[myauth]`, then map a `my-auth` passkey user into the dependency-free subject seam:
+## `my-auth` identity and FastAPI integration
 
 ```python
 from my_auth import PasskeyUser
 from my_usermanager.adapters.my_auth import passkey_user_to_authenticated_subject
 
-passkey_user = PasskeyUser(
-    user_id="passkey_user_123",
-    user_handle=b"opaque-passkey-handle",
-    name="alice",
-    display_name="Alice Example",
+subject = passkey_user_to_authenticated_subject(
+    PasskeyUser("passkey_user_123", b"opaque-handle", "alice", "Alice Example")
 )
-
-subject = passkey_user_to_authenticated_subject(passkey_user)
 identity = subject.external_identity()
 ```
 
-`PasskeyUser.user_id` is preserved as `ExternalIdentity(provider="my-auth", subject=...)`. When it is a valid `my-usermanager` identifier it is also used as the local `User.user_id`; otherwise the adapter derives a deterministic local fallback while preserving the original external subject.
+The passkey ID remains `ExternalIdentity(provider="my-auth", subject=...)`.
+The adapter uses it as the local `User.user_id` when valid, otherwise derives
+a deterministic local fallback without changing the external subject.
 
-## FastAPI hook helpers
-
-`my_usermanager.adapters.my_auth_fastapi` provides small helpers for `my_auth.fastapi.PasskeyRouteHooks`. The host application still owns sessions, login/logout callbacks, registration policy, and local user provisioning:
-
-Install both optional extras from the public repository when using these helpers: `my-usermanager[myauth,fastapi]`.
+`my_usermanager.adapters.my_auth_fastapi` supplies explicit helpers for the
+current `my-auth.fastapi.PasskeyRouteHooks` contract. Preparation is pure;
+the host decides policy and provisioning. Completion receives verified
+registration and is the durable boundary:
 
 ```python
-from my_usermanager import write_session_principal
 from my_usermanager.adapters.my_auth_fastapi import (
-    PasskeyRegistrationLink,
-    PasskeyUserProfile,
-    build_after_login_identity_linker,
-    build_after_register_identity_linker,
+    build_complete_registration,
     build_get_auth_user,
-    build_login_session_principal_writer,
-    build_make_registration_user_with_identity_link,
+    build_prepare_registration,
     require_passkey_route_hooks,
-    user_to_session_principal,
 )
 
-
-def registration_policy(request, display_name: str) -> PasskeyRegistrationLink:
-    local_user = provision_local_user(request, display_name)  # host policy
-    return PasskeyRegistrationLink(
-        local_user_id=local_user.user_id,
-        profile=PasskeyUserProfile(
-            user_id=local_user.user_id,
-            user_handle=make_passkey_handle(local_user),
-            name=local_user.username or local_user.user_id,
-            display_name=display_name,
-        ),
+prepare = build_prepare_registration(profile_for_policy)
+complete = build_complete_registration(
+    lambda request, verified: auth_db.complete_registration(
+        request, verified, user=provision_user(verified),
+        identity=identity_for(verified), grants=grants_for(verified),
     )
-
-
-def write_login_principal(response, request, principal):
-    write_session_principal(request.session, principal)
-
-
-def project_principal(user):
-    return user_to_session_principal(user, claims=project_claims(user))
-
-
+)
 PasskeyRouteHooks = require_passkey_route_hooks()
 hooks = PasskeyRouteHooks(
-    get_session_user=get_session_user,  # host session lookup
+    get_session_user=get_session_user,
     get_auth_user=build_get_auth_user(store, resolve_passkey_profile),
-    make_registration_user=build_make_registration_user_with_identity_link(
-        store,
-        registration_policy,
-    ),
-    login=build_login_session_principal_writer(
-        store,
-        write_login_principal,
-        principal_builder=project_principal,
-    ),
-    logout=logout,  # host clears its own session
+    prepare_registration=prepare,
+    complete_registration=complete,
+    login=login,
+    logout=logout,
     registration_allowed=registration_allowed,
-    after_register=build_after_register_identity_linker(store),
-    after_login=build_after_login_identity_linker(store),
+    render_login=render_login,
+    render_register=render_register,
 )
 ```
 
-The helpers return `None` for missing, unlinked, disabled, or policy-denied users so `my-auth` can deny access. They never create roles, permissions, admin grants, or sessions. The login helper only turns an already-linked local user into a `SessionPrincipal`; the host still owns the actual session write and any claim projection. Registration/provisioning must be an explicit host decision.
+`build_prepare_registration` performs no writes. `build_complete_registration`
+normalizes a synchronous or asynchronous host backend to an async callback.
+The underlying `my-auth` router accepts sync or async callbacks for every hook;
+registration policy runs before options and again before verify, then WebAuthn
+verification precedes completion, login, and non-fatal observer hooks.
 
-## Grant claim projection
+## Canonical shared SQLite owner
 
-Use `GrantClaimsProjector` to collapse stored roles, direct permissions, and app-defined mappings into a session principal:
+Use one `SQLiteAuthDatabase` for a product that stores both passkeys and
+user-management records. It owns the configured database path/connection,
+initialization, operation stores, and transaction boundaries:
 
 ```python
-from my_usermanager import (
-    GrantClaimsProjector,
-    Permission,
-    Scope,
-    max_permission_level_claim,
-    permission_claim,
-    role_claim,
-)
+from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
+
+auth_db = SQLiteAuthDatabase("app.sqlite3")
+auth_db.initialize()                 # explicit inspect + initialize/migrate
+stores = auth_db.stores()            # operation-mode stores
+with auth_db.transaction() as tx:    # one atomic transaction
+    user = tx.users.create(user)
+    tx.external_store(my_auth_credential_store_factory).save_registration(verified)
+```
+
+`SQLiteAuthDatabase.complete_registration(request, result, *, user, identity,
+grants=())` is the canonical atomic completion for a verified registration: it
+commits the passkey, UM user, external identity, and grants together, or rolls
+back all of them. Failed options and failed WebAuthn verification never reach
+it. Host domain rows and policy state remain host-owned and are supplied after
+policy verification.
+
+The owner must call `initialize()` explicitly at startup. It inspects both
+schemas, creates empty schemas, stamps canonical-unversioned layouts, and
+migrates supported legacy layouts. Unsupported schemas and orphan grants are
+refused. Initialization/migration requires no pending transaction. Inspection
+is read-only; do not treat inspection as initialization.
+
+`SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
+commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use
+`transaction_mode="external"` (savepoints); the outer context commits or rolls
+back. Do not instantiate independent auth and UM databases for one product.
+
+Direct UM SQLite stores expose `create_tables`, `inspect_sqlite_schema`, and
+`migrate_sqlite_schema`; they are synchronous. `create_tables` bootstraps
+version 2, while migration validates orphan grants and rebuilds supported
+legacy grant layouts atomically. Direct store constructors receive an open
+`sqlite3.Connection`; the caller owns its lifecycle and transaction policy.
+Path-owned shared stores use per-operation connections with
+`check_same_thread=False`, busy timeout, WAL, and foreign keys. A caller-owned
+connection remains thread-affine by default: use one connection per thread or
+explicitly coordinate access. Never mix multiple connection owners for one
+logical database.
+
+## Ownership matrix
+
+| Concern | Owner |
+| --- | --- |
+| Users, external identities, roles, grants, audit events | `my-usermanager` stores / host policy |
+| Passkey users, credentials, challenges, auth schema | `my-auth` |
+| One shared DB path and cross-library transaction | `SQLiteAuthDatabase` |
+| Registration policy, local provisioning, identity conflict policy | host callbacks |
+| Application sessions, cookies, CSRF, login/logout, audit side effects | host application |
+| Claim projection and authorization decisions | `my-usermanager` primitives + host policy |
+| HTML rendering, static mounts, route integration | optional adapters; host owns policy and persistence |
+
+## Grant claims, admin service, and sessions
+
+```python
+from my_usermanager import GrantClaimsProjector, Permission, Scope, role_claim
 
 projector = GrantClaimsProjector(
     roles=role_store,
     grants=grant_store,
-    claim_mappers=(
-        role_claim("is_member", "member"),  # rnkstr-style membership
-        role_claim("is_admin", "admin"),  # wolnyrolnik-style admin boolean
-        max_permission_level_claim(  # pyemitype-style cumulative level
-            "svg_level",
-            {
-                Permission("svg.level1"): 1,
-                Permission("svg.level2"): 2,
-                Permission("svg.level3"): 3,
-            },
-        ),
-        permission_claim(  # msds-portal workflow/pipeline access
-            "can_run_workflow",
-            Permission("workflows.run"),
-            scope=Scope.scoped("workflow", workflow_id),
-        ),
-    ),
+    claim_mappers=(role_claim("is_admin", "admin"),),
 )
-
-projection = projector.project(user.user_id, scope=Scope.scoped("workflow", workflow_id))
-principal = projection.to_session_principal(user, extra_claims={"report": "full"})
+projection = projector.project(user.user_id, scope=Scope.global_())
+principal = projection.to_session_principal(user)
 ```
 
-The default projection always includes `is_admin`, plus principal roles and permissions for the requested scope. Compute it once during login, call it from `refresh_session_principal` on each request, or recompute/revoke host sessions after grant changes.
+The default projection includes `is_admin`, roles, and permissions for the
+requested scope. `GrantAdminService` centralizes safe grant mutations,
+including protection against unsafe self-demotion and removing the last active
+admin. Hosts choose when to compute or refresh session principals.
 
-## Admin grant service
+`write_session_principal` and `read_session_principal` serialize a typed
+principal into a host-owned session mapping. For DB-backed sessions, keep the
+cookie opaque and implement `SessionTokenStore`; the host owns session lifetime,
+cookie settings, CSRF, login/logout, and persistence.
 
-Use `GrantAdminService` behind admin routes or HTML views to keep grant mutation rules consistent:
+## FastAPI/Jinja/HTMX user-management UI
 
-```python
-from my_usermanager import GrantAdminService, Permission, Scope, UserQuery
-
-admin_service = GrantAdminService(users=user_store, roles=role_store, grants=grant_store)
-rows = admin_service.list_users(limit=100, query=UserQuery())
-
-result = admin_service.grant_permission(
-    actor_id=current_user.user_id,
-    target_user_id="user_123",
-    permission=Permission("workflows.run"),
-    scope=Scope.scoped("workflow", workflow_id),
-)
-```
-
-The service returns typed row and mutation result objects for route handlers to render or audit. Duplicate and missing grants keep the store-level errors, while unsafe self-demotion and last-active-admin removal raise `UnsafeGrantMutationError`.
-
-## Session principal helpers
-
-The core package exposes a typed `SessionPrincipal` that hosts can write into a
-Starlette/FastAPI signed-cookie `request.session`, or persist behind an opaque
-DB-backed session token.
+The optional adapter installs into the host's canonical app-factory shell and shared platform asset mount. It remains usable without `my-auth`; passkey UI is an optional typed panel hook.
 
 ```python
-from my_usermanager import (
-    SessionPrincipal,
-    read_session_principal,
-    write_session_principal,
-)
-
-principal = SessionPrincipal(
-    user_id=user.user_id,
-    username=user.username,
-    roles=frozenset({"admin"}),
-    claims={"is_member": True},
-)
-write_session_principal(request.session, principal)
-current = read_session_principal(request.session)
-```
-
-For DB-backed session cookies, keep the cookie value opaque and implement
-`SessionTokenStore` with `get`, `save`, and `delete`; then use
-`read_token_principal`, `write_token_principal`, and `clear_token_principal`.
-
-FastAPI apps that use `SessionMiddleware` can install the optional FastAPI extra
-and use the dependency helpers:
-
-```python
-from typing import Annotated
-from fastapi import Depends
-from my_usermanager import SessionPrincipal
-from my_usermanager.adapters.fastapi import require_user
-
-
-@app.get("/account")
-def account(user: Annotated[SessionPrincipal, Depends(require_user)]):
-    return {"user_id": user.user_id}
-```
-
-Authorization policies can read projected session data or use a live
-`GrantClaimsProjector` for scoped grant checks:
-
-```python
-from my_usermanager import Permission, Scope
-from my_usermanager.adapters.fastapi import (
-    AuthorizationResponses,
-    require_claim,
-    require_owner_or_admin,
-    require_permission,
-    require_role,
-    require_scoped_permission,
-)
-
-require_admin = require_role("admin")
-require_app_access = require_claim(
-    "has_app_access",
-    responses=AuthorizationResponses.redirects(
-        login_url="/login",
-        forbidden_url="/request-access",
-    ),
-)
-require_workflow_run = require_scoped_permission(
-    Permission("workflows.run"),
-    Scope.scoped("workflow", workflow_id),
-    projector=grant_claims_projector,
-)
-require_owner = require_owner_or_admin(lambda request: request.path_params["user_id"])
-require_read = require_permission("users.read")
-```
-
-Malformed session payloads are treated as unauthenticated. The host still owns
-session lifetime, cookie settings, CSRF, login/logout routes, and persistence.
-
-## FastAPI/Jinja/HTMX user-management UI adapter
-
-`my_usermanager.adapters.fastapi_htmx` is an optional server-rendered
-FastAPI/Jinja/HTMX/Basecoat adapter. It provides account/admin HTML pages and
-HTMX row fragments while the host keeps all authentication, authorization, and
-persistence decisions.
-
-```python
-from fastapi import FastAPI
+from app_factory.fastapi import install_app_factory_ui
 from my_usermanager.adapters.fastapi_htmx import (
-    CsrfContext,
-    UserManagerUiConfig,
-    UserManagerUiHooks,
-    UserManagerUiRouter,
-    UserRow,
-    create_usermanager_ui_router,
-    row_key_from_user_id,
-    usermanager_ui_static_files,
+    UserManagerUiConfig, install_usermanager_ui,
 )
 
-app = FastAPI()
-config = UserManagerUiConfig(login_url="/auth/login")
-hooks: UserManagerUiHooks = build_host_hooks()
-
-users_ui: UserManagerUiRouter = create_usermanager_ui_router(config=config, hooks=hooks)
-app.include_router(users_ui.router)
-app.mount(
-    users_ui.static_mount_path,
-    users_ui.static_files,
-    name="my_usermanager_fastapi_htmx_static",
-)
-
-safe_key = row_key_from_user_id("external/id with spaces")
-row = UserRow(
-    user_id="external/id with spaces",
-    row_key=safe_key,
-    username="alice",
-    display_name="Alice Example",
-    email="alice@example.invalid",
-    disabled=False,
-    is_admin=False,
-)
-csrf = CsrfContext(
-    hidden_inputs=(("csrf_token", host_csrf_token),),
-    headers={"X-CSRF-Token": host_csrf_token},
-)
+platform = install_app_factory_ui(app, environments=(templates.env,))
+ui = install_usermanager_ui(app, platform=platform, hooks=hooks, config=UserManagerUiConfig(csrf_protection=csrf))
 ```
 
-`create_usermanager_ui_router` returns an object with `router`,
-`static_mount_path`, and `static_files`. Mount using the returned values so
-custom `UserManagerUiConfig.static_mount_path` values stay correct. The helper
-`usermanager_ui_static_files()` returns the packaged `StaticFiles` object for
-hosts that need to wire static files manually.
+The host owns sessions, CSRF validation, persistence, authorization, provisioning, redirects, and audit effects. Every enabled mutation route requires a `CsrfProtection` implementation and validates its submitted token before callbacks. Account and admin route groups can be independently disabled. The adapter ships only package-specific CSS and extends `app_factory/shell.html`; it never accepts arbitrary full-page template overrides.
 
-`UserManagerUiHooks` is the host callback seam. The adapter calls hooks for
-current-user lookup, admin authorization, user listing, disabled-state changes,
-role and app-defined capability options, grant/revoke mutations, CSRF metadata,
-post-mutation side effects, and optional passkey-panel HTML. It does not create
-application users, sessions, roles, grants, audit records, or cookies itself.
+## Canonical runnable FastAPI stack
 
-### Host-owned security responsibilities
+The complete no-build reference is [`examples/fastapi_htmx`](examples/fastapi_htmx/README.md):
 
-The host application owns sessions, app cookies, CSRF validation, persistence,
-registration policy, local user provisioning, admin checks, role/grant changes,
-audit logging, redirects, and logout effects. The UI adapter only renders forms
-and calls host hooks. It must not be documented or treated as production
-security/session/persistence/admin/role/audit policy.
-
-When composed with `my-auth`, the only adapter-owned cookie exception is the
-existing WebAuthn challenge flow in `my_auth.fastapi.PasskeyAuthRouter`
-(`passkey_challenge` and `passkey_register_name`). Those cookies are not
-application session cookies.
-
-### Template overrides
-
-Template resolution follows the same contract as the passkey adapter:
-
-1. A custom `template_loader` wins.
-2. Otherwise `template_override_directory` is searched before packaged
-   templates.
-3. Otherwise packaged templates are used.
-4. Supplying both `template_loader` and `template_override_directory` is
-   invalid and raises `ValueError`.
-
-```python
-from pathlib import Path
-from jinja2 import DictLoader
-from my_usermanager.adapters.fastapi_htmx import UserManagerUiConfig
-
-directory_override = UserManagerUiConfig(
-    template_override_directory=Path("app/templates/usermanager"),
-)
-loader_override = UserManagerUiConfig(
-    template_loader=DictLoader({"account/index.html": "<main>Account</main>"}),
-)
+```sh
+uv run --no-sync \
+  --with-editable /Users/mini-m4-main/Developer/hermes-repos/my-auth \
+  --with "fastapi>=0.115" \
+  --with "jinja2>=3.1" \
+  --with "uvicorn[standard]>=0.32" \
+  uvicorn examples.fastapi_htmx.app:app --reload
 ```
 
-The adapter is intentionally no-build: no React, shadcn, Tailwind, npm,
-bundler, SPA shell, or client-side JSON templates. It is server-rendered
-FastAPI/Jinja/HTMX/Basecoat.
+Open `http://127.0.0.1:8000/auth/login`. The host demo uses in-memory users,
+explicit demo-only CSRF metadata, and host callbacks; it is not a production
+session, persistence, admin, or audit implementation. WebAuthn requires HTTPS
+or a local secure context such as localhost, and `/api/auth/*` remains JSON.
 
-## Optional FastAPI HTMX Basecoat example
+## 0.1 to 0.2 mapping
 
-See [`examples/fastapi_htmx`](examples/fastapi_htmx/README.md) for an optional no-build FastAPI/Jinja/HTMX/Basecoat proof. It composes packaged adapter templates/static resources without making the framework-neutral core depend on FastAPI, Jinja, HTMX, Basecoat, React, npm, or a bundler.
-
-The example is a host app reference only: the host remains responsible for sessions, app cookies, CSRF validation, persistence, registration policy, local user provisioning, admin checks, role/grant changes, audit logging, redirects, logout effects, identity conflict policy, and template ownership decisions.
-
-When the example composes `my-auth`, passkeys still require HTTPS or another
-browser secure context such as localhost. Browsers without WebAuthn support need
-host-provided fallback or recovery guidance, and `/api/auth/*` remains JSON.
+| 0.1 API or behavior | 0.2 API or behavior |
+| --- | --- |
+| `build_make_registration_user_with_identity_link` | `build_prepare_registration` + host-owned `complete_registration` |
+| `PasskeyRouteHooks.make_registration_user` | `prepare_registration` + `complete_registration` |
+| `finish_registration` result passed to identity lookup | `verify_registration` returns `VerifiedRegistration`, then shared atomic completion |
+| Implicit SQLite bootstrap | Explicit `SQLiteAuthDatabase.initialize()` or inspect then `create_tables`/`migrate_sqlite_schema` |
+| Independent my-auth and UM DB owners | One `SQLiteAuthDatabase` owner and one shared configured connection/path |
+| `transaction_mode` absent from direct stores | `operation` (independent commit) or `external` (savepoint; caller commits) |
+| `PasskeyCookies.challenge` / `register_name` | Separate my-auth authentication/registration challenge cookies |
+| `Initial version: 0.1.0` | `__version__ == "0.2.0"`; schema version 2 |
 
 ## Development
 
@@ -396,10 +224,5 @@ host-provided fallback or recovery guidance, and `/api/auth/*` remains JSON.
 uv sync
 uv run pytest
 uv run ruff check .
-uv run ruff format --check .
 uv run basedpyright src tests
 ```
-
-## Version
-
-Initial version: `0.1.0`

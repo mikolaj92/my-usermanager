@@ -83,52 +83,31 @@ def import_fake_my_auth(
     return FakeMyAuthModule()
 
 
-def test_make_registration_user_with_identity_link_requires_explicit_policy(
+def test_prepare_registration_requires_explicit_policy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Given: caller policy provisions a local user and explicit passkey link target.
+    """Preparation derives a passkey user without durable identity writes."""
     monkeypatch.setattr(my_auth_adapter, "import_module", import_fake_my_auth)
-    store = FakeExternalIdentityUserStore(users=(User(user_id="local_user_123"),))
-    grants = MemoryGrantStore()
 
     def registration_policy(
-        request: FakeRequest,
-        display_name: str,
-    ) -> fastapi_adapter.PasskeyRegistrationLink:
+        request: FakeRequest, display_name: str
+    ) -> fastapi_adapter.PasskeyUserProfile:
         assert request.trace_id == "req_123"
-        return fastapi_adapter.PasskeyRegistrationLink(
-            local_user_id="local_user_123",
-            profile=fastapi_adapter.PasskeyUserProfile(
-                user_id="new_passkey_user",
-                user_handle=b"new-handle",
-                name="new_passkey_user",
-                display_name=display_name,
-            ),
+        return fastapi_adapter.PasskeyUserProfile(
+            user_id="new_passkey_user",
+            user_handle=b"new-handle",
+            name="new_passkey_user",
+            display_name=display_name,
         )
 
-    make_registration_user = (
-        fastapi_adapter.build_make_registration_user_with_identity_link(
-            store,
-            registration_policy,
-        )
-    )
-
-    # When: registration policy explicitly returns profile and link target.
-    passkey_user = make_registration_user(FakeRequest(trace_id="req_123"), "New User")
-
-    # Then: identity is linked for later get_auth_user without granting access.
-    identity = ExternalIdentity(provider="my-auth", subject="new_passkey_user")
-    linked = store.resolve_external_identity(identity)
+    prepare = fastapi_adapter.build_prepare_registration(registration_policy)
+    passkey_user = prepare(FakeRequest(trace_id="req_123"), "New User")
     assert passkey_user == FakePasskeyUser(
         user_id="new_passkey_user",
         user_handle=b"new-handle",
         name="new_passkey_user",
         display_name="New User",
     )
-    assert linked is not None
-    assert linked.user_id == "local_user_123"
-    assert linked.external_identities == frozenset({identity})
-    assert grants.list_grants_for_user("local_user_123") == ()
 
 
 def test_after_register_and_after_login_link_identity_without_grants() -> None:

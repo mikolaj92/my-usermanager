@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import TYPE_CHECKING, Final, Protocol, TypeGuard, override
+from typing import TYPE_CHECKING, Final, Protocol, TypeGuard, cast, override
 
 from my_usermanager.adapters.my_auth import (
     MY_AUTH_PROVIDER,
@@ -19,6 +19,7 @@ from my_usermanager.models import (
     User,
     ValidationError,
     validate_external_subject,
+    validate_identifier,
 )
 from my_usermanager.sessions import SessionClaimValue, SessionPrincipal
 from my_usermanager.subjects import ExternalIdentityNotFoundError
@@ -37,10 +38,10 @@ __all__: Final[tuple[str, ...]] = (
     "PasskeyUserProfile",
     "build_after_login_identity_linker",
     "build_after_register_identity_linker",
+    "build_complete_registration",
     "build_get_auth_user",
     "build_login_session_principal_writer",
-    "build_make_registration_user",
-    "build_make_registration_user_with_identity_link",
+    "build_prepare_registration",
     "require_passkey_route_hooks",
     "user_to_session_principal",
 )
@@ -51,9 +52,10 @@ _MY_AUTH_FASTAPI_INSTALL_TARGET: Final = "my-auth[fastapi]"
 type AccessPolicy = Callable[[User], bool]
 type PasskeyProfileResolver = Callable[[User], PasskeyUserProfile | None]
 type SessionPrincipalBuilder = Callable[[User], SessionPrincipal]
+type MaybeAwaitable[T] = T | Awaitable[T]
 type SessionPrincipalWriter[ResponseT, RequestT] = Callable[
     [ResponseT, RequestT, SessionPrincipal],
-    object,
+    MaybeAwaitable[None],
 ]
 
 
@@ -153,7 +155,7 @@ class PasskeyRegistrationLink:
 
     def __post_init__(self) -> None:
         """Validate the caller-owned local link target."""
-        _require_profile_text(self.local_user_id, field_name="local_user_id")
+        _require_identifier(self.local_user_id, field_name="local_user_id")
 
 
 def require_passkey_route_hooks() -> type[PasskeyRouteHooksLike]:
@@ -161,9 +163,10 @@ def require_passkey_route_hooks() -> type[PasskeyRouteHooksLike]:
     try:
         module = import_module(_FASTAPI_IMPORT_NAME)
     except ModuleNotFoundError as exc:
-        missing_import_name = exc.name or _FASTAPI_IMPORT_NAME
+        if exc.name not in {"my_auth", _FASTAPI_IMPORT_NAME}:
+            raise
         raise MissingMyAuthFastAPIDependencyError(
-            missing_import_name=missing_import_name,
+            missing_import_name=exc.name,
         ) from exc
     if not _has_passkey_route_hooks(module):
         raise MissingMyAuthFastAPIDependencyError
@@ -198,42 +201,32 @@ def build_get_auth_user(
     return get_auth_user
 
 
-def build_make_registration_user[RequestT](
+def build_prepare_registration[RequestT](
     registration_policy: Callable[[RequestT, str], PasskeyUserProfile],
 ) -> Callable[[RequestT, str], PasskeyUserLike]:
-    """Build a make_registration_user callable from explicit host policy."""
+    """Build a pure preparation hook; it performs no durable writes."""
     _ = require_my_auth()
 
-    def make_registration_user(
-        request: RequestT,
-        display_name: str,
-    ) -> PasskeyUserLike:
+    def prepare_registration(request: RequestT, display_name: str) -> PasskeyUserLike:
         return _passkey_user_from_profile(registration_policy(request, display_name))
 
-    return make_registration_user
+    return prepare_registration
 
 
-def build_make_registration_user_with_identity_link[RequestT](
-    store: ExternalIdentityUserStore,
-    registration_policy: Callable[[RequestT, str], PasskeyRegistrationLink],
-) -> Callable[[RequestT, str], PasskeyUserLike]:
-    """Build a registration callable that links only explicit policy output."""
-    _ = require_my_auth()
+def build_complete_registration[RequestT, ResultT, UserT](
+    completion_backend: Callable[
+        [RequestT, ResultT], UserT | Awaitable[UserT | None] | None
+    ],
+) -> Callable[[RequestT, ResultT], Awaitable[UserT | None]]:
+    """Build a sync/async-compatible completion hook around host backend."""
 
-    def make_registration_user(
-        request: RequestT,
-        display_name: str,
-    ) -> PasskeyUserLike:
-        registration = registration_policy(request, display_name)
-        passkey_user = _passkey_user_from_profile(registration.profile)
-        subject = passkey_user_to_authenticated_subject(passkey_user)
-        _ = store.link_external_identity(
-            user_id=registration.local_user_id,
-            identity=subject.external_identity(),
-        )
-        return passkey_user
+    async def complete_registration(request: RequestT, result: ResultT) -> UserT | None:
+        value = completion_backend(request, result)
+        if isinstance(value, Awaitable):
+            return await cast("Awaitable[UserT | None]", value)
+        return value
 
-    return make_registration_user
+    return complete_registration
 
 
 def user_to_session_principal(
@@ -259,16 +252,16 @@ def build_login_session_principal_writer[ResponseT, RequestT](
     store: ExternalIdentityUserStore,
     write_principal: SessionPrincipalWriter[ResponseT, RequestT],
     principal_builder: SessionPrincipalBuilder = user_to_session_principal,
-) -> Callable[[ResponseT, RequestT, PasskeyUserLike], None]:
+) -> Callable[[ResponseT, RequestT, PasskeyUserLike], MaybeAwaitable[None]]:
     """Build a PasskeyRouteHooks.login callback that writes a session principal."""
 
     def login(
         response: ResponseT,
         request: RequestT,
         user: PasskeyUserLike,
-    ) -> None:
+    ) -> MaybeAwaitable[None]:
         local_user = _require_linked_user(store, user)
-        _ = write_principal(response, request, principal_builder(local_user))
+        return write_principal(response, request, principal_builder(local_user))
 
     return login
 
@@ -337,6 +330,16 @@ def _passkey_user_from_profile(profile: PasskeyUserProfile) -> PasskeyUserLike:
 def _require_profile_text(value: str, *, field_name: str) -> None:
     try:
         _validate_profile_text(value, field_name=field_name)
+    except ValidationError as exc:
+        raise InvalidPasskeyUserProfileError(
+            field_name=field_name,
+            reason=exc.reason,
+        ) from exc
+
+
+def _require_identifier(value: str, *, field_name: str) -> None:
+    try:
+        _ = validate_identifier(value, field_name=field_name)
     except ValidationError as exc:
         raise InvalidPasskeyUserProfileError(
             field_name=field_name,

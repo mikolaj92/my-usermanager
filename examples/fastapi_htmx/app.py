@@ -5,25 +5,25 @@ from __future__ import annotations
 from typing import Final
 from warnings import filterwarnings
 
+from app_factory.fastapi import install_app_factory_ui
 from fastapi import APIRouter, FastAPI, status
 from fastapi.responses import PlainTextResponse, RedirectResponse, Response
-from my_auth.fastapi_htmx import PasskeyUiConfig, create_passkey_ui_router
+from my_auth.fastapi_htmx import PasskeyUiConfig, install_passkey_ui
 
 from examples.fastapi_htmx.demo_passkeys import (
     PASSKEY_PATHS,
     _demo_passkey_service,
     _passkey_hooks,
 )
-from examples.fastapi_htmx.demo_usermanager import _demo_csrf_token, _usermanager_hooks
-from examples.fastapi_htmx.demo_users import (
-    DEMO_CSRF_HEADER,
+from examples.fastapi_htmx.demo_usermanager import (
+    _demo_csrf_protection,
+    _usermanager_hooks,
 )
-from examples.fastapi_htmx.demo_users import (
-    DEMO_UNSAFE_USER_ID as _DEMO_UNSAFE_USER_ID,
-)
+from examples.fastapi_htmx.demo_users import DEMO_CSRF_HEADER
+from examples.fastapi_htmx.demo_users import DEMO_UNSAFE_USER_ID as _DEMO_UNSAFE_USER_ID
 from my_usermanager.adapters.fastapi_htmx import (
     UserManagerUiConfig,
-    create_usermanager_ui_router,
+    install_usermanager_ui,
 )
 
 _HOST_ROUTER: Final = APIRouter()
@@ -45,30 +45,26 @@ filterwarnings(
 def create_app() -> FastAPI:
     """Create the optional no-build adapter composition example."""
     demo_app = FastAPI(title="my-usermanager FastAPI HTMX adapter composition example")
-    passkey_ui = create_passkey_ui_router(
+    platform = install_app_factory_ui(demo_app, environments=())
+    install_passkey_ui(
+        demo_app,
+        platform=platform,
         service=_demo_passkey_service(),
         hooks=_passkey_hooks(),
         config=PasskeyUiConfig(
             paths=PASSKEY_PATHS,
             csrf_header_name=DEMO_CSRF_HEADER,
-            csrf_token=_demo_csrf_token,
+            csrf_token=lambda _request: "demo-noop-csrf",
         ),
     )
-    usermanager_ui = create_usermanager_ui_router(
-        config=UserManagerUiConfig(login_url=PASSKEY_PATHS.login_page),
+    install_usermanager_ui(
+        demo_app,
+        platform=platform,
+        config=UserManagerUiConfig(
+            login_url=PASSKEY_PATHS.login_page,
+            csrf_protection=_demo_csrf_protection(),
+        ),
         hooks=_usermanager_hooks(),
-    )
-    demo_app.include_router(passkey_ui.router)
-    demo_app.mount(
-        passkey_ui.static_mount_path,
-        passkey_ui.static_files,
-        name="my_auth_fastapi_htmx_static",
-    )
-    demo_app.include_router(usermanager_ui.router)
-    demo_app.mount(
-        usermanager_ui.static_mount_path,
-        usermanager_ui.static_files,
-        name="my_usermanager_fastapi_htmx_static",
     )
     demo_app.include_router(_HOST_ROUTER)
     return demo_app

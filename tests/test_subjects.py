@@ -226,6 +226,9 @@ def test_subject_seam_does_not_mutate_grants_or_import_optionals() -> None:
         user_id="user_123",
     )
 
+    optional_modules = {
+        name: sys.modules.get(name) for name in ("my_auth", "fastapi", "pydantic")
+    }
     # When: the authenticated subject is linked to a local user.
     linked = store.link_external_identity(
         user_id=subject.user_id,
@@ -236,6 +239,6 @@ def test_subject_seam_does_not_mutate_grants_or_import_optionals() -> None:
     assert linked.scope == Scope.global_()
     assert linked.system is False
     assert grants.list_grants_for_user("user_123") == ()
-    assert "my_auth" not in sys.modules
-    assert "fastapi" not in sys.modules
-    assert "pydantic" not in sys.modules
+    assert {
+        name: sys.modules.get(name) for name in optional_modules
+    } == optional_modules

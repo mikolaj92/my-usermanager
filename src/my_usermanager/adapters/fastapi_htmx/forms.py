@@ -16,6 +16,7 @@ class MutationForm:
     """Parsed mutating form payload."""
 
     user_id: str
+    csrf_token: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +27,7 @@ class GrantForm:
     value: str
     scope_type: str | None = None
     scope_id: str | None = None
+    csrf_token: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,7 +55,7 @@ async def read_mutation_form(request: Request) -> MutationFormResult:
             "Missing user id",
             "The submitted user action did not include a user id.",
         )
-    return MutationForm(user_id)
+    return MutationForm(user_id, _csrf_value(form))
 
 
 async def read_grant_form(request: Request, *, value_field: str) -> GrantFormResult:
@@ -80,6 +82,7 @@ async def read_grant_form(request: Request, *, value_field: str) -> GrantFormRes
         value=value,
         scope_type=_optional_value(form, "scope_type"),
         scope_id=_optional_value(form, "scope_id"),
+        csrf_token=_csrf_value(form),
     )
 
 
@@ -119,6 +122,11 @@ def _first_value(values: dict[str, list[str]], name: str) -> str | None:
     if field_values == [] or field_values[0] == "":
         return None
     return field_values[0]
+
+
+def _csrf_value(values: dict[str, list[str]]) -> str | None:
+    """Extract the authoritative standard CSRF field."""
+    return _first_value(values, "csrf")
 
 
 def _optional_value(values: dict[str, list[str]], name: str) -> str | None:
