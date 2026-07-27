@@ -122,6 +122,7 @@ class UserManagerUiConfig:
     static_mount_path: str = "/usermanager/ui/static"
     static_url_path: str = "/usermanager/ui/static"
     login_url: str = "/auth/login"
+    logout_path: str = "/logout"
     account_enabled: bool = True
     admin_enabled: bool = True
     csrf_protection: CsrfProtection | None = None

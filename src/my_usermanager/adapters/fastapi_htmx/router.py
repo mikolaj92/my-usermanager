@@ -132,6 +132,7 @@ def create_usermanager_ui_router(  # noqa: C901
             current_user=auth.current_user,
             passkey_panel_html=panel_html,
             static_url_path=config.static_url_path,
+            logout_path=config.logout_path,
         )
         return HTMLResponse(html)
 
