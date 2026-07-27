@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, final, override
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Final, Protocol, final, override
 
 from my_usermanager.adapters.fastapi_htmx.awaitables import (  # noqa: TC001
     MaybeAwaitable,
@@ -17,6 +17,65 @@ if TYPE_CHECKING:
     from fastapi.staticfiles import StaticFiles
 
     from my_usermanager.subjects import AuthenticatedSubject
+
+
+# English defaults for packaged chrome. Hosts override via config.labels and/or
+# an optional hooks.page_context mapping (merged last for per-request i18n).
+DEFAULT_UI_LABELS: Final[dict[str, str]] = {
+    "nav_account": "Account",
+    "nav_users": "Users",
+    "skip_to_content": "Skip to content",
+    "users_document_title": "Users - User management",
+    "users_badge": "Admin",
+    "users_title": "Users",
+    "users_description": (
+        "User status and access changes call host-owned callbacks and swap one row."
+    ),
+    "current_user": "Current user",
+    "col_user": "User",
+    "col_email": "Email",
+    "col_access": "Access",
+    "col_identities": "Identities",
+    "col_status": "Status",
+    "col_action": "Action",
+    "empty_users": "No users are available.",
+    "badge_admin": "Admin",
+    "badge_user": "User",
+    "status_disabled": "Disabled",
+    "status_active": "Active",
+    "action_enable": "Enable",
+    "action_disable": "Disable",
+    "action_grant_role": "Grant role",
+    "action_revoke": "Revoke",
+    "action_grant": "Grant",
+    "updating_row": "Updating row.",
+    "account_document_title": "Account - User management",
+    "account_badge": "Account",
+    "account_title": "Account",
+    "account_description": (
+        "This reusable page delegates authentication and passkey behavior to "
+        "host callbacks."
+    ),
+    "local_user_id": "Local user id",
+    "external_subject": "External subject",
+    "session_title": "Session",
+    "session_description": "Sign out of this app on this device.",
+    "log_out": "Log out",
+}
+
+
+def resolve_ui_labels(
+    config_labels: Mapping[str, str] | None = None,
+    *,
+    overrides: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Merge default chrome labels with host config and per-request overrides."""
+    merged = dict(DEFAULT_UI_LABELS)
+    if config_labels:
+        merged.update(dict(config_labels))
+    if overrides:
+        merged.update(dict(overrides))
+    return merged
 
 
 class CsrfProtection(Protocol):
@@ -109,7 +168,19 @@ class CsrfContext:
 
 @dataclass(frozen=True, slots=True)
 class UserManagerUiConfig:
-    """Route and static settings for the adapter."""
+    """Route and static settings for the adapter.
+
+    Host shell integration (optional, backward compatible):
+
+    * ``base_template`` — Jinja name that account/users pages extend. Default
+      ``base.html`` is the packaged shell (``app_factory/shell.html``). Hosts
+      that pass their own Jinja ``environment`` to ``install_usermanager_ui``
+      may point this at a host template that provides a ``content`` block
+      (and any chrome the host owns).
+    * ``labels`` — optional chrome string overrides merged over
+      :data:`DEFAULT_UI_LABELS`. Per-request i18n can further override via an
+      optional hooks ``page_context`` mapping key ``labels``.
+    """
 
     account_path: str = "/account"
     users_path: str = "/admin/users"
@@ -126,11 +197,16 @@ class UserManagerUiConfig:
     account_enabled: bool = True
     admin_enabled: bool = True
     csrf_protection: CsrfProtection | None = None
+    base_template: str = "base.html"
+    labels: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Require CSRF protection whenever admin mutations are enabled."""
         if self.admin_enabled and self.csrf_protection is None:
             message = "csrf_protection is required when admin_enabled is true"
+            raise ValueError(message)
+        if not self.base_template or not str(self.base_template).strip():
+            message = "base_template must be a non-empty Jinja template name"
             raise ValueError(message)
 
 

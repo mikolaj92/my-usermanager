@@ -1,13 +1,14 @@
-{% extends "base.html" %}
+{% extends base_template %}
 
-{% block title %}Account - User management{% endblock %}
+{% block title %}{{ labels.account_document_title }}{% endblock %}
 
 {% block content %}
+  <link rel="stylesheet" href="{{ static_url_path }}/usermanager-ui.css">
   <section class="um-shell um-stack" aria-labelledby="account-title">
     <div class="um-stack-tight">
-      <p class="badge">Account</p>
-      <h1 id="account-title">Account</h1>
-      <p class="um-muted">This reusable page delegates authentication and passkey behavior to host callbacks.</p>
+      <p class="badge">{{ labels.account_badge }}</p>
+      <h1 id="account-title">{{ labels.account_title }}</h1>
+      <p class="um-muted">{{ labels.account_description }}</p>
     </div>
 
     <article class="card um-card um-stack">
@@ -20,11 +21,11 @@
       </div>
       <dl class="um-stack-tight">
         <div>
-          <dt class="um-muted">Local user id</dt>
+          <dt class="um-muted">{{ labels.local_user_id }}</dt>
           <dd><code>{{ current_user.user_id }}</code></dd>
         </div>
         <div>
-          <dt class="um-muted">External subject</dt>
+          <dt class="um-muted">{{ labels.external_subject }}</dt>
           <dd><code>{{ current_user.subject }}</code></dd>
         </div>
       </dl>
@@ -37,10 +38,10 @@
     {% include "app_factory/platform_session.html" %}
     {% elif logout_path is defined %}
     <section class="card um-card um-stack" data-platform-session>
-      <h2>Session</h2>
-      <p class="um-muted">Sign out of this app on this device.</p>
+      <h2>{{ labels.session_title }}</h2>
+      <p class="um-muted">{{ labels.session_description }}</p>
       <form method="post" action="{{ logout_path }}" data-no-htmx="true">
-        <button type="submit" class="btn" data-variant="destructive" data-size="sm">Log out</button>
+        <button type="submit" class="btn" data-variant="destructive" data-size="sm">{{ labels.log_out }}</button>
       </form>
     </section>
     {% endif %}

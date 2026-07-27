@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, cast
 
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
 from fastapi import APIRouter, FastAPI, Request
@@ -24,6 +25,7 @@ from my_usermanager.adapters.fastapi_htmx.config import (
     UserManagerUiConflict,
     UserManagerUiRouter,
     UserRow,
+    resolve_ui_labels,
 )
 from my_usermanager.adapters.fastapi_htmx.forms import (
     FormError,
@@ -40,7 +42,10 @@ from my_usermanager.adapters.fastapi_htmx.static import (
     ensure_static_mount_available,
     usermanager_ui_static_files,
 )
-from my_usermanager.adapters.fastapi_htmx.templates import create_template_environment
+from my_usermanager.adapters.fastapi_htmx.templates import (
+    attach_package_templates,
+    create_template_environment,
+)
 
 if TYPE_CHECKING:
     from fastapi.responses import Response
@@ -55,8 +60,15 @@ def install_usermanager_ui(
     platform: AppFactoryUi,
     hooks: UserManagerUiHooks,
     config: UserManagerUiConfig | None = None,
+    environment: Environment | None = None,
 ) -> UserManagerUi:
-    """Install the user-manager routes and shared platform UI assets."""
+    """Install the user-manager routes and shared platform UI assets.
+
+    When ``environment`` is omitted the adapter builds a package-only Jinja
+    environment (default hosts / demos). Hosts that own product chrome may pass
+    their Jinja environment; packaged templates are attached with host loaders
+    first so a host ``base.html`` (or ``config.base_template``) can wrap pages.
+    """
     selected = config or UserManagerUiConfig()
     installed_platform = getattr(app.state, "app_factory_ui", None)
     if installed_platform != platform:
@@ -72,15 +84,18 @@ def install_usermanager_ui(
                 "a different usermanager UI is already installed"
             )
         return existing
-    environment = create_template_environment()
+    if environment is None:
+        templates = create_template_environment()
+    else:
+        templates = attach_package_templates(environment)
     _ = install_app_factory_ui(
         app,
-        environments=[environment],
+        environments=[templates],
         static_path=platform.static_path,
         mount_name=platform.mount_name,
     )
     result = create_usermanager_ui_router(
-        config=selected, hooks=hooks, environment=environment
+        config=selected, hooks=hooks, environment=templates
     )
     ensure_static_mount_available(app, result.static_mount_path)
     app.include_router(result.router)
@@ -110,6 +125,36 @@ def _csrf_inputs(
     return (*inputs, ("csrf", protection.token(request)))
 
 
+async def _page_context(
+    hooks: UserManagerUiHooks, request: Request
+) -> dict[str, object]:
+    """Optional host extras (shell chrome, i18n). Missing hook → empty dict."""
+    provider = getattr(hooks, "page_context", None)
+    if provider is None:
+        return {}
+    raw = await resolve(provider(request))
+    if raw is None:
+        return {}
+    if not isinstance(raw, Mapping):
+        message = "page_context must return a mapping"
+        raise TypeError(message)
+    return dict(cast("Mapping[str, object]", raw))
+
+
+def _merge_labels(
+    config: UserManagerUiConfig, page_context: Mapping[str, object]
+) -> dict[str, str]:
+    raw_overrides = page_context.get("labels")
+    overrides: Mapping[str, str] | None
+    if isinstance(raw_overrides, Mapping):
+        overrides = {
+            str(key): str(value) for key, value in raw_overrides.items()
+        }
+    else:
+        overrides = None
+    return resolve_ui_labels(config.labels, overrides=overrides)
+
+
 def create_usermanager_ui_router(  # noqa: C901
     *,
     config: UserManagerUiConfig,
@@ -124,15 +169,22 @@ def create_usermanager_ui_router(  # noqa: C901
         auth = await current_user(request, config, hooks)
         if isinstance(auth, Denied):
             return auth.response
+        host_context = await _page_context(hooks, request)
+        labels = _merge_labels(config, host_context)
         panel = await resolve(hooks.render_passkey_panel(request, auth.current_user))
         panel_html = _render_panel(templates, request, auth.current_user, panel)
         html = templates.get_template("account/index.html").render(
-            request=request,
-            config=config,
-            current_user=auth.current_user,
-            passkey_panel_html=panel_html,
-            static_url_path=config.static_url_path,
-            logout_path=config.logout_path,
+            **{
+                **host_context,
+                "request": request,
+                "config": config,
+                "current_user": auth.current_user,
+                "passkey_panel_html": panel_html,
+                "static_url_path": config.static_url_path,
+                "logout_path": config.logout_path,
+                "base_template": config.base_template,
+                "labels": labels,
+            }
         )
         return HTMLResponse(html)
 
@@ -140,24 +192,35 @@ def create_usermanager_ui_router(  # noqa: C901
         auth = await admin_user(request, config, hooks)
         if isinstance(auth, Denied):
             return auth.response
+        host_context = await _page_context(hooks, request)
+        labels = _merge_labels(config, host_context)
         csrf = await resolve(hooks.csrf_context(request))
         html = templates.get_template("users/list.html").render(
-            request=request,
-            config=config,
-            current_user=auth.current_user,
-            users=tuple(
-                safe_row(row)
-                for row in await resolve(hooks.list_users(request, auth.current_user))
-            ),
-            role_options=tuple(
-                await resolve(hooks.role_options(request, auth.current_user))
-            ),
-            capability_options=tuple(
-                await resolve(hooks.capability_options(request, auth.current_user))
-            ),
-            csrf=csrf,
-            csrf_inputs=_csrf_inputs(config, request, csrf),
-            static_url_path=config.static_url_path,
+            **{
+                **host_context,
+                "request": request,
+                "config": config,
+                "current_user": auth.current_user,
+                "users": tuple(
+                    safe_row(row)
+                    for row in await resolve(
+                        hooks.list_users(request, auth.current_user)
+                    )
+                ),
+                "role_options": tuple(
+                    await resolve(hooks.role_options(request, auth.current_user))
+                ),
+                "capability_options": tuple(
+                    await resolve(
+                        hooks.capability_options(request, auth.current_user)
+                    )
+                ),
+                "csrf": csrf,
+                "csrf_inputs": _csrf_inputs(config, request, csrf),
+                "static_url_path": config.static_url_path,
+                "base_template": config.base_template,
+                "labels": labels,
+            }
         )
         return HTMLResponse(html)
 
@@ -271,16 +334,24 @@ async def _row_response(
     row: UserRow,
     csrf: CsrfContext,
 ) -> HTMLResponse:
+    host_context = await _page_context(hooks, request)
+    labels = _merge_labels(config, host_context)
     html = templates.get_template("users/_row.html").render(
-        request=request,
-        config=config,
-        user=safe_row(row),
-        role_options=tuple(await resolve(hooks.role_options(request, current_user))),
-        capability_options=tuple(
-            await resolve(hooks.capability_options(request, current_user))
-        ),
-        csrf=csrf,
-        csrf_inputs=_csrf_inputs(config, request, csrf),
+        **{
+            **host_context,
+            "request": request,
+            "config": config,
+            "user": safe_row(row),
+            "role_options": tuple(
+                await resolve(hooks.role_options(request, current_user))
+            ),
+            "capability_options": tuple(
+                await resolve(hooks.capability_options(request, current_user))
+            ),
+            "csrf": csrf,
+            "csrf_inputs": _csrf_inputs(config, request, csrf),
+            "labels": labels,
+        }
     )
     return HTMLResponse(html)
 
@@ -294,5 +365,9 @@ def _render_panel(
     """Render a named packaged template with merged safe context."""
     if panel is None:
         panel = PasskeyPanel("auth/_integration_panel.html", {})
-    context = {"request": request, "current_user": current_user, **dict(panel.context)}
+    context: dict[str, Any] = {
+        "request": request,
+        "current_user": current_user,
+        **dict(panel.context),
+    }
     return templates.get_template(panel.template_name).render(**context)

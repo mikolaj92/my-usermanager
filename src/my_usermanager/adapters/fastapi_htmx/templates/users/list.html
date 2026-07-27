@@ -1,28 +1,29 @@
-{% extends "base.html" %}
+{% extends base_template %}
 
-{% block title %}Users - User management{% endblock %}
+{% block title %}{{ labels.users_document_title }}{% endblock %}
 
 {% block content %}
+  <link rel="stylesheet" href="{{ static_url_path }}/usermanager-ui.css">
   <section class="um-shell um-stack" aria-labelledby="users-title">
     <div class="um-cluster um-between">
       <div>
-        <p class="badge">Admin</p>
-        <h1 id="users-title">Users</h1>
-        <p class="um-muted">User status and access changes call host-owned callbacks and swap one row.</p>
+        <p class="badge">{{ labels.users_badge }}</p>
+        <h1 id="users-title">{{ labels.users_title }}</h1>
+        <p class="um-muted">{{ labels.users_description }}</p>
       </div>
-      <span class="badge">Current user: {{ current_user.username or current_user.user_id }}</span>
+      <span class="badge">{{ labels.current_user }}: {{ current_user.username or current_user.user_id }}</span>
     </div>
 
     <div id="users-table" class="card um-table-scroll" data-htmx-target="#users-table">
       <table class="table">
         <thead>
           <tr>
-            <th scope="col">User</th>
-            <th scope="col">Email</th>
-            <th scope="col">Access</th>
-            <th scope="col">Identities</th>
-            <th scope="col">Status</th>
-            <th scope="col">Action</th>
+            <th scope="col">{{ labels.col_user }}</th>
+            <th scope="col">{{ labels.col_email }}</th>
+            <th scope="col">{{ labels.col_access }}</th>
+            <th scope="col">{{ labels.col_identities }}</th>
+            <th scope="col">{{ labels.col_status }}</th>
+            <th scope="col">{{ labels.col_action }}</th>
           </tr>
         </thead>
         <tbody>
@@ -30,7 +31,7 @@
             {% include "users/_row.html" %}
           {% else %}
             <tr>
-              <td colspan="6">No users are available.</td>
+              <td colspan="6">{{ labels.empty_users }}</td>
             </tr>
           {% endfor %}
         </tbody>

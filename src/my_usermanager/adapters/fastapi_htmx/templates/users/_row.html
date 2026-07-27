@@ -7,7 +7,7 @@
   <td>
     <div class="um-stack um-gap-xs">
       <div class="um-cluster">
-        <span class="badge">{% if user.is_admin %}Admin{% else %}User{% endif %}</span>
+        <span class="badge">{% if user.is_admin %}{{ labels.badge_admin }}{% else %}{{ labels.badge_user }}{% endif %}</span>
         {% for role in user.roles %}
           <span class="badge">{{ role }}</span>
         {% endfor %}
@@ -37,7 +37,7 @@
       <span class="um-muted">—</span>
     {% endif %}
   </td>
-  <td><span class="badge">{% if user.disabled %}Disabled{% else %}Active{% endif %}</span></td>
+  <td><span class="badge">{% if user.disabled %}{{ labels.status_disabled }}{% else %}{{ labels.status_active }}{% endif %}</span></td>
   <td>
     <div class="um-stack">
       {% if user.disabled %}
@@ -54,7 +54,7 @@
           {% for name, value in csrf_inputs %}
             <input type="hidden" name="{{ name }}" value="{{ value }}">
           {% endfor %}
-          <button class="btn btn-secondary" type="submit">Enable</button>
+          <button class="btn btn-secondary" type="submit">{{ labels.action_enable }}</button>
         </form>
       {% else %}
         <form
@@ -70,7 +70,7 @@
           {% for name, value in csrf_inputs %}
             <input type="hidden" name="{{ name }}" value="{{ value }}">
           {% endfor %}
-          <button class="btn btn-destructive" type="submit">Disable</button>
+          <button class="btn btn-destructive" type="submit">{{ labels.action_disable }}</button>
         </form>
       {% endif %}
       {% if role_options %}
@@ -86,14 +86,14 @@
             <input type="hidden" name="{{ name }}" value="{{ value }}">
           {% endfor %}
           <label>
-            <span class="sr-only">Grant role</span>
+            <span class="sr-only">{{ labels.action_grant_role }}</span>
             <select name="role_name">
               {% for role in role_options %}
                 <option value="{{ role }}">{{ role }}</option>
               {% endfor %}
             </select>
           </label>
-          <button class="btn btn-secondary" type="submit">Grant role</button>
+          <button class="btn btn-secondary" type="submit">{{ labels.action_grant_role }}</button>
         </form>
       {% endif %}
       {% for role in user.roles %}
@@ -109,7 +109,7 @@
           {% for name, value in csrf_inputs %}
             <input type="hidden" name="{{ name }}" value="{{ value }}">
           {% endfor %}
-          <button class="btn btn-secondary" type="submit">Revoke {{ role }}</button>
+          <button class="btn btn-secondary" type="submit">{{ labels.action_revoke }} {{ role }}</button>
         </form>
       {% endfor %}
       {% if capability_options %}
@@ -132,7 +132,7 @@
             {% for name, value in csrf_inputs %}
               <input type="hidden" name="{{ name }}" value="{{ value }}">
             {% endfor %}
-            <button class="btn btn-secondary" type="submit">Grant {{ capability.label }}</button>
+            <button class="btn btn-secondary" type="submit">{{ labels.action_grant }} {{ capability.label }}</button>
           </form>
         {% endfor %}
       {% endif %}
@@ -155,11 +155,11 @@
           {% for name, value in csrf_inputs %}
             <input type="hidden" name="{{ name }}" value="{{ value }}">
           {% endfor %}
-          <button class="btn btn-secondary" type="submit">Revoke {{ permission.label }}</button>
+          <button class="btn btn-secondary" type="submit">{{ labels.action_revoke }} {{ permission.label }}</button>
         </form>
       {% endfor %}
       <span id="user-{{ user.row_key }}-indicator" class="htmx-indicator um-muted" aria-live="polite">
-        Updating row.
+        {{ labels.updating_row }}
       </span>
     </div>
   </td>

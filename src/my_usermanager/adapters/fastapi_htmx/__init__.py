@@ -9,6 +9,7 @@ _OPTIONAL_IMPORT_ROOTS: Final = frozenset(
 )
 try:
     from my_usermanager.adapters.fastapi_htmx.config import (
+        DEFAULT_UI_LABELS,
         CapabilityOption,
         CsrfContext,
         CsrfProtection,
@@ -20,6 +21,7 @@ try:
         UserManagerUiConflict,
         UserManagerUiRouter,
         UserRow,
+        resolve_ui_labels,
     )
     from my_usermanager.adapters.fastapi_htmx.ids import row_key_from_user_id
     from my_usermanager.adapters.fastapi_htmx.protocols import UserManagerUiHooks
@@ -35,6 +37,7 @@ except (ModuleNotFoundError, ImportError) as exc:
         raise ImportError(message) from exc
     raise
 __all__: Final = (
+    "DEFAULT_UI_LABELS",
     "CapabilityOption",
     "CsrfContext",
     "CsrfProtection",
@@ -48,5 +51,6 @@ __all__: Final = (
     "UserManagerUiRouter",
     "UserRow",
     "install_usermanager_ui",
+    "resolve_ui_labels",
     "row_key_from_user_id",
 )

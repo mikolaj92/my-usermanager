@@ -88,6 +88,7 @@ def test_public_api_and_resources_are_clean() -> None:
     import my_usermanager.adapters.fastapi_htmx as adapter
 
     assert tuple(adapter.__all__) == (
+        "DEFAULT_UI_LABELS",
         "CapabilityOption",
         "CsrfContext",
         "CsrfProtection",
@@ -101,6 +102,7 @@ def test_public_api_and_resources_are_clean() -> None:
         "UserManagerUiRouter",
         "UserRow",
         "install_usermanager_ui",
+        "resolve_ui_labels",
         "row_key_from_user_id",
     )
     assert not hasattr(adapter, "create_usermanager_ui_static_files")
@@ -389,3 +391,85 @@ def test_admin_requires_csrf_protection() -> None:
     with pytest.raises(ValueError, match="csrf_protection"):
         _ = adapter.UserManagerUiConfig(admin_enabled=True)
     _ = adapter.UserManagerUiConfig(admin_enabled=False)
+    with pytest.raises(ValueError, match="base_template"):
+        _ = adapter.UserManagerUiConfig(
+            admin_enabled=False, base_template="   "
+        )
+
+
+def test_labels_and_host_base_template_are_applied() -> None:
+    """Hosts may override chrome strings and extend a host shell template."""
+    from jinja2 import ChoiceLoader, DictLoader, Environment, PackageLoader
+
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    class LabeledHooks(FakeUiHooks):
+        def page_context(self, _request: Request) -> dict[str, object]:
+            return {
+                "shell_marker": "host-shell-ok",
+                "labels": {"users_title": "Uzytkownicy"},
+            }
+
+    host_base = (
+        "<!doctype html><html><body>"
+        "<div id='host-shell'>{{ shell_marker }}</div>"
+        "{% block content %}{% endblock %}"
+        "</body></html>"
+    )
+    environment = Environment(
+        loader=ChoiceLoader(
+            [
+                DictLoader({"host_shell.html": host_base}),
+                PackageLoader(
+                    "my_usermanager.adapters.fastapi_htmx", "templates"
+                ),
+            ]
+        ),
+        autoescape=True,
+    )
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
+    )
+    app = FastAPI()
+    _ = install_app_factory_ui(
+        app,
+        environments=[environment],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    hooks = cast(
+        "UserManagerUiHooks",
+        cast("object", LabeledHooks()),
+    )
+    _ = adapter.install_usermanager_ui(
+        app,
+        platform=platform,
+        hooks=hooks,
+        config=adapter.UserManagerUiConfig(
+            csrf_protection=_csrf(),
+            base_template="host_shell.html",
+            labels={"users_badge": "Administracja"},
+            account_enabled=False,
+        ),
+        environment=environment,
+    )
+    response = _get(_client(app), "/admin/users")
+    assert response.status_code == 200
+    assert "host-shell-ok" in response.text
+    assert "Uzytkownicy" in response.text
+    assert "Administracja" in response.text
+    assert "User management navigation" not in response.text
+
+
+def test_resolve_ui_labels_merges_defaults_config_and_overrides() -> None:
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    merged = adapter.resolve_ui_labels(
+        {"users_title": "From config"},
+        overrides={"users_title": "From request", "action_enable": "Wlacz"},
+    )
+    assert merged["users_title"] == "From request"
+    assert merged["action_enable"] == "Wlacz"
+    assert merged["nav_account"] == adapter.DEFAULT_UI_LABELS["nav_account"]
