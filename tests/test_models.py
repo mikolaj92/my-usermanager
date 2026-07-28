@@ -56,7 +56,13 @@ def test_user_model_rejects_invalid_ids_when_constructed(bad_user_id: str) -> No
 
     # When / Then: constructing a typed user rejects them.
     with pytest.raises(ValidationError, match="user_id"):
-        _ = User(user_id=bad_user_id)
+        _ = User(user_id=bad_user_id, username="ok_username")
+
+
+def test_user_model_requires_username_when_constructed() -> None:
+    # Given / When / Then: username is mandatory (passkey does not replace handle).
+    with pytest.raises(TypeError):
+        _ = User(user_id="user_123")  # type: ignore[call-arg]
 
 
 def test_user_model_rejects_invalid_profile_fields_when_constructed() -> None:
@@ -65,11 +71,22 @@ def test_user_model_rejects_invalid_profile_fields_when_constructed() -> None:
         _ = User(user_id="user_123", username="bad username")
 
     with pytest.raises(ValidationError, match="first_name"):
-        _ = User(user_id="user_123", first_name=" Alice")
+        _ = User(user_id="user_123", username="user_123", first_name=" Alice")
 
     with pytest.raises(ValidationError, match="last_name"):
-        _ = User(user_id="user_123", last_name="Example\n")
+        _ = User(user_id="user_123", username="user_123", last_name="Example\n")
 
+    with pytest.raises(ValidationError, match="gender"):
+        _ = User(user_id="user_123", username="user_123", gender="unknown")  # type: ignore[arg-type]
+
+    from datetime import date, timedelta
+
+    with pytest.raises(ValidationError, match="birth_date"):
+        _ = User(
+            user_id="user_123",
+            username="user_123",
+            birth_date=date.today() + timedelta(days=1),
+        )
 
 def test_scope_global_representation_when_created_by_factory() -> None:
     # Given: the public global scope factory.

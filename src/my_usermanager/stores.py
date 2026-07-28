@@ -24,6 +24,7 @@ __all__: Final[tuple[str, ...]] = (
     "DuplicateAuditEventError",
     "DuplicateGrantError",
     "DuplicateUserError",
+    "DuplicateUsernameError",
     "GrantNotFoundError",
     "GrantStore",
     "InvalidPageError",
@@ -64,6 +65,18 @@ class DuplicateUserError(StoreError):
     def __str__(self) -> str:
         """Return a stable duplicate-user message."""
         return f"duplicate user: {self.user_id}"
+
+
+@dataclass(frozen=True, slots=True)
+class DuplicateUsernameError(StoreError):
+    """Raised when a username is already taken by another user."""
+
+    username: str
+
+    @override
+    def __str__(self) -> str:
+        """Return a stable duplicate-username message."""
+        return f"duplicate username: {self.username}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +177,10 @@ class UserStore(Protocol):
 
     def get(self, user_id: str) -> User | None:
         """Return a user by id or None when missing."""
+        ...
+
+    def get_by_username(self, username: str) -> User | None:
+        """Return a user by case-insensitive username or None when missing."""
         ...
 
     def update(self, user: User) -> User:

@@ -123,8 +123,8 @@ def test_projected_claims_merge_into_session_principal() -> None:
     identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
     user = User(
         user_id="user_123",
-        external_identities=frozenset({identity}),
         username="alice",
+        external_identities=frozenset({identity}),
         display_name="Alice Example",
     )
     projection = GrantClaims(
@@ -163,4 +163,4 @@ def test_projection_rejects_merging_into_a_different_user() -> None:
 
     # When / Then: merging into a different user is rejected.
     with pytest.raises(InvalidSessionPrincipalError, match="projected grant claims"):
-        _ = projection.to_session_principal(User(user_id="other_user"))
+        _ = projection.to_session_principal(User(user_id="other_user", username="other_user"))

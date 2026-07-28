@@ -182,7 +182,7 @@ def test_subject_adapter_protocol_maps_provider_native_subjects() -> None:
 
 def test_external_identity_user_store_protocol_resolves_and_links_identities() -> None:
     # Given: a small fake that implements the sync external-identity seam.
-    user = User(user_id="user_123")
+    user = User(user_id="user_123", username="user_123")
     store = FakeExternalIdentityUserStore(users=(user,))
     identity = ExternalIdentity(provider="oidc", subject="provider_user_123")
 
@@ -201,8 +201,8 @@ def test_external_identity_user_store_protocol_resolves_and_links_identities() -
 
 def test_external_identity_link_conflict_raises_typed_error() -> None:
     # Given: one external identity already linked to a user.
-    first_user = User(user_id="user_123")
-    second_user = User(user_id="user_456")
+    first_user = User(user_id="user_123", username="user_123")
+    second_user = User(user_id="user_456", username="user_456")
     store = FakeExternalIdentityUserStore(users=(first_user, second_user))
     identity = ExternalIdentity(provider="oidc", subject="provider_user_123")
     _ = store.link_external_identity(user_id="user_123", identity=identity)
@@ -218,7 +218,7 @@ def test_external_identity_link_conflict_raises_typed_error() -> None:
 def test_subject_seam_does_not_mutate_grants_or_import_optionals() -> None:
     # Given: the core subject seam and empty authorization stores.
     grants = MemoryGrantStore()
-    user = User(user_id="user_123", scope=Scope.global_())
+    user = User(user_id="user_123", username="user_123", scope=Scope.global_())
     store = FakeExternalIdentityUserStore(users=(user,))
     subject = AuthenticatedSubject(
         provider="oidc",

@@ -101,7 +101,8 @@ def _demo_passkey_service() -> _DemoPasskeyService:
 def _passkey_hooks() -> PasskeyRouteHooks:
     return PasskeyRouteHooks(
         get_session_user=_get_session_user,
-        make_registration_user=_prepare_registration,
+        prepare_registration=_prepare_registration,
+        complete_registration=_complete_registration,
         get_auth_user=_get_auth_user,
         login=_login,
         logout=_logout,
@@ -135,12 +136,18 @@ def _prepare_registration(_request: Request, display_name: str) -> PasskeyUser:
     )
 
 
-def _complete_registration(_request: Request, result: PasskeyCredential) -> PasskeyUser:
-    user = _DEMO_PASSKEY_USERS.get(result.user_id)
-    if user is None:
-        user = _passkey_user_from_demo(_ensure_demo_user(result.user_id))
+def _complete_registration(_request: Request, result: object) -> PasskeyUser:
+    user = getattr(result, "user", None)
+    if isinstance(user, PasskeyUser):
         _DEMO_PASSKEY_USERS[user.user_id] = user
-    return user
+        return user
+    credential = getattr(result, "credential", None)
+    user_id = getattr(credential, "user_id", DEMO_ADMIN_ID)
+    linked = _DEMO_PASSKEY_USERS.get(user_id)
+    if linked is None:
+        linked = _passkey_user_from_demo(_ensure_demo_user(str(user_id)))
+        _DEMO_PASSKEY_USERS[linked.user_id] = linked
+    return linked
 
 
 def _get_auth_user(user_id: str) -> PasskeyUser | None:

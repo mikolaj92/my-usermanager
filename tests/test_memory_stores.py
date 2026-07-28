@@ -24,7 +24,7 @@ def test_memory_stores_are_independent_process_local_instances() -> None:
     # Given: two independently constructed memory user stores.
     first = MemoryUserStore()
     second = MemoryUserStore()
-    user = User(user_id="user_123")
+    user = User(user_id="user_123", username="user_123")
 
     # When: one process-local instance is mutated.
     _ = first.create(user)
@@ -40,7 +40,7 @@ def test_memory_stores_cover_dev_data_surface_without_optional_imports() -> None
     roles = MemoryRoleStore()
     grants = MemoryGrantStore()
     audit = MemoryAuditStore()
-    user = User(user_id="user_123", display_name="Alice")
+    user = User(user_id="user_123", username="user_123", display_name="Alice")
     event = AuditEvent(
         event_id="evt_123",
         timestamp=datetime(2025, 1, 1, tzinfo=UTC),
@@ -83,7 +83,7 @@ def test_memory_stores_use_deterministic_error_contracts() -> None:
     # Given: memory user and grant stores with one existing record.
     users = MemoryUserStore()
     grants = MemoryGrantStore()
-    user = User(user_id="user_123")
+    user = User(user_id="user_123", username="user_123")
     _ = users.create(user)
 
     # When / Then: duplicate and missing operations expose typed outcomes.

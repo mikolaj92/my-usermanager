@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from hashlib import sha256
 from typing import Final, Protocol, TypeVar, override, runtime_checkable
 
 from my_usermanager.models import (
     ExternalIdentity,
+    Gender,
     User,
     ValidationError,
+    validate_birth_date,
     validate_external_subject,
+    validate_gender,
     validate_identifier,
 )
 
@@ -89,6 +93,8 @@ class AuthenticatedSubject:
     last_name: str | None = None
     display_name: str | None = None
     email: str | None = None
+    birth_date: date | None = None
+    gender: Gender | None = None
 
     def __post_init__(self) -> None:
         """Validate identity and profile fields after dataclass creation."""
@@ -101,6 +107,11 @@ class AuthenticatedSubject:
         _require_optional_profile_text(self.last_name, field_name="last_name")
         _require_optional_profile_text(self.display_name, field_name="display_name")
         _require_optional_profile_text(self.email, field_name="email")
+        try:
+            _ = validate_birth_date(self.birth_date)
+            _ = validate_gender(self.gender)
+        except ValidationError as exc:
+            raise InvalidSubjectError(exc.field_name, exc.reason) from exc
 
     def external_identity(self) -> ExternalIdentity:
         """Return the original external identity without changing the subject."""

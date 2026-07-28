@@ -32,7 +32,9 @@ from my_usermanager.adapters.fastapi_htmx.forms import (
     MutationForm,
     read_grant_form,
     read_mutation_form,
+    read_profile_form,
 )
+from my_usermanager.manager import UserProfileUpdate
 from my_usermanager.adapters.fastapi_htmx.protocols import (  # noqa: TC001
     UserManagerUiHooks,
 )
@@ -173,6 +175,11 @@ def create_usermanager_ui_router(  # noqa: C901
         labels = _merge_labels(config, host_context)
         panel = await resolve(hooks.render_passkey_panel(request, auth.current_user))
         panel_html = _render_panel(templates, request, auth.current_user, panel)
+        profile_editable = callable(getattr(hooks, "update_own_profile", None))
+        csrf_inputs: tuple[tuple[str, str], ...] = ()
+        if profile_editable and config.csrf_protection is not None:
+            csrf = await resolve(hooks.csrf_context(request))
+            csrf_inputs = _csrf_inputs(config, request, csrf)
         html = templates.get_template("account/index.html").render(
             **{
                 **host_context,
@@ -184,9 +191,51 @@ def create_usermanager_ui_router(  # noqa: C901
                 "logout_path": config.logout_path,
                 "base_template": config.base_template,
                 "labels": labels,
+                "profile_editable": profile_editable,
+                "csrf_inputs": csrf_inputs,
+                "profile_message": request.query_params.get("saved") and labels["profile_saved"],
+                "profile_error": None,
             }
         )
         return HTMLResponse(html)
+
+    async def update_profile(request: Request) -> Response:
+        auth = await current_user(request, config, hooks)
+        if isinstance(auth, Denied):
+            return auth.response
+        updater = getattr(hooks, "update_own_profile", None)
+        if not callable(updater):
+            return error_response(
+                501,
+                "Profile update unavailable",
+                "Host did not provide update_own_profile.",
+            )
+        form = await read_profile_form(request)
+        if isinstance(form, FormError):
+            return error_response(form.status_code, form.title, form.message)
+        if config.csrf_protection is not None:
+            csrf_error = await _validate_csrf(request, config, form.csrf_token)
+            if csrf_error is not None:
+                return csrf_error
+        update = UserProfileUpdate(
+            username=form.username,
+            first_name=form.first_name,
+            last_name=form.last_name,
+            display_name=form.display_name,
+            email=form.email,
+            birth_date=form.birth_date,
+            gender=form.gender,
+        )
+        try:
+            _ = await resolve(updater(request, auth.current_user, update))
+        except Exception as exc:
+            return error_response(400, "Profile update failed", str(exc))
+        from fastapi.responses import RedirectResponse
+
+        return RedirectResponse(
+            url=f"{config.account_path}?saved=1",
+            status_code=303,
+        )
 
     async def users(request: Request) -> Response:
         auth = await admin_user(request, config, hooks)
@@ -226,6 +275,7 @@ def create_usermanager_ui_router(  # noqa: C901
 
     if config.account_enabled:
         router.add_api_route(config.account_path, account, methods=["GET"])
+        router.add_api_route(config.profile_path, update_profile, methods=["POST"])
     if config.admin_enabled:
 
         async def mutation(request: Request, kind: str) -> Response:

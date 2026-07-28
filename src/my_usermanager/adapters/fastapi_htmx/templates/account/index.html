@@ -31,6 +31,60 @@
       </dl>
     </article>
 
+    {% if profile_editable %}
+    <article class="card um-card um-stack" aria-labelledby="profile-title">
+      <div class="um-stack-tight">
+        <h2 id="profile-title">{{ labels.profile_title }}</h2>
+        <p class="um-muted">{{ labels.profile_description }}</p>
+        {% if profile_message %}
+        <p class="badge" role="status">{{ profile_message }}</p>
+        {% endif %}
+        {% if profile_error %}
+        <p class="um-muted" role="alert">{{ profile_error }}</p>
+        {% endif %}
+      </div>
+      <form class="um-stack" method="post" action="{{ config.profile_path }}" data-no-htmx="true">
+        {% for name, value in csrf_inputs %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% endfor %}
+        <label class="um-stack-tight">
+          <span>{{ labels.profile_username }} *</span>
+          <input class="input" name="username" required value="{{ current_user.username or '' }}" autocomplete="username">
+        </label>
+        <label class="um-stack-tight">
+          <span>{{ labels.profile_first_name }}</span>
+          <input class="input" name="first_name" value="{{ current_user.first_name or '' }}" autocomplete="given-name">
+        </label>
+        <label class="um-stack-tight">
+          <span>{{ labels.profile_last_name }}</span>
+          <input class="input" name="last_name" value="{{ current_user.last_name or '' }}" autocomplete="family-name">
+        </label>
+        <label class="um-stack-tight">
+          <span>{{ labels.profile_display_name }}</span>
+          <input class="input" name="display_name" value="{{ current_user.display_name or '' }}" autocomplete="nickname">
+        </label>
+        <label class="um-stack-tight">
+          <span>{{ labels.profile_email }}</span>
+          <input class="input" type="email" name="email" value="{{ current_user.email or '' }}" autocomplete="email">
+        </label>
+        <label class="um-stack-tight">
+          <span>{{ labels.profile_birth_date }}</span>
+          <input class="input" type="date" name="birth_date" value="{{ current_user.birth_date.isoformat() if current_user.birth_date else '' }}">
+        </label>
+        <label class="um-stack-tight">
+          <span>{{ labels.profile_gender }}</span>
+          <select class="select" name="gender">
+            <option value="" {% if not current_user.gender %}selected{% endif %}>{{ labels.profile_gender_unspecified }}</option>
+            <option value="female" {% if current_user.gender == 'female' %}selected{% endif %}>{{ labels.profile_gender_female }}</option>
+            <option value="male" {% if current_user.gender == 'male' %}selected{% endif %}>{{ labels.profile_gender_male }}</option>
+            <option value="other" {% if current_user.gender == 'other' %}selected{% endif %}>{{ labels.profile_gender_other }}</option>
+          </select>
+        </label>
+        <button type="submit" class="btn" data-variant="primary">{{ labels.profile_save }}</button>
+      </form>
+    </article>
+    {% endif %}
+
     {{ passkey_panel_html|safe }}
 
     {# Shared platform session: Log out only on the account page (app-factory). #}

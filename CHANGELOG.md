@@ -2,6 +2,15 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
+## 0.4.0
+
+- **Breaking:** `User.username` is required (passkey replaces password, not the handle).
+- Optional profile demographics: `birth_date`, `gender` (`female` | `male` | `other`).
+- `UserProfileUpdate` carries the same fields; empty first/last name clear to `None`.
+- `UserStore.get_by_username` + `DuplicateUsernameError` (case-insensitive uniqueness).
+- SQLite schema **v3** with migration from v2 (null usernames → `user_id`).
+- Account UI: optional profile form when host implements `update_own_profile`.
+
 ## 0.3.3
 
 - FastAPI/HTMX adapter: optional host Jinja `environment` on

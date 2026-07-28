@@ -112,7 +112,7 @@ def test_prepare_registration_requires_explicit_policy(
 
 def test_after_register_and_after_login_link_identity_without_grants() -> None:
     # Given: explicit identity-linking hooks and empty grant state.
-    store = FakeExternalIdentityUserStore(users=(User(user_id="passkey_user_123"),))
+    store = FakeExternalIdentityUserStore(users=(User(user_id="passkey_user_123", username="passkey_user_123"),))
     grants = MemoryGrantStore()
     after_register = fastapi_adapter.build_after_register_identity_linker(store)
     after_login = fastapi_adapter.build_after_login_identity_linker(store)
@@ -137,7 +137,7 @@ def test_after_register_and_after_login_link_identity_without_grants() -> None:
 
 def test_after_login_uses_existing_external_identity_link_for_local_user() -> None:
     # Given: a my-auth identity already linked to a distinct local user id.
-    local_user = User(user_id="local_user_123")
+    local_user = User(user_id="local_user_123", username="local_user_123")
     store = FakeExternalIdentityUserStore(users=(local_user,))
     identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
     _ = store.link_external_identity(user_id="local_user_123", identity=identity)

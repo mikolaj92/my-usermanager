@@ -149,7 +149,7 @@ def test_core_and_optional_helper_import_do_not_load_optional_dependencies() -> 
         import my_usermanager
         import my_usermanager.adapters.my_auth_fastapi
 
-        assert my_usermanager.__version__ == "0.3.3"
+        assert my_usermanager.__version__ == "0.4.0"
         assert "my_auth" not in sys.modules
         assert "my_auth.fastapi" not in sys.modules
         assert "fastapi" not in sys.modules
@@ -286,7 +286,7 @@ def test_get_auth_user_returns_none_for_missing_unlinked_or_disabled_users(
     # Given: one disabled linked user and no link for a missing subject.
     monkeypatch.setattr(fastapi_adapter, "import_module", import_fake_optional_module)
     monkeypatch.setattr(my_auth_adapter, "import_module", import_fake_optional_module)
-    disabled_user = User(user_id="local_user_123", disabled=True)
+    disabled_user = User(user_id="local_user_123", username="local_user_123", disabled=True)
     store = FakeExternalIdentityUserStore(users=(disabled_user,))
     _ = store.link_external_identity(
         user_id="local_user_123",
@@ -306,7 +306,7 @@ def test_get_auth_user_returns_none_for_mismatched_profile_user_id(
     # Given: a linked local user whose profile resolver returns another subject.
     monkeypatch.setattr(fastapi_adapter, "import_module", import_fake_optional_module)
     monkeypatch.setattr(my_auth_adapter, "import_module", import_fake_optional_module)
-    user = User(user_id="local_user_123")
+    user = User(user_id="local_user_123", username="local_user_123")
     store = FakeExternalIdentityUserStore(users=(user,))
     _ = store.link_external_identity(
         user_id="local_user_123",
@@ -359,8 +359,8 @@ def test_user_to_session_principal_projects_profile_identity_and_claims() -> Non
     identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
     user = User(
         user_id="local_user_123",
-        external_identities=frozenset({identity}),
         username="alice",
+        external_identities=frozenset({identity}),
         display_name="Alice Example",
     )
 
@@ -389,8 +389,8 @@ def test_login_session_principal_writer_resolves_linked_user_and_writes_session(
     identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
     user = User(
         user_id="local_user_123",
-        external_identities=frozenset({identity}),
         username="alice",
+        external_identities=frozenset({identity}),
     )
     store = FakeExternalIdentityUserStore(users=(user,))
     _ = store.link_external_identity(user_id="local_user_123", identity=identity)
@@ -444,8 +444,8 @@ def test_login_session_principal_writer_awaits_async_session_writer() -> None:
     identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
     user = User(
         user_id="local_user_123",
-        external_identities=frozenset({identity}),
         username="alice",
+        external_identities=frozenset({identity}),
     )
     store = FakeExternalIdentityUserStore(users=(user,))
     _ = store.link_external_identity(user_id="local_user_123", identity=identity)
@@ -489,8 +489,8 @@ def test_login_session_principal_writer_requires_existing_identity_link() -> Non
     identity = ExternalIdentity(provider="my-auth", subject="passkey_user_123")
     user = User(
         user_id="local_user_123",
-        external_identities=frozenset({identity}),
         username="alice",
+        external_identities=frozenset({identity}),
     )
     store = FakeExternalIdentityUserStore(users=(user,))
     login: Callable[[str, str, FakePasskeyUser], None | Awaitable[None]] = (

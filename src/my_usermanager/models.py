@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 from re import Pattern
 from re import compile as compile_pattern
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Final, Self, override
+from typing import TYPE_CHECKING, Final, Literal, Self, cast, override
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
 __all__: Final[tuple[str, ...]] = (
     "AuditEvent",
     "ExternalIdentity",
+    "GENDER_VALUES",
+    "Gender",
     "Grant",
     "Permission",
     "Role",
@@ -23,10 +26,15 @@ __all__: Final[tuple[str, ...]] = (
     "User",
     "ValidationError",
     "is_valid_permission_name",
+    "validate_birth_date",
     "validate_external_subject",
+    "validate_gender",
     "validate_identifier",
     "validate_permission_name",
 )
+
+Gender = Literal["female", "male", "other"]
+GENDER_VALUES: Final[frozenset[str]] = frozenset({"female", "male", "other"})
 
 _PERMISSION_NAME_PATTERN: Final[Pattern[str]] = compile_pattern(
     r"[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+",
@@ -96,6 +104,28 @@ def _validate_optional_text(value: str | None, *, field_name: str) -> str | None
         raise ValidationError(field_name, reason)
     if any(character in value for character in "\r\n\t"):
         reason = "must not contain control whitespace"
+        raise ValidationError(field_name, reason)
+    return value
+
+
+def validate_gender(value: str | None, *, field_name: str = "gender") -> Gender | None:
+    """Validate optional gender vocabulary and return it unchanged."""
+    if value is None:
+        return None
+    if value not in GENDER_VALUES:
+        reason = "must be one of: female, male, other"
+        raise ValidationError(field_name, reason)
+    return cast("Gender", value)
+
+
+def validate_birth_date(
+    value: date | None, *, field_name: str = "birth_date"
+) -> date | None:
+    """Validate optional birth date (not in the future)."""
+    if value is None:
+        return None
+    if value > date.today():
+        reason = "must not be in the future"
         raise ValidationError(field_name, reason)
     return value
 
@@ -176,15 +206,21 @@ class Scope:
 
 @dataclass(frozen=True, slots=True)
 class User:
-    """Stored user profile whose authentication is owned by the host app."""
+    """Stored user profile whose authentication is owned by the host app.
+
+    ``username`` is mandatory (passkey replaces password, not the public handle).
+    ``birth_date`` and ``gender`` are optional demographic fields.
+    """
 
     user_id: str
+    username: str
     external_identities: frozenset[ExternalIdentity] = _EMPTY_IDENTITIES
-    username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     display_name: str | None = None
     email: str | None = None
+    birth_date: date | None = None
+    gender: Gender | None = None
     disabled: bool = False
     system: bool = False
     scope: Scope = field(default_factory=Scope.global_)
@@ -192,12 +228,13 @@ class User:
     def __post_init__(self) -> None:
         """Validate stored profile values after dataclass creation."""
         _ = validate_identifier(self.user_id, field_name="user_id")
-        if self.username is not None:
-            _ = validate_identifier(self.username, field_name="username")
+        _ = validate_identifier(self.username, field_name="username")
         _ = _validate_optional_text(self.first_name, field_name="first_name")
         _ = _validate_optional_text(self.last_name, field_name="last_name")
         _ = _validate_optional_text(self.display_name, field_name="display_name")
         _ = _validate_optional_text(self.email, field_name="email")
+        _ = validate_birth_date(self.birth_date)
+        _ = validate_gender(self.gender)
 
 
 @dataclass(frozen=True, slots=True)

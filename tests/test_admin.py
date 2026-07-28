@@ -40,7 +40,7 @@ def test_admin_service_lists_users_with_grants_and_projected_claims() -> None:
 def test_admin_service_mutates_roles_permissions_and_scoped_permissions() -> None:
     # Given: an admin service and a target user.
     service, users, grants = _service()
-    _ = users.create(User(user_id="target"))
+    _ = users.create(User(user_id="target", username="target"))
     workflow_scope = Scope.scoped("workflow", "wf_1")
 
     # When: role, permission, and scoped permission grants are mutated.
@@ -90,7 +90,7 @@ def test_admin_service_mutates_roles_permissions_and_scoped_permissions() -> Non
 def test_admin_service_preserves_duplicate_and_missing_grant_errors() -> None:
     # Given: an existing role grant.
     service, users, _grants = _service()
-    _ = users.create(User(user_id="target"))
+    _ = users.create(User(user_id="target", username="target"))
     _ = service.grant_role(
         actor_id="admin",
         target_user_id="target",
@@ -115,7 +115,7 @@ def test_admin_service_preserves_duplicate_and_missing_grant_errors() -> None:
 def test_admin_service_rejects_self_demoting_last_admin_grant() -> None:
     # Given: an admin whose only global admin grant is the built-in admin role.
     service, users, _grants = _service()
-    _ = users.create(User(user_id="admin"))
+    _ = users.create(User(user_id="admin", username="admin"))
     _ = service.grant_role(
         actor_id="admin",
         target_user_id="admin",
@@ -130,7 +130,7 @@ def test_admin_service_rejects_self_demoting_last_admin_grant() -> None:
             role_name="admin",
         )
     assert (
-        service.summary_for_user(User(user_id="admin")).projection.claims["is_admin"]
+        service.summary_for_user(User(user_id="admin", username="admin")).projection.claims["is_admin"]
         is True
     )
 
@@ -138,8 +138,8 @@ def test_admin_service_rejects_self_demoting_last_admin_grant() -> None:
 def test_admin_service_rejects_removing_last_active_admin_from_another_user() -> None:
     # Given: one active admin and another actor attempting the removal.
     service, users, _grants = _service()
-    _ = users.create(User(user_id="admin"))
-    _ = users.create(User(user_id="operator"))
+    _ = users.create(User(user_id="admin", username="admin"))
+    _ = users.create(User(user_id="operator", username="operator"))
     _ = service.grant_permission(
         actor_id="operator",
         target_user_id="admin",
@@ -158,7 +158,7 @@ def test_admin_service_rejects_removing_last_active_admin_from_another_user() ->
 def test_admin_service_allows_admin_revoke_when_target_keeps_admin_access() -> None:
     # Given: an admin with two independent global admin grants.
     service, users, _grants = _service()
-    _ = users.create(User(user_id="admin"))
+    _ = users.create(User(user_id="admin", username="admin"))
     _ = service.grant_role(
         actor_id="admin",
         target_user_id="admin",
@@ -180,6 +180,6 @@ def test_admin_service_allows_admin_revoke_when_target_keeps_admin_access() -> N
     # Then: the operation succeeds because admin.access remains.
     assert result.action == "revoke_role"
     assert (
-        service.summary_for_user(User(user_id="admin")).projection.claims["is_admin"]
+        service.summary_for_user(User(user_id="admin", username="admin")).projection.claims["is_admin"]
         is True
     )

@@ -19,18 +19,20 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from threading import RLock
 from typing import ClassVar, Final, Literal, Self, cast
 
 from my_usermanager.models import (
     AuditEvent,
     ExternalIdentity,
+    Gender,
     Grant,
     Permission,
     Role,
     Scope,
     User,
+    validate_gender,
     validate_identifier,
 )
 from my_usermanager.permissions import BUILTIN_ROLES
@@ -39,6 +41,7 @@ from my_usermanager.stores import (
     DuplicateAuditEventError,
     DuplicateGrantError,
     DuplicateUserError,
+    DuplicateUsernameError,
     GrantNotFoundError,
     InvalidPageError,
     UserNotFoundError,
@@ -56,14 +59,25 @@ __all__: Final[tuple[str, ...]] = (
     "migrate_sqlite_schema",
 )
 
-_SCHEMA_VERSION: Final = 2
+_SCHEMA_VERSION: Final = 3
 _CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS um_schema_version (version INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS um_users (
-    user_id TEXT PRIMARY KEY, username TEXT, first_name TEXT, last_name TEXT,
-    display_name TEXT, email TEXT, disabled INTEGER NOT NULL DEFAULT 0,
-    system INTEGER NOT NULL DEFAULT 0, scope_type TEXT, scope_id TEXT
+    user_id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    first_name TEXT,
+    last_name TEXT,
+    display_name TEXT,
+    email TEXT,
+    birth_date TEXT,
+    gender TEXT,
+    disabled INTEGER NOT NULL DEFAULT 0,
+    system INTEGER NOT NULL DEFAULT 0,
+    scope_type TEXT,
+    scope_id TEXT
 );
+CREATE UNIQUE INDEX IF NOT EXISTS um_users_username_ci
+    ON um_users(lower(username));
 CREATE TABLE IF NOT EXISTS um_external_identities (
     provider TEXT NOT NULL, subject TEXT NOT NULL,
     user_id TEXT NOT NULL REFERENCES um_users(user_id) ON DELETE CASCADE,
@@ -115,12 +129,13 @@ _ORPHAN_GRANTS_SQL: Final = (
 )
 _INSERT_USER_SQL: Final = (
     "INSERT INTO um_users (user_id, username, first_name, last_name, display_name, "
-    "email, disabled, system, scope_type, scope_id) VALUES "
-    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "email, birth_date, gender, disabled, system, scope_type, scope_id) VALUES "
+    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 _UPDATE_USER_SQL: Final = (
     "UPDATE um_users SET username=?, first_name=?, last_name=?, display_name=?, "
-    "email=?, disabled=?, system=?, scope_type=?, scope_id=? WHERE user_id=?"
+    "email=?, birth_date=?, gender=?, disabled=?, system=?, scope_type=?, scope_id=? "
+    "WHERE user_id=?"
 )
 _LIST_USERS_SQL: Final = (
     "SELECT * FROM um_users {where} ORDER BY user_id LIMIT ? OFFSET ?"
@@ -212,6 +227,8 @@ _UM_TABLE_COLUMNS: Final[dict[str, tuple[str, ...]]] = {
         "last_name",
         "display_name",
         "email",
+        "birth_date",
+        "gender",
         "disabled",
         "system",
         "scope_type",
@@ -246,7 +263,14 @@ def _um_table_is_canonical(  # noqa: PLR0911
     if columns != _UM_TABLE_COLUMNS[table]:
         return False
     if table == "um_users":
-        return rows[0][5] == 1 and rows[6][4] == "0" and rows[7][4] == "0"
+        # user_id PK (pk=1), disabled/system default "0"
+        # columns: 0 user_id, 1 username, ... 8 disabled, 9 system
+        return (
+            rows[0][5] == 1
+            and rows[1][3] == 1  # username NOT NULL
+            and rows[8][4] == "0"
+            and rows[9][4] == "0"
+        )
     if table == "um_schema_version":
         metadata = tuple(
             (str(row[1]), str(row[2]).upper(), row[3], row[4], row[5]) for row in rows
@@ -399,14 +423,17 @@ def inspect_sqlite_schema(  # noqa: PLR0911
     grants_legacy = _um_grants_is_legacy_canonical(conn)
     audit_canonical = _um_table_is_canonical(conn, "um_audit_events")
     audit_legacy = _um_audit_events_is_legacy_canonical(conn)
-    other_tables_canonical = all(
+    users_v3 = _um_table_is_canonical(conn, "um_users")
+    users_v2 = _um_users_is_v2_layout(conn)
+    other_non_user_canonical = all(
         _um_table_is_canonical(conn, table)
         for table in expected_without_version
-        if table not in {"um_grants", "um_audit_events"}
+        if table not in {"um_grants", "um_audit_events", "um_users"}
     )
     if not all(
         (
-            other_tables_canonical,
+            other_non_user_canonical,
+            users_v3 or users_v2,
             grants_canonical or grants_legacy,
             audit_canonical or audit_legacy,
         )
@@ -418,8 +445,31 @@ def inspect_sqlite_schema(  # noqa: PLR0911
     if not has_version:
         return "canonical_unversioned"
     rows = conn.execute("SELECT version FROM um_schema_version").fetchall()
-    return (
-        "current" if len(rows) == 1 and rows[0][0] == _SCHEMA_VERSION else "unsupported"
+    if len(rows) != 1:
+        return "unsupported"
+    version = rows[0][0]
+    if version == _SCHEMA_VERSION and users_v3:
+        return "current"
+    if version == 2 and users_v2:
+        return "v2"
+    return "unsupported"
+
+
+def _um_users_is_v2_layout(conn: sqlite3.Connection) -> bool:
+    """Recognize the v2 um_users layout (no birth_date/gender, username nullable)."""
+    rows = conn.execute('PRAGMA table_info("um_users")').fetchall()
+    columns = tuple(str(row[1]) for row in rows)
+    return columns == (
+        "user_id",
+        "username",
+        "first_name",
+        "last_name",
+        "display_name",
+        "email",
+        "disabled",
+        "system",
+        "scope_type",
+        "scope_id",
     )
 
 
@@ -456,6 +506,14 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912
             if transaction_mode == "standalone":
                 conn.commit()
             return
+        if state == "v2":
+            _migrate_users_v2_to_v3(conn)
+            _ = conn.execute(
+                "UPDATE um_schema_version SET version = ?", (_SCHEMA_VERSION,)
+            )
+            if transaction_mode == "standalone":
+                conn.commit()
+            return
         if state == "empty":
             _apply_create_tables(conn)
             conn.execute(
@@ -486,6 +544,46 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912
         if transaction_mode == "standalone":
             conn.rollback()
         raise
+
+
+def _migrate_users_v2_to_v3(conn: sqlite3.Connection) -> None:
+    """Upgrade um_users: mandatory unique username + optional birth_date/gender."""
+    _ = conn.execute(
+        "UPDATE um_users SET username = user_id "
+        "WHERE username IS NULL OR trim(username) = ''"
+    )
+    statements = (
+        """
+        CREATE TABLE um_users_new (
+            user_id TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            first_name TEXT,
+            last_name TEXT,
+            display_name TEXT,
+            email TEXT,
+            birth_date TEXT,
+            gender TEXT,
+            disabled INTEGER NOT NULL DEFAULT 0,
+            system INTEGER NOT NULL DEFAULT 0,
+            scope_type TEXT,
+            scope_id TEXT
+        )
+        """,
+        """
+        INSERT INTO um_users_new(
+            user_id, username, first_name, last_name, display_name, email,
+            birth_date, gender, disabled, system, scope_type, scope_id
+        )
+        SELECT user_id, username, first_name, last_name, display_name, email,
+            NULL, NULL, disabled, system, scope_type, scope_id
+        FROM um_users
+        """,
+        "DROP TABLE um_users",
+        "ALTER TABLE um_users_new RENAME TO um_users",
+        "CREATE UNIQUE INDEX IF NOT EXISTS um_users_username_ci ON um_users(lower(username))",
+    )
+    for statement in statements:
+        _ = conn.execute(statement)
 
 
 _CONNECTION_LOCKS: dict[int, tuple[sqlite3.Connection, RLock]] = {}
@@ -751,18 +849,41 @@ def _save_identities(
             raise
 
 
+def _user_write_params(user: User) -> tuple[object, ...]:
+    return (
+        user.user_id,
+        user.username,
+        user.first_name,
+        user.last_name,
+        user.display_name,
+        user.email,
+        None if user.birth_date is None else user.birth_date.isoformat(),
+        user.gender,
+        int(user.disabled),
+        int(user.system),
+        user.scope.scope_type,
+        user.scope.scope_id,
+    )
+
+
 def _user_from_row(
     row: _CompatRow,
     identities: frozenset[ExternalIdentity],
 ) -> User:
+    birth_raw = _row_optional_str(row, "birth_date")
+    birth_date = date.fromisoformat(birth_raw) if birth_raw else None
+    gender_raw = _row_optional_str(row, "gender")
+    gender: Gender | None = validate_gender(gender_raw) if gender_raw else None
     return User(
         user_id=_row_str(row, "user_id"),
+        username=_row_str(row, "username"),
         external_identities=identities,
-        username=_row_optional_str(row, "username"),
         first_name=_row_optional_str(row, "first_name"),
         last_name=_row_optional_str(row, "last_name"),
         display_name=_row_optional_str(row, "display_name"),
         email=_row_optional_str(row, "email"),
+        birth_date=birth_date,
+        gender=gender,
         disabled=bool(_row_int(row, "disabled")),
         system=bool(_row_int(row, "system")),
         scope=_scope_from_row(
@@ -966,23 +1087,20 @@ class SQLiteUserStore:
             with _mutation(self._conn, self._mode):
                 _ = self._conn.execute(
                     _INSERT_USER_SQL,
-                    (
-                        user.user_id,
-                        user.username,
-                        user.first_name,
-                        user.last_name,
-                        user.display_name,
-                        user.email,
-                        int(user.disabled),
-                        int(user.system),
-                        user.scope.scope_type,
-                        user.scope.scope_id,
-                    ),
+                    _user_write_params(user),
                 )
                 _save_identities(self._conn, user.user_id, user.external_identities)
         except ExternalIdentityConflictError:
             raise
         except sqlite3.IntegrityError as err:
+            message = str(err).casefold()
+            # Re-creating an existing user_id is always DuplicateUserError even when
+            # SQLite reports the username unique index first.
+            existing = self.get(user.user_id)
+            if existing is not None:
+                raise DuplicateUserError(user.user_id) from err
+            if "username" in message:
+                raise DuplicateUsernameError(user.username) from err
             raise DuplicateUserError(user.user_id) from err
 
         return user
@@ -999,27 +1117,51 @@ class SQLiteUserStore:
             else _user_from_row(row, _load_identities(self._conn, checked))
         )
 
+    def get_by_username(self, username: str) -> User | None:
+        """Return a user by case-insensitive username or None when missing."""
+        checked = validate_identifier(username, field_name="username")
+        row = _fetchone_row(
+            self._conn.execute(
+                "SELECT * FROM um_users WHERE lower(username) = lower(?)",
+                (checked,),
+            )
+        )
+        if row is None:
+            return None
+        user_id = _row_str(row, "user_id")
+        return _user_from_row(row, _load_identities(self._conn, user_id))
+
     def update(self, user: User) -> User:
         """Update and return a user, raising when it does not exist."""
-        with _mutation(self._conn, self._mode):
-            cur = self._conn.execute(
-                _UPDATE_USER_SQL,
-                (
-                    user.username,
-                    user.first_name,
-                    user.last_name,
-                    user.display_name,
-                    user.email,
-                    int(user.disabled),
-                    int(user.system),
-                    user.scope.scope_type,
-                    user.scope.scope_id,
-                    user.user_id,
-                ),
-            )
-            if cur.rowcount == 0:
-                raise UserNotFoundError(user.user_id)
-            _save_identities(self._conn, user.user_id, user.external_identities)
+        try:
+            with _mutation(self._conn, self._mode):
+                cur = self._conn.execute(
+                    _UPDATE_USER_SQL,
+                    (
+                        user.username,
+                        user.first_name,
+                        user.last_name,
+                        user.display_name,
+                        user.email,
+                        None if user.birth_date is None else user.birth_date.isoformat(),
+                        user.gender,
+                        int(user.disabled),
+                        int(user.system),
+                        user.scope.scope_type,
+                        user.scope.scope_id,
+                        user.user_id,
+                    ),
+                )
+                if cur.rowcount == 0:
+                    raise UserNotFoundError(user.user_id)
+                _save_identities(self._conn, user.user_id, user.external_identities)
+        except UserNotFoundError:
+            raise
+        except sqlite3.IntegrityError as err:
+            message = str(err).casefold()
+            if "username" in message:
+                raise DuplicateUsernameError(user.username) from err
+            raise
 
         return user
 

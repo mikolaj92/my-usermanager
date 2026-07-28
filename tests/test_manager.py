@@ -20,8 +20,8 @@ def test_admin_can_grant_and_revoke_user_access() -> None:
     roles = MemoryRoleStore()
     grants = MemoryGrantStore()
     manager = UserManager(users=users, roles=roles, grants=grants)
-    _ = users.create(User(user_id="admin_123"))
-    _ = users.create(User(user_id="user_123"))
+    _ = users.create(User(user_id="admin_123", username="admin_123"))
+    _ = users.create(User(user_id="user_123", username="user_123"))
     _ = grants.add_role_grant(
         user_id="admin_123",
         role_name=ADMIN_ROLE_NAME,
@@ -49,8 +49,8 @@ def test_regular_user_cannot_manage_access() -> None:
     roles = MemoryRoleStore()
     grants = MemoryGrantStore()
     manager = UserManager(users=users, roles=roles, grants=grants)
-    _ = users.create(User(user_id="actor_123"))
-    _ = users.create(User(user_id="user_123"))
+    _ = users.create(User(user_id="actor_123", username="actor_123"))
+    _ = users.create(User(user_id="user_123", username="user_123"))
 
     # When / Then: attempting to grant access is rejected and mutates nothing.
     with pytest.raises(AuthorizationError, match=r"permissions\.grant"):
@@ -117,7 +117,7 @@ def test_user_cannot_update_another_users_profile() -> None:
         roles=MemoryRoleStore(),
         grants=MemoryGrantStore(),
     )
-    _ = users.create(User(user_id="actor_123"))
+    _ = users.create(User(user_id="actor_123", username="actor_123"))
     _ = users.create(User(user_id="user_123", username="old_username"))
 
     # When / Then: cross-user profile updates are rejected and leave data intact.
@@ -136,3 +136,43 @@ def test_user_cannot_update_another_users_profile() -> None:
         user_id="user_123",
         username="old_username",
     )
+
+
+def test_user_can_update_profile_demographics() -> None:
+    from datetime import date
+
+    users = MemoryUserStore()
+    manager = UserManager(
+        users=users,
+        roles=MemoryRoleStore(),
+        grants=MemoryGrantStore(),
+    )
+    _ = users.create(User(user_id="user_123", username="alice"))
+    updated = manager.update_own_profile(
+        actor_id="user_123",
+        update=UserProfileUpdate(
+            username="alice",
+            birth_date=date(1990, 5, 1),
+            gender="female",
+        ),
+    )
+    assert updated.birth_date == date(1990, 5, 1)
+    assert updated.gender == "female"
+
+
+def test_profile_update_rejects_duplicate_username() -> None:
+    users = MemoryUserStore()
+    manager = UserManager(
+        users=users,
+        roles=MemoryRoleStore(),
+        grants=MemoryGrantStore(),
+    )
+    _ = users.create(User(user_id="a", username="alice"))
+    _ = users.create(User(user_id="b", username="bob"))
+    from my_usermanager.stores import DuplicateUsernameError
+
+    with pytest.raises(DuplicateUsernameError):
+        _ = manager.update_own_profile(
+            actor_id="b",
+            update=UserProfileUpdate(username="alice"),
+        )

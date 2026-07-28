@@ -19,6 +19,7 @@ from my_usermanager.stores import (
     DuplicateAuditEventError,
     DuplicateGrantError,
     DuplicateUserError,
+    DuplicateUsernameError,
     GrantNotFoundError,
     InvalidPageError,
     UserNotFoundError,
@@ -45,9 +46,11 @@ class MemoryUserStore:
         self._users = {}
 
     def create(self, user: User) -> User:
-        """Store a new user or raise DuplicateUserError."""
+        """Store a new user or raise DuplicateUserError / DuplicateUsernameError."""
         if user.user_id in self._users:
             raise DuplicateUserError(user.user_id)
+        if self.get_by_username(user.username) is not None:
+            raise DuplicateUsernameError(user.username)
         self._users[user.user_id] = user
         return user
 
@@ -56,10 +59,22 @@ class MemoryUserStore:
         checked_user_id = validate_identifier(user_id, field_name="user_id")
         return self._users.get(checked_user_id)
 
+    def get_by_username(self, username: str) -> User | None:
+        """Return a user by case-insensitive username or None when missing."""
+        checked = validate_identifier(username, field_name="username")
+        needle = checked.casefold()
+        for user in self._users.values():
+            if user.username.casefold() == needle:
+                return user
+        return None
+
     def update(self, user: User) -> User:
-        """Replace an existing user or raise UserNotFoundError."""
+        """Replace an existing user or raise UserNotFoundError / DuplicateUsernameError."""
         if user.user_id not in self._users:
             raise UserNotFoundError(user.user_id)
+        existing = self.get_by_username(user.username)
+        if existing is not None and existing.user_id != user.user_id:
+            raise DuplicateUsernameError(user.username)
         self._users[user.user_id] = user
         return user
 
@@ -220,7 +235,7 @@ def _matches_user_query(user: User, query: UserQuery) -> bool:
     needle = query.text.casefold()
     searchable_fields = (
         user.user_id,
-        user.username or "",
+        user.username,
         user.first_name or "",
         user.last_name or "",
         user.display_name or "",

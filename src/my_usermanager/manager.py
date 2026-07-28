@@ -3,11 +3,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import override
 
-from my_usermanager.models import Grant, Permission, Scope, User, validate_identifier
+from my_usermanager.models import (
+    Gender,
+    Grant,
+    Permission,
+    Scope,
+    User,
+    validate_birth_date,
+    validate_gender,
+    validate_identifier,
+)
 from my_usermanager.permissions import ADMIN_ROLE_NAME
-from my_usermanager.stores import GrantStore, RoleStore, UserNotFoundError, UserStore
+from my_usermanager.stores import (
+    DuplicateUsernameError,
+    GrantStore,
+    RoleStore,
+    UserNotFoundError,
+    UserStore,
+)
 
 __all__ = [
     "AuthorizationError",
@@ -43,17 +59,25 @@ class AuthorizationError(PermissionError):
 
 @dataclass(frozen=True, slots=True)
 class UserProfileUpdate:
-    """Replacement values for the basic user-editable profile fields."""
+    """Replacement values for the user-editable profile fields.
+
+    ``username`` is always required (public handle; passkey is the secret).
+    ``birth_date`` and ``gender`` are optional.
+    """
 
     username: str
-    first_name: str
-    last_name: str
+    first_name: str = ""
+    last_name: str = ""
     display_name: str | None = None
     email: str | None = None
+    birth_date: date | None = None
+    gender: Gender | None = None
 
     def __post_init__(self) -> None:
         """Validate profile values that have public validators."""
         _ = validate_identifier(self.username, field_name="username")
+        _ = validate_birth_date(self.birth_date)
+        _ = validate_gender(self.gender)
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,14 +138,21 @@ class UserManager:
         user = self.users.get(target_user_id)
         if user is None:
             raise UserNotFoundError(target_user_id)
+        existing = self.users.get_by_username(update.username)
+        if existing is not None and existing.user_id != target_user_id:
+            raise DuplicateUsernameError(update.username)
+        first_name = update.first_name or None
+        last_name = update.last_name or None
         updated = User(
             user_id=user.user_id,
-            external_identities=user.external_identities,
             username=update.username,
-            first_name=update.first_name,
-            last_name=update.last_name,
+            external_identities=user.external_identities,
+            first_name=first_name,
+            last_name=last_name,
             display_name=update.display_name,
             email=update.email,
+            birth_date=update.birth_date,
+            gender=update.gender,
             disabled=user.disabled,
             system=user.system,
             scope=user.scope,

@@ -77,7 +77,7 @@ def user_store(conn: sqlite3.Connection) -> SQLiteUserStore:
 
 @pytest.fixture
 def grant_store(conn: sqlite3.Connection) -> SQLiteGrantStore:
-    SQLiteUserStore(conn).create(User(user_id="user_123"))
+    SQLiteUserStore(conn).create(User(user_id="user_123", username="user_123"))
     return SQLiteGrantStore(conn)
 
 
@@ -138,7 +138,7 @@ def test_sqlite_audit_store_satisfies_audit_store_protocol(
 
 
 def test_user_store_create_and_get(user_store: SQLiteUserStore) -> None:
-    user = User(user_id="user_a", display_name="Alice")
+    user = User(user_id="user_a", username="user_a", display_name="Alice")
     created = user_store.create(user)
     assert created == user
     assert user_store.get("user_a") == user
@@ -149,15 +149,15 @@ def test_user_store_get_missing_returns_none(user_store: SQLiteUserStore) -> Non
 
 
 def test_user_store_create_duplicate_raises(user_store: SQLiteUserStore) -> None:
-    user = User(user_id="user_a")
+    user = User(user_id="user_a", username="user_a")
     user_store.create(user)
     with pytest.raises(DuplicateUserError, match="user_a"):
         user_store.create(user)
 
 
 def test_user_store_update_replaces_user(user_store: SQLiteUserStore) -> None:
-    user_store.create(User(user_id="user_b", display_name="Alice"))
-    updated = User(user_id="user_b", display_name="Alice Renamed")
+    user_store.create(User(user_id="user_b", username="user_b", display_name="Alice"))
+    updated = User(user_id="user_b", username="user_b", display_name="Alice Renamed")
     result = user_store.update(updated)
     assert result == updated
     assert user_store.get("user_b") == updated
@@ -165,12 +165,12 @@ def test_user_store_update_replaces_user(user_store: SQLiteUserStore) -> None:
 
 def test_user_store_update_missing_raises(user_store: SQLiteUserStore) -> None:
     with pytest.raises(UserNotFoundError, match="missing"):
-        user_store.update(User(user_id="missing"))
+        user_store.update(User(user_id="missing", username="missing"))
 
 
 def test_user_store_list_sorted_by_user_id(user_store: SQLiteUserStore) -> None:
-    alice = User(user_id="user_b", display_name="Alice")
-    bob = User(user_id="user_a", display_name="Bob", disabled=True)
+    alice = User(user_id="user_b", username="user_b", display_name="Alice")
+    bob = User(user_id="user_a", username="user_a", display_name="Bob", disabled=True)
     user_store.create(alice)
     user_store.create(bob)
     page = user_store.list(limit=1, offset=0, query=UserQuery())
@@ -179,9 +179,9 @@ def test_user_store_list_sorted_by_user_id(user_store: SQLiteUserStore) -> None:
 
 def test_user_store_list_text_filter(user_store: SQLiteUserStore) -> None:
     user_store.create(
-        User(user_id="user_b", display_name="Alice Example", email="a@example.com"),
+        User(user_id="user_b", username="user_b", display_name="Alice Example", email="a@example.com"),
     )
-    user_store.create(User(user_id="user_a", display_name="Bob"))
+    user_store.create(User(user_id="user_a", username="user_a", display_name="Bob"))
     results = user_store.list(limit=10, offset=0, query=UserQuery(text="renamed"))
     assert results == ()
     results = user_store.list(limit=10, offset=0, query=UserQuery(text="alice"))
@@ -190,12 +190,12 @@ def test_user_store_list_text_filter(user_store: SQLiteUserStore) -> None:
 
 
 def test_user_store_list_disabled_filter(user_store: SQLiteUserStore) -> None:
-    user_store.create(User(user_id="active"))
-    user_store.create(User(user_id="disabled", disabled=True))
+    user_store.create(User(user_id="active", username="active"))
+    user_store.create(User(user_id="disabled", username="disabled", disabled=True))
     active = user_store.list(limit=10, offset=0, query=UserQuery(disabled=False))
     disabled = user_store.list(limit=10, offset=0, query=UserQuery(disabled=True))
-    assert active == (User(user_id="active"),)
-    assert disabled == (User(user_id="disabled", disabled=True),)
+    assert active == (User(user_id="active", username="active"),)
+    assert disabled == (User(user_id="disabled", username="disabled", disabled=True),)
 
 
 def test_user_store_list_invalid_page(user_store: SQLiteUserStore) -> None:
@@ -206,15 +206,15 @@ def test_user_store_list_invalid_page(user_store: SQLiteUserStore) -> None:
 
 
 def test_user_store_count_active(user_store: SQLiteUserStore) -> None:
-    user_store.create(User(user_id="user_a"))
-    user_store.create(User(user_id="user_b", disabled=True))
+    user_store.create(User(user_id="user_a", username="user_a"))
+    user_store.create(User(user_id="user_b", username="user_b", disabled=True))
     assert user_store.count_active() == 1
 
 
 def test_user_store_persists_external_identities(user_store: SQLiteUserStore) -> None:
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
     user = User(
-        user_id="user_a",
+        user_id="user_a", username="user_a",
         external_identities=frozenset({identity}),
     )
     user_store.create(user)
@@ -229,10 +229,10 @@ def test_user_store_update_replaces_external_identities(
     old_id = ExternalIdentity(provider="passkey", subject="cred_old")
     new_id = ExternalIdentity(provider="passkey", subject="cred_new")
     user_store.create(
-        User(user_id="user_a", external_identities=frozenset({old_id})),
+        User(user_id="user_a", username="user_a", external_identities=frozenset({old_id})),
     )
     user_store.update(
-        User(user_id="user_a", external_identities=frozenset({new_id})),
+        User(user_id="user_a", username="user_a", external_identities=frozenset({new_id})),
     )
     loaded = user_store.get("user_a")
     assert loaded is not None
@@ -247,7 +247,7 @@ def test_user_store_update_replaces_external_identities(
 
 def test_resolve_external_identity_returns_user(user_store: SQLiteUserStore) -> None:
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
-    user = User(user_id="user_a", external_identities=frozenset({identity}))
+    user = User(user_id="user_a", username="user_a", external_identities=frozenset({identity}))
     user_store.create(user)
     resolved = user_store.resolve_external_identity(identity)
     assert resolved is not None
@@ -262,7 +262,7 @@ def test_resolve_external_identity_unknown_returns_none(
 
 
 def test_link_external_identity_adds_identity(user_store: SQLiteUserStore) -> None:
-    user_store.create(User(user_id="user_a"))
+    user_store.create(User(user_id="user_a", username="user_a"))
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
     result = user_store.link_external_identity(user_id="user_a", identity=identity)
     assert result.user_id == "user_a"
@@ -272,8 +272,8 @@ def test_link_external_identity_adds_identity(user_store: SQLiteUserStore) -> No
 
 
 def test_link_external_identity_conflict_raises(user_store: SQLiteUserStore) -> None:
-    user_store.create(User(user_id="user_a"))
-    user_store.create(User(user_id="user_b"))
+    user_store.create(User(user_id="user_a", username="user_a"))
+    user_store.create(User(user_id="user_b", username="user_b"))
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
     user_store.link_external_identity(user_id="user_a", identity=identity)
     with pytest.raises(ExternalIdentityConflictError):
@@ -283,7 +283,7 @@ def test_link_external_identity_conflict_raises(user_store: SQLiteUserStore) -> 
 def test_link_external_identity_idempotent_for_same_user(
     user_store: SQLiteUserStore,
 ) -> None:
-    user_store.create(User(user_id="user_a"))
+    user_store.create(User(user_id="user_a", username="user_a"))
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
     user_store.link_external_identity(user_id="user_a", identity=identity)
     result = user_store.link_external_identity(user_id="user_a", identity=identity)
@@ -515,7 +515,7 @@ def test_auth_database_caller_stores_commit_mutations_and_preserve_connection(
     database = SQLiteAuthDatabase(conn)
     stores = database.stores()
 
-    stores.users.create(User(user_id="store-user"))
+    stores.users.create(User(user_id="store-user", username="store-user"))
     grant = stores.grants.add_role_grant("store-user", "admin", Scope.global_())
     assert conn.in_transaction is False
     assert conn.execute(
@@ -551,7 +551,7 @@ def test_auth_database_caller_stores_refuse_pending_transaction(
     stores = database.stores()
     conn.execute("BEGIN")
     with pytest.raises(RuntimeError, match="transaction"):
-        stores.users.create(User(user_id="not-written"))
+        stores.users.create(User(user_id="not-written", username="not-written"))
     assert conn.in_transaction
     conn.rollback()
     assert stores.users.get("not-written") is None
@@ -680,7 +680,7 @@ def test_concurrent_migrations_stamp_schema_once(tmp_path: Path) -> None:
     try:
         assert check.execute(
             "SELECT COUNT(*), MIN(version), MAX(version) FROM um_schema_version"
-        ).fetchone() == (1, 2, 2)
+        ).fetchone() == (1, 3, 3)
     finally:
         check.close()
 
@@ -842,7 +842,7 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
     conn.row_factory = row_factory
     try:
         create_tables(conn)
-        conn.execute("INSERT INTO um_users(user_id) VALUES ('legacy-user')")
+        conn.execute("INSERT INTO um_users(user_id, username) VALUES ('legacy-user', 'legacy-user')")
         conn.execute(
             "INSERT INTO um_grants(user_id, role_name) VALUES ('legacy-user', 'admin')"
         )
@@ -890,7 +890,7 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
                     'user', 'legacy-user', 'success')"""
         )
         conn.execute("CREATE TABLE um_schema_version (version INTEGER NOT NULL)")
-        conn.execute("INSERT INTO um_schema_version(version) VALUES (2)")
+        conn.execute("INSERT INTO um_schema_version(version) VALUES (3)")
         conn.commit()
 
         assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
@@ -976,7 +976,7 @@ def test_auth_database_initializes_caller_connection_with_foreign_keys() -> None
         database = SQLiteAuthDatabase(conn)
         database.initialize()
         assert conn.execute("PRAGMA foreign_keys").fetchone() == (1,)
-        conn.execute("INSERT INTO um_users(user_id) VALUES ('cascade-user')")
+        conn.execute("INSERT INTO um_users(user_id, username) VALUES ('cascade-user', 'cascade-user')")
         conn.execute(
             "INSERT INTO um_grants(user_id, role_name) VALUES ('cascade-user', 'admin')"
         )
@@ -1005,11 +1005,11 @@ def test_auth_database_transaction_refuses_pending_caller_transaction() -> None:
 def test_external_store_requires_caller_transaction(conn: sqlite3.Connection) -> None:
     store = SQLiteUserStore(conn, transaction_mode="external")
     with pytest.raises(RuntimeError, match="transaction"):
-        store.create(User(user_id="not-written"))
+        store.create(User(user_id="not-written", username="not-written"))
     assert conn.execute("SELECT * FROM um_users").fetchall() == []
 
     conn.execute("BEGIN")
-    store.create(User(user_id="caller-owned"))
+    store.create(User(user_id="caller-owned", username="caller-owned"))
     assert conn.in_transaction
     conn.rollback()
 
@@ -1044,7 +1044,7 @@ def test_create_tables_external_accepts_active_foreign_keys() -> None:
 
         assert conn.in_transaction
         assert conn.execute("PRAGMA foreign_keys").fetchone() == (1,)
-        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (2,)
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (3,)
         conn.rollback()
         assert (
             conn.execute(
@@ -1095,7 +1095,7 @@ def test_migrate_sqlite_schema_external_accepts_active_foreign_keys() -> None:
         migrate_sqlite_schema(conn, transaction_mode="external")
 
         assert conn.in_transaction
-        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (2,)
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (3,)
         conn.rollback()
         assert (
             conn.execute(
@@ -1124,7 +1124,7 @@ def test_operation_connection_locks_cleanup_after_closed_connections(
     database = SQLiteAuthDatabase(database_path)
     for index in range(20):
         stores = database.stores()
-        stores.users.create(User(user_id=f"lock-user-{index}"))
+        stores.users.create(User(user_id=f"lock-user-{index}", username=f"lock-user-{index}"))
         stores.close()
 
     assert len(connection_locks) <= 1

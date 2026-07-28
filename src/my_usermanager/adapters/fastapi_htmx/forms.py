@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Final
-from urllib.parse import parse_qs
 
 from fastapi import Request, status
+from urllib.parse import parse_qs
+
+from my_usermanager.models import Gender, ValidationError, validate_gender, validate_identifier
 
 _FORM_CONTENT_TYPE: Final = "application/x-www-form-urlencoded"
 
@@ -31,6 +34,20 @@ class GrantForm:
 
 
 @dataclass(frozen=True, slots=True)
+class ProfileForm:
+    """Parsed account profile form payload."""
+
+    username: str
+    first_name: str
+    last_name: str
+    display_name: str | None
+    email: str | None
+    birth_date: date | None
+    gender: Gender | None
+    csrf_token: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class FormError:
     """Typed form parsing error for HTML rendering."""
 
@@ -41,6 +58,7 @@ class FormError:
 
 type MutationFormResult = MutationForm | FormError
 type GrantFormResult = GrantForm | FormError
+type ProfileFormResult = ProfileForm | FormError
 
 
 async def read_mutation_form(request: Request) -> MutationFormResult:
@@ -56,6 +74,60 @@ async def read_mutation_form(request: Request) -> MutationFormResult:
             "The submitted user action did not include a user id.",
         )
     return MutationForm(user_id, _csrf_value(form))
+
+
+async def read_profile_form(request: Request) -> ProfileFormResult:
+    """Parse the account profile form (username required)."""
+    form = await _read_form_values(request)
+    if isinstance(form, FormError):
+        return form
+    username_raw = _first_value(form, "username")
+    if username_raw is None:
+        return FormError(
+            status.HTTP_400_BAD_REQUEST,
+            "Missing username",
+            "Username is required.",
+        )
+    try:
+        username = validate_identifier(username_raw, field_name="username")
+    except ValidationError as exc:
+        return FormError(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid username",
+            str(exc),
+        )
+    birth_raw = _optional_value(form, "birth_date")
+    birth_date: date | None = None
+    if birth_raw:
+        try:
+            birth_date = date.fromisoformat(birth_raw)
+        except ValueError:
+            return FormError(
+                status.HTTP_400_BAD_REQUEST,
+                "Invalid birth date",
+                "Use ISO date format YYYY-MM-DD.",
+            )
+    gender_raw = _optional_value(form, "gender")
+    gender: Gender | None = None
+    if gender_raw:
+        try:
+            gender = validate_gender(gender_raw)
+        except ValidationError as exc:
+            return FormError(
+                status.HTTP_400_BAD_REQUEST,
+                "Invalid gender",
+                str(exc),
+            )
+    return ProfileForm(
+        username=username,
+        first_name=_optional_value(form, "first_name") or "",
+        last_name=_optional_value(form, "last_name") or "",
+        display_name=_optional_value(form, "display_name"),
+        email=_optional_value(form, "email"),
+        birth_date=birth_date,
+        gender=gender,
+        csrf_token=_csrf_value(form),
+    )
 
 
 async def read_grant_form(request: Request, *, value_field: str) -> GrantFormResult:

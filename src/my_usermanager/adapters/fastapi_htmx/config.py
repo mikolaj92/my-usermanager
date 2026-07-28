@@ -58,6 +58,23 @@ DEFAULT_UI_LABELS: Final[dict[str, str]] = {
     ),
     "local_user_id": "Local user id",
     "external_subject": "External subject",
+    "profile_title": "Profile",
+    "profile_description": (
+        "Username is required. Birth date and gender are optional."
+    ),
+    "profile_username": "Username",
+    "profile_first_name": "First name",
+    "profile_last_name": "Last name",
+    "profile_display_name": "Display name",
+    "profile_email": "Email",
+    "profile_birth_date": "Birth date",
+    "profile_gender": "Gender",
+    "profile_gender_unspecified": "Prefer not to say",
+    "profile_gender_female": "Female",
+    "profile_gender_male": "Male",
+    "profile_gender_other": "Other",
+    "profile_save": "Save profile",
+    "profile_saved": "Profile saved.",
     "session_title": "Session",
     "session_description": "Sign out of this app on this device.",
     "log_out": "Log out",
@@ -183,6 +200,7 @@ class UserManagerUiConfig:
     """
 
     account_path: str = "/account"
+    profile_path: str = "/account/profile"
     users_path: str = "/admin/users"
     disable_user_path: str = "/admin/users/disable"
     enable_user_path: str = "/admin/users/enable"
@@ -331,6 +349,9 @@ class UserManagerUiHooks(Protocol):
     ) -> MaybeAwaitable[PasskeyPanel | None]:
         """Return an optional packaged-template passkey panel descriptor."""
         ...
+
+    # Optional (checked via getattr): update_own_profile(request, current_user, update)
+    # -> AuthenticatedSubject. When absent, the account profile form is read-only.
 
 
 @dataclass(frozen=True, slots=True)

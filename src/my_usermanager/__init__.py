@@ -31,14 +31,18 @@ from my_usermanager.memory import (
     MemoryUserStore,
 )
 from my_usermanager.models import (
+    GENDER_VALUES,
     AuditEvent,
     ExternalIdentity,
+    Gender,
     Grant,
     Permission,
     Role,
     Scope,
     User,
     ValidationError,
+    validate_birth_date,
+    validate_gender,
     validate_identifier,
     validate_permission_name,
 )
@@ -72,6 +76,7 @@ from my_usermanager.stores import (
     DuplicateAuditEventError,
     DuplicateGrantError,
     DuplicateUserError,
+    DuplicateUsernameError,
     GrantNotFoundError,
     GrantStore,
     InvalidPageError,
@@ -83,7 +88,7 @@ from my_usermanager.stores import (
     UserStore,
 )
 
-__version__: Final = "0.3.3"
+__version__: Final = "0.4.0"
 
 __all__: Final = (
     "ADMIN_ROLE_NAME",
@@ -101,7 +106,10 @@ __all__: Final = (
     "DuplicateAuditEventError",
     "DuplicateGrantError",
     "DuplicateUserError",
+    "DuplicateUsernameError",
     "ExternalIdentity",
+    "GENDER_VALUES",
+    "Gender",
     "Grant",
     "GrantAdminService",
     "GrantClaims",
@@ -142,6 +150,8 @@ __all__: Final = (
     "is_valid_permission_name",
     "max_permission_level_claim",
     "permission_claim",
+    "validate_birth_date",
+    "validate_gender",
     "principal_template_context",
     "read_session_principal",
     "read_token_principal",
