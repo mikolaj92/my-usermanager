@@ -175,7 +175,8 @@ class SQLiteAuthDatabase:
                 if um_state == "empty":
                     create_tables(conn, transaction_mode="external")
                 elif um_state in {"canonical_unversioned", "v2"}:
-                    # v2 → v3: username NOT NULL + unique + birth_date/gender.
+                    # Unversioned (pre-stamp) and stamped v2 both need users v3
+                    # (username NOT NULL + unique + birth_date/gender).
                     migrate_sqlite_schema(conn, transaction_mode="external")
                 if auth_state.state in {"empty", "canonical_unversioned"}:
                     _ = auth_schema.ensure_sqlite_schema(

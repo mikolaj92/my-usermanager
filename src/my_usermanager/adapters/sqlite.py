@@ -533,6 +533,11 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912
             raise RuntimeError(message)  # noqa: TRY301
         _rebuild_grants_table(conn)
         _rebuild_audit_events_table(conn)
+        # Pre-versioned DBs often still carry the v2 um_users layout (nullable
+        # username, no birth_date/gender). CREATE IF NOT EXISTS will not alter
+        # them — rebuild to v3 before stamping schema version 3.
+        if _um_users_is_v2_layout(conn):
+            _migrate_users_v2_to_v3(conn)
         _apply_create_tables(conn)
         conn.execute(
             "INSERT INTO um_schema_version(version) VALUES (?)",
