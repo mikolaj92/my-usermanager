@@ -552,10 +552,25 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912
 
 
 def _migrate_users_v2_to_v3(conn: sqlite3.Connection) -> None:
-    """Upgrade um_users: mandatory unique username + optional birth_date/gender."""
+    """Upgrade um_users: mandatory unique username + optional birth_date/gender.
+
+    Child rows (identities, grants) are snapshotted first: with foreign keys
+    enabled, ``DROP TABLE um_users`` would cascade-delete them.
+    """
     _ = conn.execute(
         "UPDATE um_users SET username = user_id "
         "WHERE username IS NULL OR trim(username) = ''"
+    )
+    identity_rows = _fetchall_rows(
+        conn.execute(
+            "SELECT provider, subject, user_id FROM um_external_identities"
+        )
+    )
+    grant_rows = _fetchall_rows(
+        conn.execute(
+            "SELECT user_id, role_name, permission_name, scope_type, scope_id "
+            "FROM um_grants"
+        )
     )
     statements = (
         """
@@ -589,6 +604,25 @@ def _migrate_users_v2_to_v3(conn: sqlite3.Connection) -> None:
     )
     for statement in statements:
         _ = conn.execute(statement)
+    for row in identity_rows:
+        _ = conn.execute(
+            "INSERT INTO um_external_identities (provider, subject, user_id) "
+            "VALUES (?, ?, ?)",
+            (_row_str(row, 0), _row_str(row, 1), _row_str(row, 2)),
+        )
+    for row in grant_rows:
+        _ = conn.execute(
+            "INSERT INTO um_grants "
+            "(user_id, role_name, permission_name, scope_type, scope_id) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                _row_str(row, 0),
+                _row_str(row, 1),
+                _row_str(row, 2),
+                _row_str(row, 3),
+                _row_str(row, 4),
+            ),
+        )
 
 
 _CONNECTION_LOCKS: dict[int, tuple[sqlite3.Connection, RLock]] = {}
