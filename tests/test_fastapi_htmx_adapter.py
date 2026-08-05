@@ -236,6 +236,16 @@ class FakeUiHooks:
         return self.panel
 
 
+    def update_own_profile(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        update: object,
+    ) -> AuthenticatedSubject:
+        self.calls.append(("update", update))
+        return self.user
+
+
 class FakeCsrfProtection:
     valid: bool
 
@@ -271,7 +281,14 @@ class ResponseLike(Protocol):
 class ClientLike(Protocol):
     def get(self, url: str) -> object: ...
 
-    def post(self, url: str, *, data: dict[str, str] | None = None) -> object: ...
+    def post(
+        self,
+        url: str,
+        *,
+        data: dict[str, str] | None = None,
+        follow_redirects: bool = True,
+    ) -> object: ...
+
 
 
 def _client(app: FastAPI) -> ClientLike:
@@ -283,9 +300,14 @@ def _response(response: object) -> ResponseLike:
 
 
 def _post(
-    client: ClientLike, url: str, data: dict[str, str] | None = None
+    client: ClientLike,
+    url: str,
+    data: dict[str, str] | None = None,
+    *,
+    follow_redirects: bool = True,
 ) -> ResponseLike:
-    return _response(client.post(url, data=data))
+    return _response(client.post(url, data=data, follow_redirects=follow_redirects))
+
 
 
 def _get(client: ClientLike, url: str) -> ResponseLike:
@@ -353,6 +375,58 @@ def test_route_toggles_and_csrf_guard() -> None:
     assert _get(client2, disabled.account_path).status_code == 404
     assert _get(client2, disabled.users_path).status_code == 404
     assert _post(client2, disabled.disable_user_path).status_code == 404
+
+
+def test_profile_update_rejects_future_birth_date_with_400() -> None:
+    """Validation failures from UserProfileUpdate must map to HTTP 400."""
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    from datetime import date, timedelta
+
+    calls: list[object] = []
+    hooks = _hooks(calls=calls)
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
+    )
+    config = adapter.UserManagerUiConfig(csrf_protection=_csrf())
+    app = FastAPI()
+    _ = install_app_factory_ui(
+        app,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    _ = adapter.install_usermanager_ui(
+        app, platform=platform, hooks=hooks, config=config
+    )
+    client = _client(app)
+    future = (date.today() + timedelta(days=1)).isoformat()
+    response = _post(
+        client,
+        config.profile_path,
+        {
+            "username": "admin",
+            "birth_date": future,
+            "csrf": "good",
+        },
+    )
+    assert response.status_code == 400
+    assert "Profile update failed" in response.text
+    assert calls == []
+
+    cleared = _post(
+        client,
+        config.profile_path,
+        {
+            "username": "admin",
+            "csrf": "good",
+        },
+        follow_redirects=False,
+    )
+    assert cleared.status_code == 303
+    assert calls and calls[0][0] == "update"
 
 
 def test_passkey_panel_uses_named_packaged_template() -> None:
