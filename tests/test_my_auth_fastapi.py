@@ -149,7 +149,7 @@ def test_core_and_optional_helper_import_do_not_load_optional_dependencies() -> 
         import my_usermanager
         import my_usermanager.adapters.my_auth_fastapi
 
-        assert my_usermanager.__version__ == "0.4.0"
+        assert my_usermanager.__version__ == "0.4.4"
         assert "my_auth" not in sys.modules
         assert "my_auth.fastapi" not in sys.modules
         assert "fastapi" not in sys.modules

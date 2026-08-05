@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, Request, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 
 from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.responses import (
@@ -15,7 +15,6 @@ from my_usermanager.adapters.fastapi_htmx.responses import (
 )
 
 if TYPE_CHECKING:
-    from fastapi.responses import Response
 
     from my_usermanager.adapters.fastapi_htmx.config import UserManagerUiConfig
     from my_usermanager.adapters.fastapi_htmx.protocols import UserManagerUiHooks

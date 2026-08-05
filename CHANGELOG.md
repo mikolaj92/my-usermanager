@@ -2,6 +2,10 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
+## 0.4.4
+
+- Fix FastAPI route annotations by importing `fastapi.responses.Response` at runtime.
+
 ## 0.4.0
 
 - **Breaking:** `User.username` is required (passkey replaces password, not the handle).

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
 from fastapi import APIRouter, FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from my_usermanager.adapters.fastapi_htmx.auth import (
     Denied,
@@ -50,7 +50,6 @@ from my_usermanager.adapters.fastapi_htmx.templates import (
 )
 
 if TYPE_CHECKING:
-    from fastapi.responses import Response
     from jinja2 import Environment
 
     from my_usermanager.subjects import AuthenticatedSubject
