@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "my-usermanager"
-version = "0.4.3"
+version = "0.4.4"
 source = { editable = "." }
 
 [package.optional-dependencies]
