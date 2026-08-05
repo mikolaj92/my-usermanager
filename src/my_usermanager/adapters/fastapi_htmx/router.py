@@ -216,16 +216,16 @@ def create_usermanager_ui_router(  # noqa: C901
             csrf_error = await _validate_csrf(request, config, form.csrf_token)
             if csrf_error is not None:
                 return csrf_error
-        update = UserProfileUpdate(
-            username=form.username,
-            first_name=form.first_name,
-            last_name=form.last_name,
-            display_name=form.display_name,
-            email=form.email,
-            birth_date=form.birth_date,
-            gender=form.gender,
-        )
         try:
+            update = UserProfileUpdate(
+                username=form.username,
+                first_name=form.first_name,
+                last_name=form.last_name,
+                display_name=form.display_name,
+                email=form.email,
+                birth_date=form.birth_date,
+                gender=form.gender,
+            )
             _ = await resolve(updater(request, auth.current_user, update))
         except Exception as exc:
             return error_response(400, "Profile update failed", str(exc))

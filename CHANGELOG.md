@@ -2,6 +2,10 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
+## 0.4.5
+
+- Convert profile validation failures into HTTP 400 responses instead of uncaught 500 errors.
+
 ## 0.4.4
 
 - Fix FastAPI route annotations by importing `fastapi.responses.Response` at runtime.
