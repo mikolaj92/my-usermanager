@@ -5,13 +5,9 @@
 {% endblock %}
 
 {% block navigation %}
+<a class="btn btn-secondary" href="#main-content">{{ labels.skip_to_content }}</a>
 <nav class="app-nav" aria-label="User management navigation">
   <a href="{{ config.account_path }}">{{ labels.nav_account }}</a>
   {% if config.admin_enabled %}<a href="{{ config.users_path }}">{{ labels.nav_users }}</a>{% endif %}
 </nav>
-{% endblock %}
-
-{% block main %}
-<a class="btn btn-secondary" href="#main-content">{{ labels.skip_to_content }}</a>
-{% block content %}{% endblock %}
 {% endblock %}

@@ -35,7 +35,7 @@ fastapi = [
     "pydantic>=2.10",
 ]
 fastapi-htmx = [
-    "app-factory[fastapi]>=0.4",
+    "app-factory[fastapi]>=0.5",
     "fastapi>=0.115",
     "jinja2>=3.1",
 ]
@@ -66,8 +66,8 @@ exclude = [
 "src/my_usermanager/adapters/fastapi_htmx/static" = "my_usermanager/adapters/fastapi_htmx/static"
 
 [tool.uv.sources]
-app-factory = { git = "https://github.com/mikolaj92/app-factory", rev = "4d39f7cc069433614bf04445b7b43832594a4aa6" }
-my-auth = { git = "https://github.com/mikolaj92/my-auth", rev = "e1393b2b4cec9fc756ad850a725c33b291d714df" }
+app-factory = { git = "https://github.com/mikolaj92/app-factory", tag = "v0.5.18" }
+my-auth = { git = "https://github.com/mikolaj92/my-auth", tag = "v0.3.23" }
 
 [tool.basedpyright]
 typeCheckingMode = "all"
