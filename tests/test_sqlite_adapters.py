@@ -680,7 +680,7 @@ def test_concurrent_migrations_stamp_schema_once(tmp_path: Path) -> None:
     try:
         assert check.execute(
             "SELECT COUNT(*), MIN(version), MAX(version) FROM um_schema_version"
-        ).fetchone() == (1, 3, 3)
+        ).fetchone() == (1, 4, 4)
     finally:
         check.close()
 
@@ -890,7 +890,7 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
                     'user', 'legacy-user', 'success')"""
         )
         conn.execute("CREATE TABLE um_schema_version (version INTEGER NOT NULL)")
-        conn.execute("INSERT INTO um_schema_version(version) VALUES (3)")
+        conn.execute("INSERT INTO um_schema_version(version) VALUES (4)")
         conn.commit()
 
         assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
@@ -1044,7 +1044,7 @@ def test_create_tables_external_accepts_active_foreign_keys() -> None:
 
         assert conn.in_transaction
         assert conn.execute("PRAGMA foreign_keys").fetchone() == (1,)
-        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (3,)
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (4,)
         conn.rollback()
         assert (
             conn.execute(
@@ -1095,7 +1095,7 @@ def test_migrate_sqlite_schema_external_accepts_active_foreign_keys() -> None:
         migrate_sqlite_schema(conn, transaction_mode="external")
 
         assert conn.in_transaction
-        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (3,)
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (4,)
         conn.rollback()
         assert (
             conn.execute(

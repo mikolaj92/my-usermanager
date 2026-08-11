@@ -187,7 +187,7 @@ def build_get_auth_user(
         except ValidationError:
             return None
         user = store.resolve_external_identity(identity)
-        if user is None or user.disabled:
+        if user is None or not user.is_active:
             return None
         if access_policy is not None and not access_policy(user):
             return None
