@@ -89,6 +89,19 @@ The underlying `my-auth` router accepts sync or async callbacks for every hook;
 registration policy runs before options and again before verify, then WebAuthn
 verification precedes completion, login, and non-fatal observer hooks.
 
+## Administrator invitations
+
+`InvitationService` creates a concrete pending user, snapshots the host-approved
+initial grants, and delegates one-time activation material to an injected
+enrollment capability issuer. The included `build_enrollment_capability_issuer`
+adapter binds this contract to `my-auth` v0.4 enrollment capabilities.
+Invitation metadata may be stored with `SQLiteInvitationStore`; the raw token is
+returned only in `IssuedInvitation` for host delivery and is never persisted by
+my-usermanager. Reissue revokes previous capability material, while activation
+requires the exact invited user, capability id, and external identity subject.
+All unavailable, expired, revoked, disabled, or replayed invitations fail through
+the same non-enumerating `InvitationError`.
+
 Identity-linking checklist for host apps:
 
 - Provision or choose the local `User` in host code before returning `PasskeyRegistrationLink`.

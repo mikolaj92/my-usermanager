@@ -259,6 +259,22 @@ class UserManager:
             scope=request.scope,
         )
 
+    def require_permission(
+        self,
+        *,
+        actor_id: str,
+        permission: Permission,
+        target_user_id: str,
+        scope: Scope,
+    ) -> None:
+        """Require an actor permission for a host/domain lifecycle operation."""
+        self._require_permission(
+            actor_id=actor_id,
+            permission=permission,
+            target_user_id=target_user_id,
+            scope=scope,
+        )
+
     def _require_permission(
         self,
         *,
