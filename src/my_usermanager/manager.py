@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date
-from typing import override
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING, override
+
+if TYPE_CHECKING:
+    from datetime import date
 
 from my_usermanager.models import (
     Gender,
@@ -26,6 +28,7 @@ from my_usermanager.stores import (
 )
 
 __all__ = [
+    "AccountTransitionError",
     "AuthorizationError",
     "PermissionGrantRequest",
     "RoleGrantRequest",
@@ -38,6 +41,19 @@ PROFILE_UPDATE_ACTION = "profile.update"
 ROLE_ASSIGN_PERMISSION = Permission("roles.assign")
 PERMISSION_GRANT_PERMISSION = Permission("permissions.grant")
 PERMISSION_REVOKE_PERMISSION = Permission("permissions.revoke")
+
+
+@dataclass(frozen=True, slots=True)
+class AccountTransitionError(ValueError):
+    """Raised when an account lifecycle transition is illegal."""
+
+    current: str
+    requested: str
+
+    @override
+    def __str__(self) -> str:
+        """Return the rejected transition."""
+        return f"illegal account transition: {self.current} -> {self.requested}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,6 +131,23 @@ class UserManager:
     roles: RoleStore
     grants: GrantStore
 
+    def transition_account(self, *, user_id: str, status: str) -> User:
+        """Apply one explicit legal account lifecycle transition."""
+        user = self.users.get(user_id)
+        if user is None:
+            raise UserNotFoundError(user_id)
+        transitions = {
+            "pending": frozenset({"active", "disabled"}),
+            "active": frozenset({"disabled"}),
+            "disabled": frozenset({"active"}),
+        }
+        current = user.status or "active"
+        if status not in transitions.get(current, frozenset()):
+            raise AccountTransitionError(current, status)
+        return self.users.update(
+            replace(user, status=status, disabled=status == "disabled")
+        )
+
     def update_own_profile(self, *, actor_id: str, update: UserProfileUpdate) -> User:
         """Update the authenticated user's own basic profile fields."""
         return self.update_profile(
@@ -154,6 +187,7 @@ class UserManager:
             birth_date=update.birth_date,
             gender=update.gender,
             disabled=user.disabled,
+            status=user.status,
             system=user.system,
             scope=user.scope,
         )

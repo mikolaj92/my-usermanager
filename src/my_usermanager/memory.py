@@ -89,7 +89,7 @@ class MemoryUserStore:
 
     def count_active(self) -> int:
         """Return the number of non-disabled users."""
-        return sum(1 for user in self._users.values() if not user.disabled)
+        return sum(1 for user in self._users.values() if user.is_active)
 
 
 class MemoryRoleStore:
@@ -225,6 +225,8 @@ def _validate_page(*, limit: int, offset: int) -> None:
 
 def _matches_user_query(user: User, query: UserQuery) -> bool:
     if query.disabled is not None and user.disabled != query.disabled:
+        return False
+    if query.status is not None and user.status != query.status:
         return False
     if query.system is not None and user.system != query.system:
         return False

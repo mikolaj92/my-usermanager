@@ -15,9 +15,10 @@ if TYPE_CHECKING:
 
 
 __all__: Final[tuple[str, ...]] = (
+    "GENDER_VALUES",
+    "AccountStatus",
     "AuditEvent",
     "ExternalIdentity",
-    "GENDER_VALUES",
     "Gender",
     "Grant",
     "Permission",
@@ -34,6 +35,7 @@ __all__: Final[tuple[str, ...]] = (
 )
 
 Gender = Literal["female", "male", "other"]
+AccountStatus = Literal["pending", "active", "disabled"]
 GENDER_VALUES: Final[frozenset[str]] = frozenset({"female", "male", "other"})
 
 _PERMISSION_NAME_PATTERN: Final[Pattern[str]] = compile_pattern(
@@ -222,6 +224,7 @@ class User:
     birth_date: date | None = None
     gender: Gender | None = None
     disabled: bool = False
+    status: AccountStatus | None = None
     system: bool = False
     scope: Scope = field(default_factory=Scope.global_)
 
@@ -235,6 +238,22 @@ class User:
         _ = _validate_optional_text(self.email, field_name="email")
         _ = validate_birth_date(self.birth_date)
         _ = validate_gender(self.gender)
+        status = (
+            ("disabled" if self.disabled else "active")
+            if self.status is None
+            else self.status
+        )
+        if status not in {"pending", "active", "disabled"}:
+            field_name = "status"
+            reason = "must be one of: pending, active, disabled"
+            raise ValidationError(field_name, reason)
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "disabled", status == "disabled")
+
+    @property
+    def is_active(self) -> bool:
+        """Return whether authentication and authorization may establish access."""
+        return self.status == "active"
 
 
 @dataclass(frozen=True, slots=True)

@@ -133,6 +133,7 @@ class UserQuery:
 
     text: str | None = None
     disabled: bool | None = None
+    status: str | None = None
     system: bool | None = None
     scope: Scope | None = None
 

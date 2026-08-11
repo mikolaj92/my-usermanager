@@ -24,6 +24,7 @@ from threading import RLock
 from typing import ClassVar, Final, Literal, Self, cast
 
 from my_usermanager.models import (
+    AccountStatus,
     AuditEvent,
     ExternalIdentity,
     Gender,
@@ -59,7 +60,7 @@ __all__: Final[tuple[str, ...]] = (
     "migrate_sqlite_schema",
 )
 
-_SCHEMA_VERSION: Final = 3
+_SCHEMA_VERSION: Final = 4
 _CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS um_schema_version (version INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS um_users (
@@ -74,7 +75,9 @@ CREATE TABLE IF NOT EXISTS um_users (
     disabled INTEGER NOT NULL DEFAULT 0,
     system INTEGER NOT NULL DEFAULT 0,
     scope_type TEXT,
-    scope_id TEXT
+    scope_id TEXT,
+    status TEXT NOT NULL DEFAULT 'active'
+        CHECK (status IN ('pending', 'active', 'disabled'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS um_users_username_ci
     ON um_users(lower(username));
@@ -129,12 +132,13 @@ _ORPHAN_GRANTS_SQL: Final = (
 )
 _INSERT_USER_SQL: Final = (
     "INSERT INTO um_users (user_id, username, first_name, last_name, display_name, "
-    "email, birth_date, gender, disabled, system, scope_type, scope_id) VALUES "
-    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "email, birth_date, gender, disabled, status, system, scope_type, scope_id) VALUES "
+    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 _UPDATE_USER_SQL: Final = (
     "UPDATE um_users SET username=?, first_name=?, last_name=?, display_name=?, "
-    "email=?, birth_date=?, gender=?, disabled=?, system=?, scope_type=?, scope_id=? "
+    "email=?, birth_date=?, gender=?, disabled=?, status=?, system=?, "
+    "scope_type=?, scope_id=? "
     "WHERE user_id=?"
 )
 _LIST_USERS_SQL: Final = (
@@ -233,6 +237,7 @@ _UM_TABLE_COLUMNS: Final[dict[str, tuple[str, ...]]] = {
         "system",
         "scope_type",
         "scope_id",
+        "status",
     ),
     "um_external_identities": ("provider", "subject", "user_id"),
     "um_grants": ("user_id", "role_name", "permission_name", "scope_type", "scope_id"),
@@ -270,6 +275,7 @@ def _um_table_is_canonical(  # noqa: PLR0911
             and rows[1][3] == 1  # username NOT NULL
             and rows[8][4] == "0"
             and rows[9][4] == "0"
+            and rows[12][4] == "'active'"
         )
     if table == "um_schema_version":
         metadata = tuple(
@@ -401,7 +407,7 @@ def _um_audit_events_is_legacy_canonical(conn: sqlite3.Connection) -> bool:
     return sql in {expected_sql, implicit_sql}
 
 
-def inspect_sqlite_schema(  # noqa: PLR0911
+def inspect_sqlite_schema(  # noqa: C901, PLR0911
     conn: sqlite3.Connection,
 ) -> str:
     """Return empty, canonical_unversioned, current, or unsupported."""
@@ -423,7 +429,8 @@ def inspect_sqlite_schema(  # noqa: PLR0911
     grants_legacy = _um_grants_is_legacy_canonical(conn)
     audit_canonical = _um_table_is_canonical(conn, "um_audit_events")
     audit_legacy = _um_audit_events_is_legacy_canonical(conn)
-    users_v3 = _um_table_is_canonical(conn, "um_users")
+    users_v4 = _um_table_is_canonical(conn, "um_users")
+    users_v3 = _um_users_is_v3_layout(conn)
     users_v2 = _um_users_is_v2_layout(conn)
     other_non_user_canonical = all(
         _um_table_is_canonical(conn, table)
@@ -433,7 +440,7 @@ def inspect_sqlite_schema(  # noqa: PLR0911
     if not all(
         (
             other_non_user_canonical,
-            users_v3 or users_v2,
+            users_v4 or users_v3 or users_v2,
             grants_canonical or grants_legacy,
             audit_canonical or audit_legacy,
         )
@@ -448,11 +455,31 @@ def inspect_sqlite_schema(  # noqa: PLR0911
     if len(rows) != 1:
         return "unsupported"
     version = rows[0][0]
-    if version == _SCHEMA_VERSION and users_v3:
+    if version == _SCHEMA_VERSION and users_v4:
         return "current"
-    if version == 2 and users_v2:
+    if version == _SCHEMA_VERSION - 1 and users_v3:
+        return "v3"
+    if version == _SCHEMA_VERSION - 2 and users_v2:
         return "v2"
     return "unsupported"
+
+
+def _um_users_is_v3_layout(conn: sqlite3.Connection) -> bool:
+    rows = conn.execute('PRAGMA table_info("um_users")').fetchall()
+    return tuple(str(row[1]) for row in rows) == (
+        "user_id",
+        "username",
+        "first_name",
+        "last_name",
+        "display_name",
+        "email",
+        "birth_date",
+        "gender",
+        "disabled",
+        "system",
+        "scope_type",
+        "scope_id",
+    )
 
 
 def _um_users_is_v2_layout(conn: sqlite3.Connection) -> bool:
@@ -473,7 +500,7 @@ def _um_users_is_v2_layout(conn: sqlite3.Connection) -> bool:
     )
 
 
-def migrate_sqlite_schema(  # noqa: C901, PLR0912
+def migrate_sqlite_schema(  # noqa: C901, PLR0912, PLR0915
     conn: sqlite3.Connection,
     *,
     transaction_mode: Literal["standalone", "external"] = "standalone",
@@ -506,8 +533,10 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912
             if transaction_mode == "standalone":
                 conn.commit()
             return
-        if state == "v2":
-            _migrate_users_v2_to_v3(conn)
+        if state in {"v2", "v3"}:
+            if state == "v2":
+                _migrate_users_v2_to_v3(conn)
+            _migrate_users_v3_to_v4(conn)
             _ = conn.execute(
                 "UPDATE um_schema_version SET version = ?", (_SCHEMA_VERSION,)
             )
@@ -538,6 +567,8 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912
         # them — rebuild to v3 before stamping schema version 3.
         if _um_users_is_v2_layout(conn):
             _migrate_users_v2_to_v3(conn)
+        if _um_users_is_v3_layout(conn):
+            _migrate_users_v3_to_v4(conn)
         _apply_create_tables(conn)
         conn.execute(
             "INSERT INTO um_schema_version(version) VALUES (?)",
@@ -551,27 +582,39 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912
         raise
 
 
+def _migrate_users_v3_to_v4(conn: sqlite3.Connection) -> None:
+    """Add explicit lifecycle status while preserving enabled users as active."""
+    add_status_sql = (
+        "ALTER TABLE um_users ADD COLUMN status TEXT NOT NULL DEFAULT 'active' "
+        "CHECK (status IN ('pending', 'active', 'disabled'))"
+    )
+    set_status_sql = (
+        "UPDATE um_users SET status = CASE WHEN disabled = 1 "
+        "THEN 'disabled' ELSE 'active' END"
+    )
+    _ = conn.execute(add_status_sql)
+    _ = conn.execute(set_status_sql)
+
+
 def _migrate_users_v2_to_v3(conn: sqlite3.Connection) -> None:
     """Upgrade um_users: mandatory unique username + optional birth_date/gender.
 
     Child rows (identities, grants) are snapshotted first: with foreign keys
     enabled, ``DROP TABLE um_users`` would cascade-delete them.
     """
-    _ = conn.execute(
+    normalize_username_sql = (
         "UPDATE um_users SET username = user_id "
         "WHERE username IS NULL OR trim(username) = ''"
     )
+    _ = conn.execute(normalize_username_sql)
     identity_rows = _fetchall_rows(
-        conn.execute(
-            "SELECT provider, subject, user_id FROM um_external_identities"
-        )
+        conn.execute("SELECT provider, subject, user_id FROM um_external_identities")
     )
-    grant_rows = _fetchall_rows(
-        conn.execute(
-            "SELECT user_id, role_name, permission_name, scope_type, scope_id "
-            "FROM um_grants"
-        )
+    select_grants_sql = (
+        "SELECT user_id, role_name, permission_name, scope_type, scope_id "
+        "FROM um_grants"
     )
+    grant_rows = _fetchall_rows(conn.execute(select_grants_sql))
     statements = (
         """
         CREATE TABLE um_users_new (
@@ -600,21 +643,22 @@ def _migrate_users_v2_to_v3(conn: sqlite3.Connection) -> None:
         """,
         "DROP TABLE um_users",
         "ALTER TABLE um_users_new RENAME TO um_users",
-        "CREATE UNIQUE INDEX IF NOT EXISTS um_users_username_ci ON um_users(lower(username))",
+        """CREATE UNIQUE INDEX IF NOT EXISTS um_users_username_ci
+        ON um_users(lower(username))""",
     )
     for statement in statements:
         _ = conn.execute(statement)
     for row in identity_rows:
         _ = conn.execute(
-            "INSERT INTO um_external_identities (provider, subject, user_id) "
-            "VALUES (?, ?, ?)",
+            """INSERT INTO um_external_identities (provider, subject, user_id)
+            VALUES (?, ?, ?)""",
             (_row_str(row, 0), _row_str(row, 1), _row_str(row, 2)),
         )
     for row in grant_rows:
         _ = conn.execute(
-            "INSERT INTO um_grants "
-            "(user_id, role_name, permission_name, scope_type, scope_id) "
-            "VALUES (?, ?, ?, ?, ?)",
+            """INSERT INTO um_grants
+            (user_id, role_name, permission_name, scope_type, scope_id)
+            VALUES (?, ?, ?, ?, ?)""",
             (
                 _row_str(row, 0),
                 _row_str(row, 1),
@@ -899,6 +943,7 @@ def _user_write_params(user: User) -> tuple[object, ...]:
         None if user.birth_date is None else user.birth_date.isoformat(),
         user.gender,
         int(user.disabled),
+        user.status,
         int(user.system),
         user.scope.scope_type,
         user.scope.scope_id,
@@ -924,6 +969,7 @@ def _user_from_row(
         birth_date=birth_date,
         gender=gender,
         disabled=bool(_row_int(row, "disabled")),
+        status=cast("AccountStatus", _row_str(row, "status")),
         system=bool(_row_int(row, "system")),
         scope=_scope_from_row(
             _row_optional_str(row, "scope_type"),
@@ -1020,6 +1066,9 @@ def _matches_user_query_sql(query: UserQuery) -> tuple[str, list[object]]:
     if query.disabled is not None:
         clauses.append("disabled = ?")
         params.append(1 if query.disabled else 0)
+    if query.status is not None:
+        clauses.append("status = ?")
+        params.append(query.status)
     if query.system is not None:
         clauses.append("system = ?")
         params.append(1 if query.system else 0)
@@ -1102,6 +1151,10 @@ def _matches_audit_filters_sql(filters: AuditFilters) -> tuple[str, list[object]
 # ---------------------------------------------------------------------------
 
 
+def _raise_user_not_found(user_id: str) -> None:
+    raise UserNotFoundError(user_id)
+
+
 class SQLiteUserStore:
     """SQLite-backed UserStore and ExternalIdentityUserStore implementation."""
 
@@ -1182,9 +1235,12 @@ class SQLiteUserStore:
                         user.last_name,
                         user.display_name,
                         user.email,
-                        None if user.birth_date is None else user.birth_date.isoformat(),
+                        None
+                        if user.birth_date is None
+                        else user.birth_date.isoformat(),
                         user.gender,
                         int(user.disabled),
+                        user.status,
                         int(user.system),
                         user.scope.scope_type,
                         user.scope.scope_id,
@@ -1192,7 +1248,7 @@ class SQLiteUserStore:
                     ),
                 )
                 if cur.rowcount == 0:
-                    raise UserNotFoundError(user.user_id)
+                    _raise_user_not_found(user.user_id)
                 _save_identities(self._conn, user.user_id, user.external_identities)
         except UserNotFoundError:
             raise
@@ -1221,7 +1277,7 @@ class SQLiteUserStore:
     def count_active(self) -> int:
         """Return the number of non-disabled users."""
         row = _fetchone_row(
-            self._conn.execute("SELECT COUNT(*) FROM um_users WHERE disabled = 0")
+            self._conn.execute("SELECT COUNT(*) FROM um_users WHERE status = 'active'")
         )
         return 0 if row is None else _row_int(row, 0)
 

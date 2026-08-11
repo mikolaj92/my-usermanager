@@ -18,6 +18,7 @@ from my_usermanager.claims import (
     role_claim,
 )
 from my_usermanager.manager import (
+    AccountTransitionError,
     AuthorizationError,
     PermissionGrantRequest,
     RoleGrantRequest,
@@ -32,6 +33,7 @@ from my_usermanager.memory import (
 )
 from my_usermanager.models import (
     GENDER_VALUES,
+    AccountStatus,
     AuditEvent,
     ExternalIdentity,
     Gender,
@@ -96,6 +98,8 @@ __all__: Final = (
     "BUILTIN_PERMISSION_NAMES",
     "BUILTIN_ROLES",
     "SESSION_PRINCIPAL_KEY",
+    "AccountStatus",
+    "AccountTransitionError",
     "AdminGrantOperation",
     "AdminUserGrantSummary",
     "AuditEvent",
