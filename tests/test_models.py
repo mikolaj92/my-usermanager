@@ -1,4 +1,6 @@
-from datetime import UTC, datetime
+# pyright: reportArgumentType=false, reportCallIssue=false
+
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -79,14 +81,13 @@ def test_user_model_rejects_invalid_profile_fields_when_constructed() -> None:
     with pytest.raises(ValidationError, match="gender"):
         _ = User(user_id="user_123", username="user_123", gender="unknown")  # type: ignore[arg-type]
 
-    from datetime import date, timedelta
-
     with pytest.raises(ValidationError, match="birth_date"):
         _ = User(
             user_id="user_123",
             username="user_123",
-            birth_date=date.today() + timedelta(days=1),
+            birth_date=datetime.now(UTC).date() + timedelta(days=1),
         )
+
 
 def test_scope_global_representation_when_created_by_factory() -> None:
     # Given: the public global scope factory.

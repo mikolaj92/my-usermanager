@@ -10,12 +10,15 @@ _OPTIONAL_IMPORT_ROOTS: Final = frozenset(
 try:
     from my_usermanager.adapters.fastapi_htmx.config import (
         DEFAULT_UI_LABELS,
+        AuditRow,
         CapabilityOption,
         CsrfContext,
         CsrfProtection,
         ExternalIdentityRow,
+        InvitationResult,
         PasskeyPanel,
         PermissionGrantRow,
+        SessionRow,
         UserManagerUi,
         UserManagerUiConfig,
         UserManagerUiConflict,
@@ -38,12 +41,15 @@ except (ModuleNotFoundError, ImportError) as exc:
     raise
 __all__: Final = (
     "DEFAULT_UI_LABELS",
+    "AuditRow",
     "CapabilityOption",
     "CsrfContext",
     "CsrfProtection",
     "ExternalIdentityRow",
+    "InvitationResult",
     "PasskeyPanel",
     "PermissionGrantRow",
+    "SessionRow",
     "UserManagerUi",
     "UserManagerUiConfig",
     "UserManagerUiConflict",

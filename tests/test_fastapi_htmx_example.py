@@ -322,7 +322,8 @@ def test_api_auth_endpoints_remain_json_and_adapter_challenge_cookie_only() -> N
         set_cookies = options.headers.get_list("set-cookie")
         assert set_cookies != []
         assert all(
-            cookie.startswith("passkey_authentication_challenge=") for cookie in set_cookies
+            cookie.startswith("passkey_authentication_challenge=")
+            for cookie in set_cookies
         )
 
         assert missing_cookie.status_code == 400, missing_cookie.text

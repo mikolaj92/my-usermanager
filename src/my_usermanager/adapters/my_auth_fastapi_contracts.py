@@ -112,7 +112,9 @@ def _assert_registration_linking_is_explicit() -> None:
 
 
 def _assert_after_register_links_without_grants() -> None:
-    store = _ContractExternalIdentityStore((User(user_id=_PASSKEY_USER_ID, username=_PASSKEY_USER_ID),))
+    store = _ContractExternalIdentityStore(
+        (User(user_id=_PASSKEY_USER_ID, username=_PASSKEY_USER_ID),)
+    )
     grant_store = MemoryGrantStore()
     passkey_user = _passkey_user(_PASSKEY_USER_ID)
     credential = _ContractCredential(user_id=_PASSKEY_USER_ID)
@@ -127,7 +129,9 @@ def _assert_after_register_links_without_grants() -> None:
 
 
 def _assert_after_login_links_without_grants() -> None:
-    store = _ContractExternalIdentityStore((User(user_id=_PASSKEY_USER_ID, username=_PASSKEY_USER_ID),))
+    store = _ContractExternalIdentityStore(
+        (User(user_id=_PASSKEY_USER_ID, username=_PASSKEY_USER_ID),)
+    )
     grant_store = MemoryGrantStore()
     passkey_user = _passkey_user(_PASSKEY_USER_ID)
     credential = _ContractCredential(user_id=_PASSKEY_USER_ID)
@@ -144,7 +148,8 @@ def _assert_after_login_links_without_grants() -> None:
 def _assert_existing_identity_link_is_preserved() -> None:
     identity = ExternalIdentity(provider=_PROVIDER, subject=_SECOND_PASSKEY_USER_ID)
     existing_user = User(
-        user_id=_EXISTING_LOCAL_USER_ID, username=_EXISTING_LOCAL_USER_ID,
+        user_id=_EXISTING_LOCAL_USER_ID,
+        username=_EXISTING_LOCAL_USER_ID,
         external_identities=frozenset((identity,)),
     )
     store = _ContractExternalIdentityStore(
@@ -165,7 +170,9 @@ def _assert_existing_identity_link_is_preserved() -> None:
 
 
 def _assert_credential_user_mismatch_is_rejected() -> None:
-    store = _ContractExternalIdentityStore((User(user_id=_PASSKEY_USER_ID, username=_PASSKEY_USER_ID),))
+    store = _ContractExternalIdentityStore(
+        (User(user_id=_PASSKEY_USER_ID, username=_PASSKEY_USER_ID),)
+    )
     after_login = build_after_login_identity_linker(store)
 
     try:

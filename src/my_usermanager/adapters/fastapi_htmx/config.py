@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 
 # English defaults for packaged chrome. Hosts override via config.labels and/or
 # an optional hooks.page_context mapping (merged last for per-request i18n).
+def _empty_labels() -> dict[str, str]:
+    return {}
+
+
 DEFAULT_UI_LABELS: Final[dict[str, str]] = {
     "nav_account": "Account",
     "nav_users": "Users",
@@ -48,6 +52,27 @@ DEFAULT_UI_LABELS: Final[dict[str, str]] = {
     "action_grant_role": "Grant role",
     "action_revoke": "Revoke",
     "action_grant": "Grant",
+    "action_soft_delete": "Delete account",
+    "action_hard_delete": "Permanently delete",
+    "confirm_hard_delete": "Type the user id to permanently delete this account.",
+    "status_deleted": "Deleted",
+    "invite_title": "Invite user",
+    "invite_description": (
+        "Create a pending account and send the activation link through your "
+        "trusted delivery channel."
+    ),
+    "invite_username": "Username",
+    "invite_email": "Email",
+    "invite_role": "Initial role",
+    "invite_submit": "Create invitation",
+    "invite_activation_link": "Activation link",
+    "sessions_title": "Sessions",
+    "sessions_description": "Review and revoke active application sessions.",
+    "sessions_empty": "No active sessions.",
+    "session_current": "Current",
+    "audit_title": "Audit log",
+    "audit_description": "Append-only account and authorization activity.",
+    "audit_empty": "No audit events.",
     "updating_row": "Updating row.",
     "account_document_title": "Account - User management",
     "account_badge": "Account",
@@ -173,6 +198,38 @@ class UserRow:
     roles: tuple[str, ...] = ()
     permissions: tuple[PermissionGrantRow, ...] = ()
     external_identities: tuple[ExternalIdentityRow, ...] = ()
+    deleted: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SessionRow:
+    """Safe host session metadata; opaque tokens are never exposed."""
+
+    session_id: str
+    created_at: str
+    last_seen_at: str | None = None
+    user_agent: str | None = None
+    ip_address: str | None = None
+    current: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class AuditRow:
+    """Safe append-only audit row for the administrator reader."""
+
+    timestamp: str
+    actor_id: str
+    action: str
+    target_type: str
+    target_id: str
+    result: str
+
+
+@dataclass(frozen=True, slots=True)
+class InvitationResult:
+    """Invitation delivery result linked to my-auth's activation page."""
+
+    activation_url: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,6 +265,12 @@ class UserManagerUiConfig:
     revoke_role_path: str = "/admin/users/revoke-role"
     grant_permission_path: str = "/admin/users/grant-permission"
     revoke_permission_path: str = "/admin/users/revoke-permission"
+    invite_path: str = "/admin/users/invite"
+    soft_delete_user_path: str = "/admin/users/delete"
+    hard_delete_user_path: str = "/admin/users/delete-permanently"
+    sessions_path: str = "/account/sessions"
+    revoke_session_path: str = "/account/sessions/revoke"
+    audit_path: str = "/admin/audit"
     static_mount_path: str = "/usermanager/ui/static"
     static_url_path: str = "/usermanager/ui/static"
     login_url: str = "/auth/login"
@@ -216,7 +279,7 @@ class UserManagerUiConfig:
     admin_enabled: bool = True
     csrf_protection: CsrfProtection | None = None
     base_template: str = "base.html"
-    labels: Mapping[str, str] = field(default_factory=dict)
+    labels: Mapping[str, str] = field(default_factory=_empty_labels)
 
     def __post_init__(self) -> None:
         """Require CSRF protection whenever admin mutations are enabled."""
@@ -350,8 +413,13 @@ class UserManagerUiHooks(Protocol):
         """Return an optional packaged-template passkey panel descriptor."""
         ...
 
-    # Optional (checked via getattr): update_own_profile(request, current_user, update)
-    # -> AuthenticatedSubject. When absent, the account profile form is read-only.
+    # Optional hooks are discovered with getattr so existing hosts remain valid:
+    # invite_user(request, current_user, username, email, role) -> InvitationResult
+    # list_sessions(request, current_user) -> Sequence[SessionRow]
+    # revoke_session(request, current_user, session_id) -> None
+    # list_audit_events(request, current_user) -> Sequence[AuditRow]
+    # soft_delete_user(request, current_user, user_id) -> UserRow
+    # hard_delete_user and update_own_profile follow the same host-owned pattern.
 
 
 @dataclass(frozen=True, slots=True)

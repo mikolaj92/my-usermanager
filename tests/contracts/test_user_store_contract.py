@@ -28,14 +28,24 @@ def test_user_store_protocol_is_satisfied_by_memory_store() -> None:
 def test_user_store_persists_updates_and_lists_deterministically() -> None:
     # Given: a memory store with out-of-order users.
     store = MemoryUserStore()
-    alice = User(user_id="user_b", username="user_b", display_name="Alice Example", email="a@example.com")
-    bob = User(user_id="user_a", username="user_a", display_name="Bob Example", disabled=True)
+    alice = User(
+        user_id="user_b",
+        username="user_b",
+        display_name="Alice Example",
+        email="a@example.com",
+    )
+    bob = User(
+        user_id="user_a", username="user_a", display_name="Bob Example", disabled=True
+    )
     _ = store.create(alice)
     _ = store.create(bob)
 
     # When: one user is updated and the collection is queried.
     updated = User(
-        user_id="user_b", username="user_b", display_name="Alice Renamed", email="a@example.com"
+        user_id="user_b",
+        username="user_b",
+        display_name="Alice Renamed",
+        email="a@example.com",
     )
     stored_update = store.update(updated)
     page = store.list(limit=1, offset=0, query=UserQuery())
@@ -70,7 +80,9 @@ def test_user_store_filters_disabled_users_when_requested() -> None:
     # Given: active and disabled users.
     store = MemoryUserStore()
     active = User(user_id="active", username="active", display_name="Same Name")
-    disabled = User(user_id="disabled", username="disabled", display_name="Same Name", disabled=True)
+    disabled = User(
+        user_id="disabled", username="disabled", display_name="Same Name", disabled=True
+    )
     _ = store.create(disabled)
     _ = store.create(active)
 

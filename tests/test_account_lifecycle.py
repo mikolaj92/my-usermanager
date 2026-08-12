@@ -1,3 +1,5 @@
+# pyright: reportImplicitStringConcatenation=false, reportOptionalMemberAccess=false, reportUnusedCallResult=false
+
 from __future__ import annotations
 
 import sqlite3
@@ -42,18 +44,77 @@ def test_pending_activation_disable_and_reenable_are_explicit() -> None:
         manager.transition_account(user_id="user", status="pending")
 
 
+def test_soft_delete_is_terminal_and_hard_delete_requires_it() -> None:
+    users = MemoryUserStore()
+    users.create(User("user", "user"))
+    users.create(User("active", "active"))
+    manager = _manager(users)
+
+    with pytest.raises(AccountTransitionError):
+        manager.hard_delete_account(user_id="active")
+    deleted = manager.soft_delete_account(user_id="user")
+    assert deleted.status == "deleted"
+    assert deleted.disabled
+    with pytest.raises(AccountTransitionError):
+        manager.transition_account(user_id="user", status="active")
+    manager.hard_delete_account(user_id="user")
+    assert users.get("user") is None
+
+
+def test_sqlite_hard_delete_cascades_account_owned_records() -> None:
+    connection = sqlite3.connect(":memory:")
+    create_tables(connection)
+    users = SQLiteUserStore(connection)
+    users.create(User("user", "user", status="deleted"))
+    connection.execute(
+        "INSERT INTO um_external_identities(provider, subject, user_id) "
+        "VALUES ('my-auth', 'subject', 'user')"
+    )
+    connection.execute(
+        "INSERT INTO um_grants(user_id, role_name, permission_name, "
+        "scope_type, scope_id) VALUES ('user', 'admin', '', '', '')"
+    )
+    connection.commit()
+
+    UserManager(users, MemoryRoleStore(), MemoryGrantStore()).hard_delete_account(
+        user_id="user"
+    )
+
+    assert connection.execute("SELECT COUNT(*) FROM um_users").fetchone() == (0,)
+    assert connection.execute(
+        "SELECT COUNT(*) FROM um_external_identities"
+    ).fetchone() == (0,)
+    assert connection.execute("SELECT COUNT(*) FROM um_grants").fetchone() == (0,)
+    connection.close()
+
+
 def test_pending_and_disabled_users_cannot_authenticate() -> None:
     identity = ExternalIdentity("my-auth", "subject")
 
     class IdentityStore(MemoryUserStore):
-        def resolve_external_identity(self, wanted: ExternalIdentity) -> User | None:
+        def resolve_external_identity(self, identity: ExternalIdentity) -> User | None:
             return next(
                 (
                     user
                     for user in self._users.values()
-                    if wanted in user.external_identities
+                    if identity in user.external_identities
                 ),
                 None,
+            )
+
+        def link_external_identity(
+            self, *, user_id: str, identity: ExternalIdentity
+        ) -> User:
+            user = self.get(user_id)
+            if user is None:
+                raise AssertionError(user_id)
+            return self.update(
+                User(
+                    user.user_id,
+                    user.username,
+                    user.external_identities | frozenset({identity}),
+                    status=user.status,
+                )
             )
 
     users = IdentityStore()
@@ -67,6 +128,10 @@ def test_pending_and_disabled_users_cannot_authenticate() -> None:
     assert resolver("subject") is not None
     users.update(
         User("user", "user", frozenset({identity}), status="disabled", disabled=True)
+    )
+    assert resolver("subject") is None
+    users.update(
+        User("user", "user", frozenset({identity}), status="deleted", disabled=True)
     )
     assert resolver("subject") is None
 

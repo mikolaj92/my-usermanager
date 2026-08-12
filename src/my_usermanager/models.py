@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import UTC, date, datetime
 from re import Pattern
 from re import compile as compile_pattern
 from types import MappingProxyType
@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Final, Literal, Self, cast, override
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from datetime import datetime
 
 
 __all__: Final[tuple[str, ...]] = (
@@ -35,7 +34,7 @@ __all__: Final[tuple[str, ...]] = (
 )
 
 Gender = Literal["female", "male", "other"]
-AccountStatus = Literal["pending", "active", "disabled"]
+AccountStatus = Literal["pending", "active", "disabled", "deleted"]
 GENDER_VALUES: Final[frozenset[str]] = frozenset({"female", "male", "other"})
 
 _PERMISSION_NAME_PATTERN: Final[Pattern[str]] = compile_pattern(
@@ -126,7 +125,7 @@ def validate_birth_date(
     """Validate optional birth date (not in the future)."""
     if value is None:
         return None
-    if value > date.today():
+    if value > datetime.now(UTC).date():
         reason = "must not be in the future"
         raise ValidationError(field_name, reason)
     return value
@@ -243,12 +242,12 @@ class User:
             if self.status is None
             else self.status
         )
-        if status not in {"pending", "active", "disabled"}:
+        if status not in {"pending", "active", "disabled", "deleted"}:
             field_name = "status"
-            reason = "must be one of: pending, active, disabled"
+            reason = "must be one of: pending, active, disabled, deleted"
             raise ValidationError(field_name, reason)
         object.__setattr__(self, "status", status)
-        object.__setattr__(self, "disabled", status == "disabled")
+        object.__setattr__(self, "disabled", status in {"disabled", "deleted"})
 
     @property
     def is_active(self) -> bool:

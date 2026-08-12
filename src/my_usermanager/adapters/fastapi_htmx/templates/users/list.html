@@ -14,6 +14,22 @@
       <span class="badge">{{ labels.current_user }}: {{ current_user.username or current_user.user_id }}</span>
     </div>
 
+    {% if invite_enabled %}
+      <article class="card um-card um-stack" aria-labelledby="invite-title">
+        <div><h2 id="invite-title">{{ labels.invite_title }}</h2><p class="um-muted">{{ labels.invite_description }}</p></div>
+        {% if invitation_url %}<p role="status"><strong>{{ labels.invite_activation_link }}:</strong> <a href="{{ invitation_url }}"><code>{{ invitation_url }}</code></a></p>{% endif %}
+        <form class="um-cluster" method="post" action="{{ config.invite_path }}" data-no-htmx="true">
+          {% for name, value in csrf_inputs %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+          <label>{{ labels.invite_username }} <input class="input" name="username" required autocomplete="off"></label>
+          <label>{{ labels.invite_email }} <input class="input" type="email" name="email" required autocomplete="off"></label>
+          <label>{{ labels.invite_role }} <select class="select" name="role" required>{% for role in role_options %}<option value="{{ role }}">{{ role }}</option>{% endfor %}</select></label>
+          <button class="btn" data-variant="primary">{{ labels.invite_submit }}</button>
+        </form>
+      </article>
+    {% endif %}
+
+    <nav class="um-cluster" aria-label="Administration"><a class="btn" data-variant="outline" href="{{ config.audit_path }}">{{ labels.audit_title }}</a></nav>
+
     <div id="users-table" class="card um-table-scroll" data-htmx-target="#users-table">
       <table class="table">
         <thead>

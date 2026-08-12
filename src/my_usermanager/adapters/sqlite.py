@@ -60,7 +60,7 @@ __all__: Final[tuple[str, ...]] = (
     "migrate_sqlite_schema",
 )
 
-_SCHEMA_VERSION: Final = 4
+_SCHEMA_VERSION: Final = 5
 _CREATE_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS um_schema_version (version INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS um_users (
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS um_users (
     scope_type TEXT,
     scope_id TEXT,
     status TEXT NOT NULL DEFAULT 'active'
-        CHECK (status IN ('pending', 'active', 'disabled'))
+        CHECK (status IN ('pending', 'active', 'disabled', 'deleted'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS um_users_username_ci
     ON um_users(lower(username));
@@ -457,9 +457,11 @@ def inspect_sqlite_schema(  # noqa: C901, PLR0911
     version = rows[0][0]
     if version == _SCHEMA_VERSION and users_v4:
         return "current"
-    if version == _SCHEMA_VERSION - 1 and users_v3:
+    if version == _SCHEMA_VERSION - 1 and users_v4:
+        return "v4"
+    if version == _SCHEMA_VERSION - 2 and users_v3:
         return "v3"
-    if version == _SCHEMA_VERSION - 2 and users_v2:
+    if version == _SCHEMA_VERSION - 3 and users_v2:
         return "v2"
     return "unsupported"
 
@@ -533,10 +535,21 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912, PLR0915
             if transaction_mode == "standalone":
                 conn.commit()
             return
-        if state in {"v2", "v3"}:
+        if state in {"v2", "v3", "v4"}:
+            if _um_grants_is_legacy_canonical(conn):
+                orphan_rows = _fetchall_rows(conn.execute(_ORPHAN_GRANTS_SQL))
+                orphans = [_row_str(row, 0) for row in orphan_rows]
+                if orphans:
+                    message = f"orphan grants refuse migration: {', '.join(orphans)}"
+                    raise RuntimeError(message)  # noqa: TRY301
+                _rebuild_grants_table(conn)
+            if _um_audit_events_needs_rebuild(conn):
+                _rebuild_audit_events_table(conn)
             if state == "v2":
                 _migrate_users_v2_to_v3(conn)
-            _migrate_users_v3_to_v4(conn)
+            if state in {"v2", "v3"}:
+                _migrate_users_v3_to_v4(conn)
+            _migrate_users_v4_to_v5(conn)
             _ = conn.execute(
                 "UPDATE um_schema_version SET version = ?", (_SCHEMA_VERSION,)
             )
@@ -569,6 +582,8 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912, PLR0915
             _migrate_users_v2_to_v3(conn)
         if _um_users_is_v3_layout(conn):
             _migrate_users_v3_to_v4(conn)
+        if _um_table_is_canonical(conn, "um_users"):
+            _migrate_users_v4_to_v5(conn)
         _apply_create_tables(conn)
         conn.execute(
             "INSERT INTO um_schema_version(version) VALUES (?)",
@@ -580,6 +595,82 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912, PLR0915
         if transaction_mode == "standalone":
             conn.rollback()
         raise
+
+
+def _migrate_users_v4_to_v5(conn: sqlite3.Connection) -> None:
+    """Extend the lifecycle constraint while preserving all FK child rows."""
+    child_tables: list[tuple[str, tuple[str, ...], list[tuple[object, ...]]]] = []
+    table_sql = (
+        "SELECT name FROM sqlite_master WHERE type = 'table' "
+        "AND name NOT LIKE 'sqlite_%'"
+    )
+    table_rows = conn.execute(table_sql).fetchall()
+    for table_row in table_rows:
+        table = str(table_row[0])
+        if table == "um_users":
+            continue
+        quoted_table = table.replace('"', '""')
+        foreign_keys = conn.execute(
+            f'PRAGMA foreign_key_list("{quoted_table}")'
+        ).fetchall()
+        if not any(str(foreign_key[2]) == "um_users" for foreign_key in foreign_keys):
+            continue
+        columns = tuple(
+            str(row[1])
+            for row in conn.execute(f'PRAGMA table_info("{quoted_table}")').fetchall()
+        )
+        rows = [
+            tuple(row)
+            for row in conn.execute(
+                f'SELECT * FROM "{quoted_table}"'  # noqa: S608
+            ).fetchall()
+        ]
+        child_tables.append((table, columns, rows))
+
+    conn.execute(
+        """CREATE TABLE um_users_new (
+            user_id TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            first_name TEXT,
+            last_name TEXT,
+            display_name TEXT,
+            email TEXT,
+            birth_date TEXT,
+            gender TEXT,
+            disabled INTEGER NOT NULL DEFAULT 0,
+            system INTEGER NOT NULL DEFAULT 0,
+            scope_type TEXT,
+            scope_id TEXT,
+            status TEXT NOT NULL DEFAULT 'active'
+                CHECK (status IN ('pending', 'active', 'disabled', 'deleted'))
+        )"""
+    )
+    conn.execute(
+        """INSERT INTO um_users_new SELECT user_id, username, first_name,
+        last_name, display_name, email, birth_date, gender, disabled, system,
+        scope_type, scope_id, status FROM um_users"""
+    )
+    conn.execute("DROP TABLE um_users")
+    conn.execute("ALTER TABLE um_users_new RENAME TO um_users")
+    index_sql = (
+        "CREATE UNIQUE INDEX IF NOT EXISTS um_users_username_ci "
+        "ON um_users(lower(username))"
+    )
+    conn.execute(index_sql)
+    for table, columns, rows in child_tables:
+        if not rows:
+            continue
+        quoted_table = table.replace('"', '""')
+        conn.execute(f'DELETE FROM "{quoted_table}"')  # noqa: S608
+        quoted_columns = ", ".join(
+            f'"{column.replace(chr(34), chr(34) * 2)}"' for column in columns
+        )
+        placeholders = ", ".join("?" for _ in columns)
+        insert_sql = (
+            f'INSERT INTO "{quoted_table}" ({quoted_columns}) '  # noqa: S608
+            f"VALUES ({placeholders})"
+        )
+        conn.executemany(insert_sql, rows)
 
 
 def _migrate_users_v3_to_v4(conn: sqlite3.Connection) -> None:
@@ -1259,6 +1350,16 @@ class SQLiteUserStore:
             raise
 
         return user
+
+    def delete(self, user_id: str) -> None:
+        """Purge a user and its cascade-owned records after policy approval."""
+        checked_user_id = validate_identifier(user_id, field_name="user_id")
+        with _mutation(self._conn, self._mode):
+            cursor = self._conn.execute(
+                "DELETE FROM um_users WHERE user_id = ?", (checked_user_id,)
+            )
+            if cursor.rowcount == 0:
+                _raise_user_not_found(checked_user_id)
 
     def list(self, *, limit: int, offset: int, query: UserQuery) -> tuple[User, ...]:
         """Return users matching the query and page."""

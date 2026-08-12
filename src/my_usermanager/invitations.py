@@ -14,6 +14,7 @@ from typing import (
     override,
     runtime_checkable,
 )
+from urllib.parse import urlencode
 from uuid import uuid4
 
 from my_usermanager.models import (
@@ -93,6 +94,12 @@ class IssuedEnrollment:
 class IssuedInvitation:
     invitation: Invitation
     token: str
+
+    def activation_url(self, activation_path: str = "/activate") -> str:
+        """Link the one-time token to my-auth's existing activation page."""
+        if not activation_path.startswith("/"):
+            raise ValueError("activation_path must be absolute")
+        return f"{activation_path}?{urlencode({'capability': self.token})}"
 
 
 @dataclass(frozen=True, slots=True)

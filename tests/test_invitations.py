@@ -1,3 +1,6 @@
+# pyright: reportMissingParameterType=false, reportOptionalMemberAccess=false, reportPrivateUsage=false, reportUnannotatedClassAttribute=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportUnusedCallResult=false, reportUnusedParameter=false
+# ruff: noqa: ANN003, ANN201, ANN202, EM101, PLC0415, S105, TRY003
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
@@ -137,6 +140,8 @@ def test_invite_and_activate_preserves_subject_and_initial_grants() -> None:
     assert issued.token == "token-1"
     assert users.get("anna").status == "pending"
     assert grants.list_grants_for_user("anna")[0].role_name == "admin"
+    assert issued.activation_url() == "/activate?capability=token-1"
+
     active = service.activate(
         InvitationActivation(
             issued.invitation.invitation_id,

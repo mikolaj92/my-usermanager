@@ -89,12 +89,15 @@ def test_public_api_and_resources_are_clean() -> None:
 
     assert tuple(adapter.__all__) == (
         "DEFAULT_UI_LABELS",
+        "AuditRow",
         "CapabilityOption",
         "CsrfContext",
         "CsrfProtection",
         "ExternalIdentityRow",
+        "InvitationResult",
         "PasskeyPanel",
         "PermissionGrantRow",
+        "SessionRow",
         "UserManagerUi",
         "UserManagerUiConfig",
         "UserManagerUiConflict",
@@ -115,6 +118,8 @@ def test_public_api_and_resources_are_clean() -> None:
         "templates/account/index.html",
         "templates/users/list.html",
         "templates/users/_row.html",
+        "templates/sessions/list.html",
+        "templates/audit/list.html",
         "templates/auth/_integration_panel.html",
         "static/usermanager-ui.css",
     ):
@@ -235,6 +240,60 @@ class FakeUiHooks:
     ) -> PasskeyPanel | None:
         return self.panel
 
+    def invite_user(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        username: str,
+        email: str,
+        role: str,
+    ) -> object:
+        import my_usermanager.adapters.fastapi_htmx as adapter
+
+        self.calls.append(("invite", username, email, role))
+        return adapter.InvitationResult(f"/activate?capability={username}-token")
+
+    def list_sessions(
+        self, _request: Request, _current_user: AuthenticatedSubject
+    ) -> tuple[object, ...]:
+        import my_usermanager.adapters.fastapi_htmx as adapter
+
+        return (
+            adapter.SessionRow("session-1", "2026-01-01", current=True),
+            adapter.SessionRow("session-2", "2026-01-02"),
+        )
+
+    def revoke_session(
+        self, _request: Request, _current_user: AuthenticatedSubject, session_id: str
+    ) -> None:
+        self.calls.append(("revoke-session", session_id))
+
+    def list_audit_events(
+        self, _request: Request, _current_user: AuthenticatedSubject
+    ) -> tuple[object, ...]:
+        import my_usermanager.adapters.fastapi_htmx as adapter
+
+        return (
+            adapter.AuditRow(
+                "2026-01-01",
+                "admin",
+                "invitation.issue",
+                "invitation",
+                "invite-1",
+                "success",
+            ),
+        )
+
+    def soft_delete_user(
+        self, _request: Request, _current_user: AuthenticatedSubject, user_id: str
+    ) -> UserRow:
+        self.calls.append(("soft-delete", user_id))
+        return self.row
+
+    def hard_delete_user(
+        self, _request: Request, _current_user: AuthenticatedSubject, user_id: str
+    ) -> None:
+        self.calls.append(("hard-delete", user_id))
 
     def update_own_profile(
         self,
@@ -290,7 +349,6 @@ class ClientLike(Protocol):
     ) -> object: ...
 
 
-
 def _client(app: FastAPI) -> ClientLike:
     return cast("ClientLike", cast("object", TestClient(app)))
 
@@ -307,7 +365,6 @@ def _post(
     follow_redirects: bool = True,
 ) -> ResponseLike:
     return _response(client.post(url, data=data, follow_redirects=follow_redirects))
-
 
 
 def _get(client: ClientLike, url: str) -> ResponseLike:
@@ -357,7 +414,51 @@ def test_route_toggles_and_csrf_guard() -> None:
     assert good.status_code == 200
     assert calls == [("set", True), "after"]
     assert _get(client, config.account_path).status_code == 200
-    assert _get(client, config.users_path).status_code == 200
+    users_page = _get(client, config.users_path)
+    assert users_page.status_code == 200
+    assert "Invite user" in users_page.text
+    assert _get(client, config.sessions_path).status_code == 200
+    assert "session-2" in _get(client, config.sessions_path).text
+    assert "invitation.issue" in _get(client, config.audit_path).text
+
+    invited = _post(
+        client,
+        config.invite_path,
+        {
+            "username": "new-user",
+            "email": "new@example.test",
+            "role": "member",
+            "csrf": "good",
+        },
+    )
+    assert invited.status_code == 200
+    assert "/activate?capability=new-user-token" in invited.text
+    wrong_delete = _post(
+        client,
+        config.hard_delete_user_path,
+        {"user_id": "user-1", "confirmation": "wrong", "csrf": "good"},
+    )
+    assert wrong_delete.status_code == 400
+    assert ("hard-delete", "user-1") not in calls
+    soft_deleted = _post(
+        client,
+        config.soft_delete_user_path,
+        {"user_id": "user-1", "csrf": "good"},
+    )
+    assert soft_deleted.status_code == 200
+    assert ("soft-delete", "user-1") in calls
+    confirmed_delete = _post(
+        client,
+        config.hard_delete_user_path,
+        {"user_id": "user-1", "confirmation": "user-1", "csrf": "good"},
+    )
+    assert confirmed_delete.status_code == 200
+    assert ("hard-delete", "user-1") in calls
+    revoked = _post(
+        client, config.revoke_session_path, {"session_id": "session-2", "csrf": "good"}
+    )
+    assert revoked.status_code == 200
+    assert ("revoke-session", "session-2") in calls
 
     disabled = adapter.UserManagerUiConfig(
         account_enabled=False,
@@ -379,9 +480,9 @@ def test_route_toggles_and_csrf_guard() -> None:
 
 def test_profile_update_rejects_future_birth_date_with_400() -> None:
     """Validation failures from UserProfileUpdate must map to HTTP 400."""
-    import my_usermanager.adapters.fastapi_htmx as adapter
+    from datetime import UTC, datetime, timedelta
 
-    from datetime import date, timedelta
+    import my_usermanager.adapters.fastapi_htmx as adapter
 
     calls: list[object] = []
     hooks = _hooks(calls=calls)
@@ -402,7 +503,7 @@ def test_profile_update_rejects_future_birth_date_with_400() -> None:
         app, platform=platform, hooks=hooks, config=config
     )
     client = _client(app)
-    future = (date.today() + timedelta(days=1)).isoformat()
+    future = (datetime.now(UTC).date() + timedelta(days=1)).isoformat()
     response = _post(
         client,
         config.profile_path,
@@ -426,7 +527,10 @@ def test_profile_update_rejects_future_birth_date_with_400() -> None:
         follow_redirects=False,
     )
     assert cleared.status_code == 303
-    assert calls and calls[0][0] == "update"
+    assert calls
+    first_call = calls[0]
+    assert isinstance(first_call, tuple)
+    assert first_call[0] == "update"
 
 
 def test_passkey_panel_uses_named_packaged_template() -> None:
@@ -466,9 +570,7 @@ def test_admin_requires_csrf_protection() -> None:
         _ = adapter.UserManagerUiConfig(admin_enabled=True)
     _ = adapter.UserManagerUiConfig(admin_enabled=False)
     with pytest.raises(ValueError, match="base_template"):
-        _ = adapter.UserManagerUiConfig(
-            admin_enabled=False, base_template="   "
-        )
+        _ = adapter.UserManagerUiConfig(admin_enabled=False, base_template="   ")
 
 
 def test_labels_and_host_base_template_are_applied() -> None:
@@ -494,9 +596,7 @@ def test_labels_and_host_base_template_are_applied() -> None:
         loader=ChoiceLoader(
             [
                 DictLoader({"host_shell.html": host_base}),
-                PackageLoader(
-                    "my_usermanager.adapters.fastapi_htmx", "templates"
-                ),
+                PackageLoader("my_usermanager.adapters.fastapi_htmx", "templates"),
             ]
         ),
         autoescape=True,

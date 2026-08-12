@@ -286,7 +286,9 @@ def test_get_auth_user_returns_none_for_missing_unlinked_or_disabled_users(
     # Given: one disabled linked user and no link for a missing subject.
     monkeypatch.setattr(fastapi_adapter, "import_module", import_fake_optional_module)
     monkeypatch.setattr(my_auth_adapter, "import_module", import_fake_optional_module)
-    disabled_user = User(user_id="local_user_123", username="local_user_123", disabled=True)
+    disabled_user = User(
+        user_id="local_user_123", username="local_user_123", disabled=True
+    )
     store = FakeExternalIdentityUserStore(users=(disabled_user,))
     _ = store.link_external_identity(
         user_id="local_user_123",

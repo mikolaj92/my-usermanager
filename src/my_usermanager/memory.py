@@ -69,7 +69,7 @@ class MemoryUserStore:
         return None
 
     def update(self, user: User) -> User:
-        """Replace an existing user or raise UserNotFoundError / DuplicateUsernameError."""
+        """Replace a user or raise UserNotFoundError / DuplicateUsernameError."""
         if user.user_id not in self._users:
             raise UserNotFoundError(user.user_id)
         existing = self.get_by_username(user.username)
@@ -77,6 +77,13 @@ class MemoryUserStore:
             raise DuplicateUsernameError(user.username)
         self._users[user.user_id] = user
         return user
+
+    def delete(self, user_id: str) -> None:
+        """Purge a user after lifecycle policy has marked it deleted."""
+        checked_user_id = validate_identifier(user_id, field_name="user_id")
+        if checked_user_id not in self._users:
+            raise UserNotFoundError(checked_user_id)
+        del self._users[checked_user_id]
 
     def list(self, *, limit: int, offset: int, query: UserQuery) -> tuple[User, ...]:
         """Return users sorted by user_id after applying query filters."""

@@ -1,0 +1,9 @@
+{% extends base_template %}
+{% block title %}{{ labels.audit_title }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ static_url_path }}/usermanager-ui.css">
+<section class="um-shell um-stack" aria-labelledby="audit-title"><div><p class="badge">{{ labels.users_badge }}</p><h1 id="audit-title">{{ labels.audit_title }}</h1><p class="um-muted">{{ labels.audit_description }}</p></div>
+<div class="card um-table-scroll"><table class="table"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th><th>Result</th></tr></thead><tbody>
+{% for event in events %}<tr><td>{{ event.timestamp }}</td><td><code>{{ event.actor_id }}</code></td><td>{{ event.action }}</td><td>{{ event.target_type }} · <code>{{ event.target_id }}</code></td><td><span class="badge">{{ event.result }}</span></td></tr>{% else %}<tr><td colspan="5">{{ labels.audit_empty }}</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

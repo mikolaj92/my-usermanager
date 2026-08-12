@@ -179,7 +179,12 @@ def test_user_store_list_sorted_by_user_id(user_store: SQLiteUserStore) -> None:
 
 def test_user_store_list_text_filter(user_store: SQLiteUserStore) -> None:
     user_store.create(
-        User(user_id="user_b", username="user_b", display_name="Alice Example", email="a@example.com"),
+        User(
+            user_id="user_b",
+            username="user_b",
+            display_name="Alice Example",
+            email="a@example.com",
+        ),
     )
     user_store.create(User(user_id="user_a", username="user_a", display_name="Bob"))
     results = user_store.list(limit=10, offset=0, query=UserQuery(text="renamed"))
@@ -214,7 +219,8 @@ def test_user_store_count_active(user_store: SQLiteUserStore) -> None:
 def test_user_store_persists_external_identities(user_store: SQLiteUserStore) -> None:
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
     user = User(
-        user_id="user_a", username="user_a",
+        user_id="user_a",
+        username="user_a",
         external_identities=frozenset({identity}),
     )
     user_store.create(user)
@@ -229,10 +235,14 @@ def test_user_store_update_replaces_external_identities(
     old_id = ExternalIdentity(provider="passkey", subject="cred_old")
     new_id = ExternalIdentity(provider="passkey", subject="cred_new")
     user_store.create(
-        User(user_id="user_a", username="user_a", external_identities=frozenset({old_id})),
+        User(
+            user_id="user_a", username="user_a", external_identities=frozenset({old_id})
+        ),
     )
     user_store.update(
-        User(user_id="user_a", username="user_a", external_identities=frozenset({new_id})),
+        User(
+            user_id="user_a", username="user_a", external_identities=frozenset({new_id})
+        ),
     )
     loaded = user_store.get("user_a")
     assert loaded is not None
@@ -247,7 +257,9 @@ def test_user_store_update_replaces_external_identities(
 
 def test_resolve_external_identity_returns_user(user_store: SQLiteUserStore) -> None:
     identity = ExternalIdentity(provider="passkey", subject="cred_abc123")
-    user = User(user_id="user_a", username="user_a", external_identities=frozenset({identity}))
+    user = User(
+        user_id="user_a", username="user_a", external_identities=frozenset({identity})
+    )
     user_store.create(user)
     resolved = user_store.resolve_external_identity(identity)
     assert resolved is not None
@@ -680,7 +692,7 @@ def test_concurrent_migrations_stamp_schema_once(tmp_path: Path) -> None:
     try:
         assert check.execute(
             "SELECT COUNT(*), MIN(version), MAX(version) FROM um_schema_version"
-        ).fetchone() == (1, 4, 4)
+        ).fetchone() == (1, 5, 5)
     finally:
         check.close()
 
@@ -842,7 +854,10 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
     conn.row_factory = row_factory
     try:
         create_tables(conn)
-        conn.execute("INSERT INTO um_users(user_id, username) VALUES ('legacy-user', 'legacy-user')")
+        conn.execute(
+            "INSERT INTO um_users(user_id, username) VALUES (?, ?)",
+            ("legacy-user", "legacy-user"),
+        )
         conn.execute(
             "INSERT INTO um_grants(user_id, role_name) VALUES ('legacy-user', 'admin')"
         )
@@ -893,7 +908,7 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
         conn.execute("INSERT INTO um_schema_version(version) VALUES (4)")
         conn.commit()
 
-        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "v4"
         sqlite_adapter.migrate_sqlite_schema(conn)
 
         assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
@@ -976,7 +991,10 @@ def test_auth_database_initializes_caller_connection_with_foreign_keys() -> None
         database = SQLiteAuthDatabase(conn)
         database.initialize()
         assert conn.execute("PRAGMA foreign_keys").fetchone() == (1,)
-        conn.execute("INSERT INTO um_users(user_id, username) VALUES ('cascade-user', 'cascade-user')")
+        conn.execute(
+            "INSERT INTO um_users(user_id, username) VALUES (?, ?)",
+            ("cascade-user", "cascade-user"),
+        )
         conn.execute(
             "INSERT INTO um_grants(user_id, role_name) VALUES ('cascade-user', 'admin')"
         )
@@ -1044,7 +1062,7 @@ def test_create_tables_external_accepts_active_foreign_keys() -> None:
 
         assert conn.in_transaction
         assert conn.execute("PRAGMA foreign_keys").fetchone() == (1,)
-        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (4,)
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (5,)
         conn.rollback()
         assert (
             conn.execute(
@@ -1095,7 +1113,7 @@ def test_migrate_sqlite_schema_external_accepts_active_foreign_keys() -> None:
         migrate_sqlite_schema(conn, transaction_mode="external")
 
         assert conn.in_transaction
-        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (4,)
+        assert conn.execute("SELECT version FROM um_schema_version").fetchone() == (5,)
         conn.rollback()
         assert (
             conn.execute(
@@ -1124,7 +1142,9 @@ def test_operation_connection_locks_cleanup_after_closed_connections(
     database = SQLiteAuthDatabase(database_path)
     for index in range(20):
         stores = database.stores()
-        stores.users.create(User(user_id=f"lock-user-{index}", username=f"lock-user-{index}"))
+        stores.users.create(
+            User(user_id=f"lock-user-{index}", username=f"lock-user-{index}")
+        )
         stores.close()
 
     assert len(connection_locks) <= 1

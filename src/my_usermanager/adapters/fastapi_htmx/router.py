@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Protocol, cast
+from urllib.parse import urlencode
 
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
 from fastapi import APIRouter, FastAPI, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from my_usermanager.adapters.fastapi_htmx.auth import (
     Denied,
@@ -32,9 +33,9 @@ from my_usermanager.adapters.fastapi_htmx.forms import (
     MutationForm,
     read_grant_form,
     read_mutation_form,
+    read_named_form,
     read_profile_form,
 )
-from my_usermanager.manager import UserProfileUpdate
 from my_usermanager.adapters.fastapi_htmx.protocols import (  # noqa: TC001
     UserManagerUiHooks,
 )
@@ -48,11 +49,32 @@ from my_usermanager.adapters.fastapi_htmx.templates import (
     attach_package_templates,
     create_template_environment,
 )
+from my_usermanager.manager import UserProfileUpdate
 
 if TYPE_CHECKING:
     from jinja2 import Environment
 
+    from my_usermanager.adapters.fastapi_htmx.awaitables import MaybeAwaitable
+    from my_usermanager.adapters.fastapi_htmx.config import AuditRow, SessionRow
     from my_usermanager.subjects import AuthenticatedSubject
+
+
+class _PageContextHook(Protocol):
+    def page_context(
+        self, request: Request
+    ) -> MaybeAwaitable[Mapping[str, object] | None]: ...
+
+
+class _ListSessionsHook(Protocol):
+    def list_sessions(
+        self, request: Request, current_user: AuthenticatedSubject
+    ) -> MaybeAwaitable[tuple[SessionRow, ...]]: ...
+
+
+class _ListAuditHook(Protocol):
+    def list_audit_events(
+        self, request: Request, current_user: AuthenticatedSubject
+    ) -> MaybeAwaitable[tuple[AuditRow, ...]]: ...
 
 
 def install_usermanager_ui(
@@ -133,13 +155,11 @@ async def _page_context(
     provider = getattr(hooks, "page_context", None)
     if provider is None:
         return {}
-    raw = await resolve(provider(request))
+    hook = cast("_PageContextHook", cast("object", hooks))
+    raw = await resolve(hook.page_context(request))
     if raw is None:
         return {}
-    if not isinstance(raw, Mapping):
-        message = "page_context must return a mapping"
-        raise TypeError(message)
-    return dict(cast("Mapping[str, object]", raw))
+    return dict(raw)
 
 
 def _merge_labels(
@@ -148,15 +168,18 @@ def _merge_labels(
     raw_overrides = page_context.get("labels")
     overrides: Mapping[str, str] | None
     if isinstance(raw_overrides, Mapping):
+        untyped_overrides = cast("Mapping[object, object]", raw_overrides)
         overrides = {
-            str(key): str(value) for key, value in raw_overrides.items()
+            key: value
+            for key, value in untyped_overrides.items()
+            if isinstance(key, str) and isinstance(value, str)
         }
     else:
         overrides = None
     return resolve_ui_labels(config.labels, overrides=overrides)
 
 
-def create_usermanager_ui_router(  # noqa: C901
+def create_usermanager_ui_router(  # noqa: C901, PLR0915
     *,
     config: UserManagerUiConfig,
     hooks: UserManagerUiHooks,
@@ -192,7 +215,8 @@ def create_usermanager_ui_router(  # noqa: C901
                 "labels": labels,
                 "profile_editable": profile_editable,
                 "csrf_inputs": csrf_inputs,
-                "profile_message": request.query_params.get("saved") and labels["profile_saved"],
+                "profile_message": request.query_params.get("saved")
+                and labels["profile_saved"],
                 "profile_error": None,
             }
         )
@@ -229,12 +253,70 @@ def create_usermanager_ui_router(  # noqa: C901
             _ = await resolve(updater(request, auth.current_user, update))
         except Exception as exc:
             return error_response(400, "Profile update failed", str(exc))
-        from fastapi.responses import RedirectResponse
-
         return RedirectResponse(
             url=f"{config.account_path}?saved=1",
             status_code=303,
         )
+
+    async def sessions(request: Request) -> Response:
+        auth = await current_user(request, config, hooks)
+        if isinstance(auth, Denied):
+            return auth.response
+        provider = getattr(hooks, "list_sessions", None)
+        if not callable(provider):
+            return error_response(
+                501, "Sessions unavailable", "Host did not provide list_sessions."
+            )
+        host_context = await _page_context(hooks, request)
+        labels = _merge_labels(config, host_context)
+        csrf = await resolve(hooks.csrf_context(request))
+        html = templates.get_template("sessions/list.html").render(
+            **host_context,
+            request=request,
+            config=config,
+            current_user=auth.current_user,
+            sessions=tuple(
+                await resolve(
+                    cast("_ListSessionsHook", cast("object", hooks)).list_sessions(
+                        request, auth.current_user
+                    )
+                )
+            ),
+            csrf_inputs=_csrf_inputs(config, request, csrf),
+            static_url_path=config.static_url_path,
+            base_template=config.base_template,
+            labels=labels,
+        )
+        return HTMLResponse(html)
+
+    async def audit(request: Request) -> Response:
+        auth = await admin_user(request, config, hooks)
+        if isinstance(auth, Denied):
+            return auth.response
+        provider = getattr(hooks, "list_audit_events", None)
+        if not callable(provider):
+            return error_response(
+                501, "Audit unavailable", "Host did not provide list_audit_events."
+            )
+        host_context = await _page_context(hooks, request)
+        labels = _merge_labels(config, host_context)
+        html = templates.get_template("audit/list.html").render(
+            **host_context,
+            request=request,
+            config=config,
+            current_user=auth.current_user,
+            events=tuple(
+                await resolve(
+                    cast("_ListAuditHook", cast("object", hooks)).list_audit_events(
+                        request, auth.current_user
+                    )
+                )
+            ),
+            static_url_path=config.static_url_path,
+            base_template=config.base_template,
+            labels=labels,
+        )
+        return HTMLResponse(html)
 
     async def users(request: Request) -> Response:
         auth = await admin_user(request, config, hooks)
@@ -259,22 +341,90 @@ def create_usermanager_ui_router(  # noqa: C901
                     await resolve(hooks.role_options(request, auth.current_user))
                 ),
                 "capability_options": tuple(
-                    await resolve(
-                        hooks.capability_options(request, auth.current_user)
-                    )
+                    await resolve(hooks.capability_options(request, auth.current_user))
                 ),
                 "csrf": csrf,
                 "csrf_inputs": _csrf_inputs(config, request, csrf),
                 "static_url_path": config.static_url_path,
                 "base_template": config.base_template,
                 "labels": labels,
+                "invitation_url": request.query_params.get("invitation_url"),
+                "invite_enabled": callable(getattr(hooks, "invite_user", None)),
+                "soft_delete_enabled": callable(
+                    getattr(hooks, "soft_delete_user", None)
+                ),
+                "hard_delete_enabled": callable(
+                    getattr(hooks, "hard_delete_user", None)
+                ),
             }
         )
         return HTMLResponse(html)
 
+    async def named_action(  # noqa: PLR0911
+        request: Request,
+        *,
+        hook_name: str,
+        required: tuple[str, ...],
+        redirect_url: str,
+    ) -> Response:
+        auth = (
+            await current_user(request, config, hooks)
+            if hook_name == "revoke_session"
+            else await admin_user(request, config, hooks)
+        )
+        if isinstance(auth, Denied):
+            return auth.response
+        callback = getattr(hooks, hook_name, None)
+        if not callable(callback):
+            return error_response(
+                501, "Action unavailable", f"Host did not provide {hook_name}."
+            )
+        form = await read_named_form(request, required)
+        if isinstance(form, FormError):
+            return error_response(form.status_code, form.title, form.message)
+        csrf_error = await _validate_csrf(request, config, form.get("csrf"))
+        if csrf_error is not None:
+            return csrf_error
+        if hook_name == "hard_delete_user" and form["confirmation"] != form["user_id"]:
+            return error_response(
+                400,
+                "Confirmation failed",
+                "Confirmation must exactly match the user id.",
+            )
+        callback_values = (
+            (form["user_id"],)
+            if hook_name == "hard_delete_user"
+            else tuple(form[name] for name in required)
+        )
+        result = await resolve(callback(request, auth.current_user, *callback_values))
+        if hook_name == "invite_user":
+            activation_url = getattr(result, "activation_url", None)
+            if not isinstance(activation_url, str) or not activation_url:
+                return error_response(
+                    500, "Invitation failed", "Invitation result has no activation URL."
+                )
+            return RedirectResponse(
+                url=f"{redirect_url}?{urlencode({'invitation_url': activation_url})}",
+                status_code=303,
+            )
+        return RedirectResponse(url=redirect_url, status_code=303)
+
     if config.account_enabled:
         router.add_api_route(config.account_path, account, methods=["GET"])
         router.add_api_route(config.profile_path, update_profile, methods=["POST"])
+        router.add_api_route(config.sessions_path, sessions, methods=["GET"])
+
+        async def revoke_session(request: Request) -> Response:
+            return await named_action(
+                request,
+                hook_name="revoke_session",
+                required=("session_id",),
+                redirect_url=config.sessions_path,
+            )
+
+        router.add_api_route(
+            config.revoke_session_path, revoke_session, methods=["POST"]
+        )
     if config.admin_enabled:
 
         async def mutation(request: Request, kind: str) -> Response:
@@ -336,6 +486,38 @@ def create_usermanager_ui_router(  # noqa: C901
 
             return endpoint
 
+        async def invite(request: Request) -> Response:
+            return await named_action(
+                request,
+                hook_name="invite_user",
+                required=("username", "email", "role"),
+                redirect_url=config.users_path,
+            )
+
+        async def soft_delete(request: Request) -> Response:
+            return await named_action(
+                request,
+                hook_name="soft_delete_user",
+                required=("user_id",),
+                redirect_url=config.users_path,
+            )
+
+        async def hard_delete(request: Request) -> Response:
+            return await named_action(
+                request,
+                hook_name="hard_delete_user",
+                required=("user_id", "confirmation"),
+                redirect_url=config.users_path,
+            )
+
+        router.add_api_route(config.audit_path, audit, methods=["GET"])
+        router.add_api_route(config.invite_path, invite, methods=["POST"])
+        router.add_api_route(
+            config.soft_delete_user_path, soft_delete, methods=["POST"]
+        )
+        router.add_api_route(
+            config.hard_delete_user_path, hard_delete, methods=["POST"]
+        )
         for path, kind in (
             (config.users_path, "users"),
             (config.disable_user_path, "disable"),
@@ -400,6 +582,8 @@ async def _row_response(
             "csrf": csrf,
             "csrf_inputs": _csrf_inputs(config, request, csrf),
             "labels": labels,
+            "soft_delete_enabled": callable(getattr(hooks, "soft_delete_user", None)),
+            "hard_delete_enabled": callable(getattr(hooks, "hard_delete_user", None)),
         }
     )
     return HTMLResponse(html)
@@ -414,7 +598,7 @@ def _render_panel(
     """Render a named packaged template with merged safe context."""
     if panel is None:
         panel = PasskeyPanel("auth/_integration_panel.html", {})
-    context: dict[str, Any] = {
+    context: dict[str, object] = {
         "request": request,
         "current_user": current_user,
         **dict(panel.context),

@@ -5,11 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from typing import Final
-
-from fastapi import Request, status
 from urllib.parse import parse_qs
 
-from my_usermanager.models import Gender, ValidationError, validate_gender, validate_identifier
+from fastapi import Request, status
+
+from my_usermanager.models import (
+    Gender,
+    ValidationError,
+    validate_gender,
+    validate_identifier,
+)
 
 _FORM_CONTENT_TYPE: Final = "application/x-www-form-urlencoded"
 
@@ -59,6 +64,24 @@ class FormError:
 type MutationFormResult = MutationForm | FormError
 type GrantFormResult = GrantForm | FormError
 type ProfileFormResult = ProfileForm | FormError
+
+
+async def read_named_form(
+    request: Request, required: tuple[str, ...]
+) -> dict[str, str] | FormError:
+    """Parse a small URL-encoded action form with required named fields."""
+    form = await _read_form_values(request)
+    if isinstance(form, FormError):
+        return form
+    values = {name: _first_value(form, name) or "" for name in (*required, "csrf")}
+    missing = next((name for name in required if not values[name]), None)
+    if missing is not None:
+        return FormError(
+            status.HTTP_400_BAD_REQUEST,
+            "Missing form value",
+            f"The submitted action did not include {missing}.",
+        )
+    return values
 
 
 async def read_mutation_form(request: Request) -> MutationFormResult:

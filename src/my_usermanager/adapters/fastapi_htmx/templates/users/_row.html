@@ -37,10 +37,12 @@
       <span class="um-muted">—</span>
     {% endif %}
   </td>
-  <td><span class="badge">{% if user.disabled %}{{ labels.status_disabled }}{% else %}{{ labels.status_active }}{% endif %}</span></td>
+  <td><span class="badge">{% if user.deleted %}{{ labels.status_deleted }}{% elif user.disabled %}{{ labels.status_disabled }}{% else %}{{ labels.status_active }}{% endif %}</span></td>
   <td>
     <div class="um-stack">
-      {% if user.disabled %}
+      {% if user.deleted %}
+        <span class="um-muted">{{ labels.status_deleted }}</span>
+      {% elif user.disabled %}
         <form
           method="post"
           action="{{ config.enable_user_path }}"
@@ -158,6 +160,23 @@
           <button class="btn btn-secondary" type="submit">{{ labels.action_revoke }} {{ permission.label }}</button>
         </form>
       {% endfor %}
+      {% if soft_delete_enabled and not user.deleted %}
+        <form method="post" action="{{ config.soft_delete_user_path }}" data-no-htmx="true">
+          <input type="hidden" name="user_id" value="{{ user.user_id }}">
+          {% for name, value in csrf_inputs %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+          <button class="btn btn-destructive" type="submit">{{ labels.action_soft_delete }}</button>
+        </form>
+      {% endif %}
+      {% if hard_delete_enabled and user.deleted %}
+        <details><summary>{{ labels.action_hard_delete }}</summary>
+          <form method="post" action="{{ config.hard_delete_user_path }}" data-no-htmx="true">
+            <input type="hidden" name="user_id" value="{{ user.user_id }}">
+            {% for name, value in csrf_inputs %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+            <label>{{ labels.confirm_hard_delete }}<input class="input" name="confirmation" required></label>
+            <button class="btn btn-destructive" type="submit">{{ labels.action_hard_delete }}</button>
+          </form>
+        </details>
+      {% endif %}
       <span id="user-{{ user.row_key }}-indicator" class="htmx-indicator um-muted" aria-live="polite">
         {{ labels.updating_row }}
       </span>

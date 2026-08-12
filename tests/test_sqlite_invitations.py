@@ -1,3 +1,5 @@
+# pyright: reportAny=false, reportUnusedCallResult=false
+
 from __future__ import annotations
 
 import sqlite3

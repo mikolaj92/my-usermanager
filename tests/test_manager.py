@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from my_usermanager import ADMIN_ROLE_NAME
@@ -12,6 +14,7 @@ from my_usermanager.manager import (
 )
 from my_usermanager.memory import MemoryGrantStore, MemoryRoleStore, MemoryUserStore
 from my_usermanager.models import Permission, Scope, User
+from my_usermanager.stores import DuplicateUsernameError
 
 
 def test_admin_can_grant_and_revoke_user_access() -> None:
@@ -139,8 +142,6 @@ def test_user_cannot_update_another_users_profile() -> None:
 
 
 def test_user_can_update_profile_demographics() -> None:
-    from datetime import date
-
     users = MemoryUserStore()
     manager = UserManager(
         users=users,
@@ -169,8 +170,6 @@ def test_profile_update_rejects_duplicate_username() -> None:
     )
     _ = users.create(User(user_id="a", username="alice"))
     _ = users.create(User(user_id="b", username="bob"))
-    from my_usermanager.stores import DuplicateUsernameError
-
     with pytest.raises(DuplicateUsernameError):
         _ = manager.update_own_profile(
             actor_id="b",

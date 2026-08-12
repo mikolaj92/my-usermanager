@@ -112,7 +112,9 @@ def test_prepare_registration_requires_explicit_policy(
 
 def test_after_register_and_after_login_link_identity_without_grants() -> None:
     # Given: explicit identity-linking hooks and empty grant state.
-    store = FakeExternalIdentityUserStore(users=(User(user_id="passkey_user_123", username="passkey_user_123"),))
+    store = FakeExternalIdentityUserStore(
+        users=(User(user_id="passkey_user_123", username="passkey_user_123"),)
+    )
     grants = MemoryGrantStore()
     after_register = fastapi_adapter.build_after_register_identity_linker(store)
     after_login = fastapi_adapter.build_after_login_identity_linker(store)

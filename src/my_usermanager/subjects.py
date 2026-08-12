@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
 from hashlib import sha256
-from typing import Final, Protocol, TypeVar, override, runtime_checkable
+from typing import TYPE_CHECKING, Final, Protocol, TypeVar, override, runtime_checkable
+
+if TYPE_CHECKING:
+    from datetime import date
 
 from my_usermanager.models import (
     ExternalIdentity,

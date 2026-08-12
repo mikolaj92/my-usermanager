@@ -130,7 +130,9 @@ def test_admin_service_rejects_self_demoting_last_admin_grant() -> None:
             role_name="admin",
         )
     assert (
-        service.summary_for_user(User(user_id="admin", username="admin")).projection.claims["is_admin"]
+        service.summary_for_user(
+            User(user_id="admin", username="admin")
+        ).projection.claims["is_admin"]
         is True
     )
 
@@ -180,6 +182,8 @@ def test_admin_service_allows_admin_revoke_when_target_keeps_admin_access() -> N
     # Then: the operation succeeds because admin.access remains.
     assert result.action == "revoke_role"
     assert (
-        service.summary_for_user(User(user_id="admin", username="admin")).projection.claims["is_admin"]
+        service.summary_for_user(
+            User(user_id="admin", username="admin")
+        ).projection.claims["is_admin"]
         is True
     )

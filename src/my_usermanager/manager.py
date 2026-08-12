@@ -136,17 +136,35 @@ class UserManager:
         user = self.users.get(user_id)
         if user is None:
             raise UserNotFoundError(user_id)
-        transitions = {
+        transitions: dict[str, frozenset[str]] = {
             "pending": frozenset({"active", "disabled"}),
-            "active": frozenset({"disabled"}),
-            "disabled": frozenset({"active"}),
+            "active": frozenset({"disabled", "deleted"}),
+            "disabled": frozenset({"active", "deleted"}),
+            "deleted": frozenset(),
         }
         current = user.status or "active"
         if status not in transitions.get(current, frozenset()):
             raise AccountTransitionError(current, status)
         return self.users.update(
-            replace(user, status=status, disabled=status == "disabled")
+            replace(user, status=status, disabled=status in {"disabled", "deleted"})
         )
+
+    def soft_delete_account(self, *, user_id: str) -> User:
+        """Make an account irreversibly inactive while retaining its audit identity."""
+        return self.transition_account(user_id=user_id, status="deleted")
+
+    def hard_delete_account(self, *, user_id: str) -> None:
+        """Purge a previously soft-deleted account through a capable store."""
+        user = self.users.get(user_id)
+        if user is None:
+            raise UserNotFoundError(user_id)
+        if user.status != "deleted":
+            raise AccountTransitionError(user.status or "active", "purged")
+        delete = getattr(self.users, "delete", None)
+        if not callable(delete):
+            message = "user store does not support hard deletion"
+            raise TypeError(message)
+        _ = delete(user_id)
 
     def update_own_profile(self, *, actor_id: str, update: UserProfileUpdate) -> User:
         """Update the authenticated user's own basic profile fields."""

@@ -163,4 +163,6 @@ def test_projection_rejects_merging_into_a_different_user() -> None:
 
     # When / Then: merging into a different user is rejected.
     with pytest.raises(InvalidSessionPrincipalError, match="projected grant claims"):
-        _ = projection.to_session_principal(User(user_id="other_user", username="other_user"))
+        _ = projection.to_session_principal(
+            User(user_id="other_user", username="other_user")
+        )
