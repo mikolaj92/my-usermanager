@@ -137,8 +137,11 @@ it. Host domain rows and policy state remain host-owned and are supplied after
 policy verification.
 
 The owner must call `initialize()` explicitly at startup. It inspects both
-schemas, creates empty schemas, stamps canonical-unversioned layouts, and
-migrates supported legacy layouts. Unsupported schemas and orphan grants are
+schemas, creates empty schemas, stamps canonical-unversioned layouts, and runs
+explicit one-shot UM migration for supported upgrade sources (including
+migratable legacy grant/audit layouts). Inspection is fail-closed: legacy
+layouts are not treated as ready dual-read paths. my-auth legacy schemas are
+refused (modern my-auth only). Unsupported schemas and orphan grants are
 refused. Initialization/migration requires no pending transaction. Inspection
 is read-only; do not treat inspection as initialization.
 
@@ -148,10 +151,12 @@ commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use
 back. Do not instantiate independent auth and UM databases for one product.
 
 Direct UM SQLite stores expose `create_tables`, `inspect_sqlite_schema`, and
-`migrate_sqlite_schema`; they are synchronous. `create_tables` bootstraps
-version 2, while migration validates orphan grants and rebuilds supported
-legacy grant layouts atomically. Direct store constructors receive an open
-`sqlite3.Connection`; the caller owns its lifecycle and transaction policy.
+`migrate_sqlite_schema`; they are synchronous. `create_tables` bootstraps the
+current schema. `inspect_sqlite_schema` recognizes only the modern grants/audit
+path; supported legacy layouts require explicit `migrate_sqlite_schema`, which
+validates orphan grants and rebuilds them atomically. Direct store constructors
+receive an open `sqlite3.Connection`; the caller owns its lifecycle and
+transaction policy.
 Path-owned shared stores use per-operation connections with
 `check_same_thread=False`, busy timeout, WAL, and foreign keys. A caller-owned
 connection remains thread-affine by default: use one connection per thread or
