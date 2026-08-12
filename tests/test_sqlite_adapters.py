@@ -740,9 +740,11 @@ def test_legacy_audit_schema_migrates_without_losing_events() -> None:
         )
         conn.commit()
 
-        assert sqlite_adapter.inspect_sqlite_schema(conn) == "canonical_unversioned"
+        # Fail closed on inspect: legacy audit is not a silent dual-read path.
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "unsupported"
         sqlite_adapter.migrate_sqlite_schema(conn)
 
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
         assert conn.execute("SELECT event_id FROM um_audit_events").fetchall() == [
             ("legacy-event",)
         ]
@@ -772,7 +774,7 @@ def test_legacy_audit_schema_migrates_without_losing_events() -> None:
         conn.close()
 
 
-def test_implicit_rowid_legacy_audit_schema_migrates_without_losing_events() -> None:
+def test_implicit_rowid_unversioned_audit_schema_stamps_without_losing_events() -> None:
     conn = sqlite3.connect(":memory:")
     try:
         create_tables(conn)
@@ -908,7 +910,8 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
         conn.execute("INSERT INTO um_schema_version(version) VALUES (4)")
         conn.commit()
 
-        assert sqlite_adapter.inspect_sqlite_schema(conn) == "v4"
+        # Fail closed on inspect: legacy grants/audit require explicit migrate.
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "unsupported"
         sqlite_adapter.migrate_sqlite_schema(conn)
 
         assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
@@ -926,6 +929,43 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
             ).fetchone()[0],
         )
         assert "CHECK ((role_name = '') != (permission_name = ''))" in grant_sql
+    finally:
+        conn.close()
+
+
+def test_auth_database_initialize_rejects_my_auth_legacy_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """my-auth legacy layouts fail closed; initialize does not auto-migrate them."""
+
+    class LegacyAuthSchema:
+        @staticmethod
+        def inspect_sqlite_schema(_connection: sqlite3.Connection) -> object:
+            return type("Inspection", (), {"state": "legacy"})()
+
+        @staticmethod
+        def ensure_sqlite_schema(
+            connection: sqlite3.Connection, *, transaction_mode: str
+        ) -> None:
+            del connection, transaction_mode
+            message = "ensure_sqlite_schema must not run for legacy"
+            raise AssertionError(message)
+
+    def import_legacy_auth_schema(name: str) -> object:
+        assert name == "my_auth.sqlite_schema"
+        return LegacyAuthSchema
+
+    monkeypatch.setattr(importlib, "import_module", import_legacy_auth_schema)
+    conn = sqlite3.connect(":memory:")
+    try:
+        with pytest.raises(RuntimeError, match="unsupported"):
+            SQLiteAuthDatabase(conn).initialize()
+        assert (
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+            == []
+        )
     finally:
         conn.close()
 

@@ -298,12 +298,87 @@ def _um_table_is_canonical(  # noqa: PLR0911
             and "CHECK ((ROLE_NAME = '') != (PERMISSION_NAME = ''))" in sql
         )
     if table == "um_audit_events":
-        return _um_audit_events_is_legacy_canonical(conn)
+        return _um_audit_events_is_canonical(conn)
     return True
 
 
-def _um_grants_is_legacy_canonical(conn: sqlite3.Connection) -> bool:
-    """Recognize the prior grants layout that v2 can rebuild losslessly."""
+_UM_AUDIT_EVENT_COLUMNS: Final[tuple[tuple[str, str, int, object, int], ...]] = (
+    ("event_id", "TEXT", 1, None, 0),
+    ("timestamp", "TEXT", 1, None, 0),
+    ("actor_id", "TEXT", 1, None, 0),
+    ("action", "TEXT", 1, None, 0),
+    ("target_type", "TEXT", 1, None, 0),
+    ("target_id", "TEXT", 1, None, 0),
+    ("scope_type", "TEXT", 0, None, 0),
+    ("scope_id", "TEXT", 0, None, 0),
+    ("result", "TEXT", 1, None, 0),
+    ("reason", "TEXT", 0, None, 0),
+    ("request_id", "TEXT", 0, None, 0),
+    ("ip_address", "TEXT", 0, None, 0),
+    ("user_agent", "TEXT", 0, None, 0),
+    ("metadata", "TEXT", 1, "'{}'", 0),
+)
+
+
+def _um_audit_events_matches_sql(
+    conn: sqlite3.Connection, *, explicit_rowid: bool
+) -> bool:
+    sql_row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='um_audit_events'"
+    ).fetchone()
+    if sql_row is None or sql_row[0] is None:
+        return False
+    sql = "".join(str(sql_row[0]).upper().replace('"', "").split())
+    expected_sql = (
+        "CREATETABLEUM_AUDIT_EVENTS("
+        "ROWIDINTEGERPRIMARYKEYAUTOINCREMENT,"
+        "EVENT_IDTEXTNOTNULLUNIQUE,TIMESTAMPTEXTNOTNULL,ACTOR_IDTEXTNOTNULL,"
+        "ACTIONTEXTNOTNULL,TARGET_TYPETEXTNOTNULL,TARGET_IDTEXTNOTNULL,"
+        "SCOPE_TYPETEXT,SCOPE_IDTEXT,RESULTTEXTNOTNULL,REASONTEXT,"
+        "REQUEST_IDTEXT,IP_ADDRESSTEXT,USER_AGENTTEXT,"
+        "METADATATEXTNOTNULLDEFAULT'{}')"
+    )
+    if explicit_rowid:
+        return sql == expected_sql
+    implicit_sql = expected_sql.replace("ROWIDINTEGERPRIMARYKEYAUTOINCREMENT,", "", 1)
+    return sql == implicit_sql
+
+
+def _um_audit_events_unique_event_id(
+    conn: sqlite3.Connection, *, event_id_cid: int
+) -> bool:
+    index_rows = conn.execute('PRAGMA index_list("um_audit_events")').fetchall()
+    if len(index_rows) != 1:
+        return False
+    index = index_rows[0]
+    if tuple(index[2:]) != (1, "u", 0):
+        return False
+    index_name = str(index[1])
+    index_columns = conn.execute(
+        f'PRAGMA index_info("{index_name.replace(chr(34), chr(34) * 2)}")'
+    ).fetchall()
+    return len(index_columns) == 1 and tuple(index_columns[0]) == (
+        0,
+        event_id_cid,
+        "event_id",
+    )
+
+
+def _um_audit_events_is_canonical(conn: sqlite3.Connection) -> bool:
+    """Recognize the modern audit layout (implicit rowid, unique event_id)."""
+    rows = conn.execute('PRAGMA table_info("um_audit_events")').fetchall()
+    metadata = tuple(
+        (str(row[1]), str(row[2]).upper(), row[3], row[4], row[5]) for row in rows
+    )
+    if len(rows) != len(_UM_AUDIT_EVENT_COLUMNS) or metadata != _UM_AUDIT_EVENT_COLUMNS:
+        return False
+    return _um_audit_events_unique_event_id(
+        conn, event_id_cid=0
+    ) and _um_audit_events_matches_sql(conn, explicit_rowid=False)
+
+
+def _um_grants_is_legacy_migratable(conn: sqlite3.Connection) -> bool:
+    """Recognize the prior grants layout that one-shot migrate can rebuild."""
     rows = conn.execute('PRAGMA table_info("um_grants")').fetchall()
     expected = (
         ("user_id", "TEXT", 1, None, 1),
@@ -333,84 +408,33 @@ def _um_grants_is_legacy_canonical(conn: sqlite3.Connection) -> bool:
     )
 
 
-def _um_audit_events_needs_rebuild(conn: sqlite3.Connection) -> bool:
-    """Return whether v2 audit storage uses the released explicit rowid layout."""
+def _um_audit_events_is_legacy_migratable(conn: sqlite3.Connection) -> bool:
+    """Recognize the released explicit-rowid audit layout for one-shot migrate."""
     rows = conn.execute('PRAGMA table_info("um_audit_events")').fetchall()
-    return bool(rows and rows[0][1] == "rowid")
-
-
-def _um_audit_events_is_legacy_canonical(conn: sqlite3.Connection) -> bool:
-    """Recognize the released v0.1 audit layouts."""
-    rows = conn.execute('PRAGMA table_info("um_audit_events")').fetchall()
-    expected = (
-        ("event_id", "TEXT", 1, None, 0),
-        ("timestamp", "TEXT", 1, None, 0),
-        ("actor_id", "TEXT", 1, None, 0),
-        ("action", "TEXT", 1, None, 0),
-        ("target_type", "TEXT", 1, None, 0),
-        ("target_id", "TEXT", 1, None, 0),
-        ("scope_type", "TEXT", 0, None, 0),
-        ("scope_id", "TEXT", 0, None, 0),
-        ("result", "TEXT", 1, None, 0),
-        ("reason", "TEXT", 0, None, 0),
-        ("request_id", "TEXT", 0, None, 0),
-        ("ip_address", "TEXT", 0, None, 0),
-        ("user_agent", "TEXT", 0, None, 0),
-        ("metadata", "TEXT", 1, "'{}'", 0),
-    )
     metadata = tuple(
         (str(row[1]), str(row[2]).upper(), row[3], row[4], row[5]) for row in rows
     )
     explicit_rowid = (
-        len(rows) == len(expected) + 1
+        len(rows) == len(_UM_AUDIT_EVENT_COLUMNS) + 1
         and tuple(rows[0][1:]) == ("rowid", "INTEGER", 0, None, 1)
-        and metadata[1:] == expected
+        and metadata[1:] == _UM_AUDIT_EVENT_COLUMNS
     )
-    implicit_rowid = len(rows) == len(expected) and metadata == expected
-    if not (explicit_rowid or implicit_rowid):
+    if not explicit_rowid:
         return False
-
-    index_rows = conn.execute('PRAGMA index_list("um_audit_events")').fetchall()
-    if len(index_rows) != 1:
-        return False
-    index = index_rows[0]
-    if tuple(index[2:]) != (1, "u", 0):
-        return False
-    index_name = str(index[1])
-    index_columns = conn.execute(
-        f'PRAGMA index_info("{index_name.replace(chr(34), chr(34) * 2)}")'
-    ).fetchall()
-    expected_cid = 1 if explicit_rowid else 0
-    if len(index_columns) != 1 or tuple(index_columns[0]) != (
-        0,
-        expected_cid,
-        "event_id",
-    ):
-        return False
-
-    sql_row = conn.execute(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='um_audit_events'"
-    ).fetchone()
-    if sql_row is None or sql_row[0] is None:
-        return False
-    sql = "".join(str(sql_row[0]).upper().replace('"', "").split())
-    expected_sql = (
-        "CREATETABLEUM_AUDIT_EVENTS("
-        "ROWIDINTEGERPRIMARYKEYAUTOINCREMENT,"
-        "EVENT_IDTEXTNOTNULLUNIQUE,TIMESTAMPTEXTNOTNULL,ACTOR_IDTEXTNOTNULL,"
-        "ACTIONTEXTNOTNULL,TARGET_TYPETEXTNOTNULL,TARGET_IDTEXTNOTNULL,"
-        "SCOPE_TYPETEXT,SCOPE_IDTEXT,RESULTTEXTNOTNULL,REASONTEXT,"
-        "REQUEST_IDTEXT,IP_ADDRESSTEXT,USER_AGENTTEXT,"
-        "METADATATEXTNOTNULLDEFAULT'{}')"
-    )
-    implicit_sql = expected_sql.replace("ROWIDINTEGERPRIMARYKEYAUTOINCREMENT,", "", 1)
-    return sql in {expected_sql, implicit_sql}
+    return _um_audit_events_unique_event_id(
+        conn, event_id_cid=1
+    ) and _um_audit_events_matches_sql(conn, explicit_rowid=True)
 
 
 def inspect_sqlite_schema(  # noqa: C901, PLR0911
     conn: sqlite3.Connection,
 ) -> str:
-    """Return empty, canonical_unversioned, current, or unsupported."""
+    """Return empty, canonical_unversioned, current, v2/v3/v4, or unsupported.
+
+    Inspection is fail-closed: only the modern grants/audit layouts count as
+    recognized versioned/unversioned states. Migratable legacy layouts are
+    ``unsupported`` here and must go through explicit ``migrate_sqlite_schema``.
+    """
     names = {
         cast("str", row[0])
         for row in conn.execute(
@@ -426,9 +450,7 @@ def inspect_sqlite_schema(  # noqa: C901, PLR0911
     if not expected_without_version.issubset(um_names):
         return "unsupported"
     grants_canonical = _um_table_is_canonical(conn, "um_grants")
-    grants_legacy = _um_grants_is_legacy_canonical(conn)
     audit_canonical = _um_table_is_canonical(conn, "um_audit_events")
-    audit_legacy = _um_audit_events_is_legacy_canonical(conn)
     users_v4 = _um_table_is_canonical(conn, "um_users")
     users_v3 = _um_users_is_v3_layout(conn)
     users_v2 = _um_users_is_v2_layout(conn)
@@ -441,8 +463,8 @@ def inspect_sqlite_schema(  # noqa: C901, PLR0911
         (
             other_non_user_canonical,
             users_v4 or users_v3 or users_v2,
-            grants_canonical or grants_legacy,
-            audit_canonical or audit_legacy,
+            grants_canonical,
+            audit_canonical,
         )
     ):
         return "unsupported"
@@ -464,6 +486,57 @@ def inspect_sqlite_schema(  # noqa: C901, PLR0911
     if version == _SCHEMA_VERSION - 3 and users_v2:
         return "v2"
     return "unsupported"
+
+
+def _um_schema_is_migratable(conn: sqlite3.Connection) -> bool:  # noqa: PLR0911
+    """Return whether an unsupported layout is a supported one-shot upgrade source."""
+    names = {
+        cast("str", row[0])
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    um_names = {name for name in names if name.startswith("um_")}
+    expected_without_version = set(_UM_TABLE_COLUMNS) - {"um_schema_version"}
+    if not expected_without_version.issubset(um_names):
+        return False
+    grants_ok = _um_table_is_canonical(
+        conn, "um_grants"
+    ) or _um_grants_is_legacy_migratable(conn)
+    audit_ok = _um_table_is_canonical(
+        conn, "um_audit_events"
+    ) or _um_audit_events_is_legacy_migratable(conn)
+    users_v4 = _um_table_is_canonical(conn, "um_users")
+    users_v3 = _um_users_is_v3_layout(conn)
+    users_v2 = _um_users_is_v2_layout(conn)
+    other_ok = all(
+        _um_table_is_canonical(conn, table)
+        for table in expected_without_version
+        if table not in {"um_grants", "um_audit_events", "um_users"}
+    )
+    if not all((other_ok, users_v4 or users_v3 or users_v2, grants_ok, audit_ok)):
+        return False
+    has_version = "um_schema_version" in um_names
+    if has_version and not _um_table_is_canonical(conn, "um_schema_version"):
+        return False
+    if not has_version:
+        return True
+    rows = conn.execute("SELECT version FROM um_schema_version").fetchall()
+    if len(rows) != 1:
+        return False
+    version = rows[0][0]
+    if version == _SCHEMA_VERSION:
+        return users_v4 and (
+            _um_grants_is_legacy_migratable(conn)
+            or _um_audit_events_is_legacy_migratable(conn)
+        )
+    if version == _SCHEMA_VERSION - 1:
+        return users_v4
+    if version == _SCHEMA_VERSION - 2:
+        return users_v3
+    if version == _SCHEMA_VERSION - 3:
+        return users_v2
+    return False
 
 
 def _um_users_is_v3_layout(conn: sqlite3.Connection) -> bool:
@@ -502,12 +575,65 @@ def _um_users_is_v2_layout(conn: sqlite3.Connection) -> bool:
     )
 
 
-def migrate_sqlite_schema(  # noqa: C901, PLR0912, PLR0915
+def _refuse_orphan_grants(conn: sqlite3.Connection) -> None:
+    orphan_rows = _fetchall_rows(conn.execute(_ORPHAN_GRANTS_SQL))
+    orphans = [_row_str(row, 0) for row in orphan_rows]
+    if orphans:
+        message = f"orphan grants refuse migration: {', '.join(orphans)}"
+        raise RuntimeError(message)
+
+
+def _upgrade_um_schema_to_current(conn: sqlite3.Connection) -> None:
+    """One-shot upgrade path: rebuild migratable legacy tables, then stamp v5."""
+    if _um_grants_is_legacy_migratable(conn):
+        _refuse_orphan_grants(conn)
+        _rebuild_grants_table(conn)
+    if _um_audit_events_is_legacy_migratable(conn):
+        _rebuild_audit_events_table(conn)
+    if _um_users_is_v2_layout(conn):
+        _migrate_users_v2_to_v3(conn)
+    if _um_users_is_v3_layout(conn):
+        _migrate_users_v3_to_v4(conn)
+    tables = {
+        cast("str", row[0])
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    version_row = (
+        None
+        if "um_schema_version" not in tables
+        else _fetchone_row(
+            conn.execute("SELECT version FROM um_schema_version LIMIT 1")
+        )
+    )
+    current_version = None if version_row is None else _row_object(version_row, 0)
+    if current_version != _SCHEMA_VERSION and _um_table_is_canonical(conn, "um_users"):
+        _migrate_users_v4_to_v5(conn)
+    _apply_create_tables(conn)
+    if "um_schema_version" not in tables or version_row is None:
+        _ = conn.execute("DELETE FROM um_schema_version")
+        _ = conn.execute(
+            "INSERT INTO um_schema_version(version) VALUES (?)",
+            (_SCHEMA_VERSION,),
+        )
+    else:
+        _ = conn.execute(
+            "UPDATE um_schema_version SET version = ?", (_SCHEMA_VERSION,)
+        )
+
+
+def migrate_sqlite_schema(  # noqa: C901, PLR0912
     conn: sqlite3.Connection,
     *,
     transaction_mode: Literal["standalone", "external"] = "standalone",
 ) -> None:
-    """Explicitly stamp/migrate schema; standalone mode owns its commit."""
+    """Explicitly stamp/migrate schema; standalone mode owns its commit.
+
+    Modern layouts use a single path. Supported legacy grant/audit layouts are
+    upgraded only through this explicit one-shot migrate (inspection fails
+    closed on them).
+    """
     if transaction_mode not in {"standalone", "external"}:
         raise ValueError(_TRANSACTION_MODE_ERROR)
     _prepare_schema_transaction(
@@ -520,31 +646,10 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912, PLR0915
     try:
         state = inspect_sqlite_schema(conn)
         if state == "current":
-            needs_grants_rebuild = _um_grants_is_legacy_canonical(conn)
-            needs_audit_rebuild = _um_audit_events_needs_rebuild(conn)
-            if needs_grants_rebuild or needs_audit_rebuild:
-                orphan_rows = _fetchall_rows(conn.execute(_ORPHAN_GRANTS_SQL))
-                orphans = [_row_str(row, 0) for row in orphan_rows]
-                if orphans:
-                    message = f"orphan grants refuse migration: {', '.join(orphans)}"
-                    raise RuntimeError(message)  # noqa: TRY301
-                if needs_grants_rebuild:
-                    _rebuild_grants_table(conn)
-                if needs_audit_rebuild:
-                    _rebuild_audit_events_table(conn)
             if transaction_mode == "standalone":
                 conn.commit()
             return
         if state in {"v2", "v3", "v4"}:
-            if _um_grants_is_legacy_canonical(conn):
-                orphan_rows = _fetchall_rows(conn.execute(_ORPHAN_GRANTS_SQL))
-                orphans = [_row_str(row, 0) for row in orphan_rows]
-                if orphans:
-                    message = f"orphan grants refuse migration: {', '.join(orphans)}"
-                    raise RuntimeError(message)  # noqa: TRY301
-                _rebuild_grants_table(conn)
-            if _um_audit_events_needs_rebuild(conn):
-                _rebuild_audit_events_table(conn)
             if state == "v2":
                 _migrate_users_v2_to_v3(conn)
             if state in {"v2", "v3"}:
@@ -565,30 +670,26 @@ def migrate_sqlite_schema(  # noqa: C901, PLR0912, PLR0915
             if transaction_mode == "standalone":
                 conn.commit()
             return
-        if state != "canonical_unversioned":
+        if state == "canonical_unversioned":
+            # Modern grants/audit already; upgrade older user layouts and stamp.
+            if _um_users_is_v2_layout(conn):
+                _migrate_users_v2_to_v3(conn)
+            if _um_users_is_v3_layout(conn):
+                _migrate_users_v3_to_v4(conn)
+            if _um_table_is_canonical(conn, "um_users"):
+                _migrate_users_v4_to_v5(conn)
+            _apply_create_tables(conn)
+            conn.execute(
+                "INSERT INTO um_schema_version(version) VALUES (?)",
+                (_SCHEMA_VERSION,),
+            )
+            if transaction_mode == "standalone":
+                conn.commit()
+            return
+        if not _um_schema_is_migratable(conn):
             message = "unsupported my-usermanager schema version"
             raise RuntimeError(message)  # noqa: TRY301
-        orphan_rows = _fetchall_rows(conn.execute(_ORPHAN_GRANTS_SQL))
-        orphans = [_row_str(row, 0) for row in orphan_rows]
-        if orphans:
-            message = f"orphan grants refuse migration: {', '.join(orphans)}"
-            raise RuntimeError(message)  # noqa: TRY301
-        _rebuild_grants_table(conn)
-        _rebuild_audit_events_table(conn)
-        # Pre-versioned DBs often still carry the v2 um_users layout (nullable
-        # username, no birth_date/gender). CREATE IF NOT EXISTS will not alter
-        # them — rebuild to v3 before stamping schema version 3.
-        if _um_users_is_v2_layout(conn):
-            _migrate_users_v2_to_v3(conn)
-        if _um_users_is_v3_layout(conn):
-            _migrate_users_v3_to_v4(conn)
-        if _um_table_is_canonical(conn, "um_users"):
-            _migrate_users_v4_to_v5(conn)
-        _apply_create_tables(conn)
-        conn.execute(
-            "INSERT INTO um_schema_version(version) VALUES (?)",
-            (_SCHEMA_VERSION,),
-        )
+        _upgrade_um_schema_to_current(conn)
         if transaction_mode == "standalone":
             conn.commit()
     except BaseException:
@@ -848,7 +949,7 @@ def _grants_have_user_fk(conn: sqlite3.Connection) -> bool:
 
 
 def _rebuild_grants_table(conn: sqlite3.Connection) -> None:
-    """Rebuild legacy grants so deletes cascade to users."""
+    """Rebuild migratable legacy grants so deletes cascade to users."""
     tables = {
         _row_object(row, 0)
         for row in _fetchall_rows(
@@ -889,8 +990,8 @@ def _rebuild_grants_table(conn: sqlite3.Connection) -> None:
 
 
 def _rebuild_audit_events_table(conn: sqlite3.Connection) -> None:
-    """Rebuild the v0.1 audit table without dropping event data or order."""
-    if not _um_audit_events_is_legacy_canonical(conn):
+    """Rebuild the explicit-rowid audit table without dropping event data or order."""
+    if not _um_audit_events_is_legacy_migratable(conn):
         return
     statements = (
         """

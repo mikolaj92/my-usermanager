@@ -34,7 +34,7 @@ _FOREIGN_KEYS_ERROR: Final = "cannot enable SQLite foreign keys"
 
 
 class _SchemaInspection(Protocol):
-    state: Literal["empty", "canonical_unversioned", "legacy", "current", "unsupported"]
+    state: Literal["empty", "canonical_unversioned", "current", "unsupported"]
 
 
 class _SchemaModule(Protocol):
@@ -43,13 +43,6 @@ class _SchemaModule(Protocol):
     ) -> _SchemaInspection: ...
 
     def ensure_sqlite_schema(
-        self,
-        connection: sqlite3.Connection,
-        *,
-        transaction_mode: Literal["external"],
-    ) -> object: ...
-
-    def migrate_sqlite_schema(
         self,
         connection: sqlite3.Connection,
         *,
@@ -169,21 +162,22 @@ class SQLiteAuthDatabase:
             try:
                 auth_state = auth_schema.inspect_sqlite_schema(conn)
                 um_state = inspect_sqlite_schema(conn)
-                if um_state == "unsupported" or auth_state.state == "unsupported":
+                # Fail closed: modern my-auth schema only (no legacy branch).
+                if auth_state.state not in {
+                    "empty",
+                    "canonical_unversioned",
+                    "current",
+                }:
                     message = _UNSUPPORTED_SCHEMA_ERROR
                     raise RuntimeError(message)  # noqa: TRY301
                 if um_state == "empty":
                     create_tables(conn, transaction_mode="external")
-                elif um_state in {"canonical_unversioned", "v2"}:
-                    # Unversioned (pre-stamp) and stamped v2 both need users v3
-                    # (username NOT NULL + unique + birth_date/gender).
+                elif um_state != "current":
+                    # Explicit one-shot UM migrate (including migratable legacy
+                    # layouts that inspection fails closed on).
                     migrate_sqlite_schema(conn, transaction_mode="external")
                 if auth_state.state in {"empty", "canonical_unversioned"}:
                     _ = auth_schema.ensure_sqlite_schema(
-                        conn, transaction_mode="external"
-                    )
-                elif auth_state.state == "legacy":
-                    _ = auth_schema.migrate_sqlite_schema(
                         conn, transaction_mode="external"
                     )
                 conn.commit()
