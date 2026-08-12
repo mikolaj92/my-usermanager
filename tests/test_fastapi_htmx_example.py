@@ -245,15 +245,17 @@ def test_admin_users_page_uses_dom_safe_keys_and_noop_csrf_inputs() -> None:
 
 def test_disable_enable_fragments_mutate_only_in_memory_demo_users() -> None:
     # Given / When / Then: HTMX mutations call host callbacks and swap one row.
+    # Disable a non-admin so the final active administrator invariant stays intact.
     assert_route_contract(
-        f"""
+        """
+        target = "auditor-user"
         disable = client.post(
             "/admin/users/disable",
-            data={{"user_id": {DEMO_USER_ID!r}, "csrf": "demo-noop-csrf"}},
+            data={"user_id": target, "csrf": "demo-noop-csrf"},
         )
         enable = client.post(
             "/admin/users/enable",
-            data={{"user_id": {DEMO_USER_ID!r}, "csrf": "demo-noop-csrf"}},
+            data={"user_id": target, "csrf": "demo-noop-csrf"},
         )
         table = client.get("/admin/users")
 
@@ -268,6 +270,22 @@ def test_disable_enable_fragments_mutate_only_in_memory_demo_users() -> None:
         assert "Disabled" in disable.text
         assert "Active" in enable.text
         assert "Active" in table.text
+        """,
+    )
+
+
+def test_demo_rejects_disabling_final_active_administrator() -> None:
+    assert_route_contract(
+        f"""
+        before = client.get("/admin/users").text
+        response = client.post(
+            "/admin/users/disable",
+            data={{"user_id": {DEMO_USER_ID!r}, "csrf": "demo-noop-csrf"}},
+        )
+        after = client.get("/admin/users").text
+        assert response.status_code == 409, response.text
+        assert "last active admin" in response.text
+        assert before == after
         """,
     )
 

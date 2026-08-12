@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from contextlib import nullcontext
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, override
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from contextlib import AbstractContextManager
     from datetime import date
 
+from my_usermanager.last_admin import (
+    AdminAccessPredicate,
+    ensure_account_deactivation_allowed,
+)
 from my_usermanager.models import (
     Gender,
     Grant,
@@ -130,24 +137,50 @@ class UserManager:
     users: UserStore
     roles: RoleStore
     grants: GrantStore
+    admin_predicate: AdminAccessPredicate = field(default_factory=AdminAccessPredicate)
+    atomic: Callable[[], AbstractContextManager[object]] | None = None
 
     def transition_account(self, *, user_id: str, status: str) -> User:
-        """Apply one explicit legal account lifecycle transition."""
-        user = self.users.get(user_id)
-        if user is None:
-            raise UserNotFoundError(user_id)
-        transitions: dict[str, frozenset[str]] = {
-            "pending": frozenset({"active", "disabled"}),
-            "active": frozenset({"disabled", "deleted"}),
-            "disabled": frozenset({"active", "deleted"}),
-            "deleted": frozenset(),
-        }
-        current = user.status or "active"
-        if status not in transitions.get(current, frozenset()):
-            raise AccountTransitionError(current, status)
-        return self.users.update(
-            replace(user, status=status, disabled=status in {"disabled", "deleted"})
-        )
+        """Apply one explicit legal account lifecycle transition.
+
+        Disabling or soft-deleting the final active administrator fails closed.
+        Provide ``atomic`` (for example SQLite ``BEGIN IMMEDIATE``) so the
+        last-admin check and user update commit as one mutation.
+        """
+        with self._atomic_boundary():
+            user = self.users.get(user_id)
+            if user is None:
+                raise UserNotFoundError(user_id)
+            transitions: dict[str, frozenset[str]] = {
+                "pending": frozenset({"active", "disabled"}),
+                "active": frozenset({"disabled", "deleted"}),
+                "disabled": frozenset({"active", "deleted"}),
+                "deleted": frozenset(),
+            }
+            current = user.status or "active"
+            if status not in transitions.get(current, frozenset()):
+                raise AccountTransitionError(current, status)
+            if status in {"disabled", "deleted"}:
+                ensure_account_deactivation_allowed(
+                    user=user,
+                    users=self.users,
+                    grants=self.grants,
+                    roles=self.roles,
+                    action="disable" if status == "disabled" else "delete",
+                    predicate=self.admin_predicate,
+                )
+            return self.users.update(
+                replace(
+                    user,
+                    status=status,
+                    disabled=status in {"disabled", "deleted"},
+                )
+            )
+
+    def _atomic_boundary(self) -> AbstractContextManager[object]:
+        if self.atomic is None:
+            return nullcontext()
+        return self.atomic()
 
     def soft_delete_account(self, *, user_id: str) -> User:
         """Make an account irreversibly inactive while retaining its audit identity."""

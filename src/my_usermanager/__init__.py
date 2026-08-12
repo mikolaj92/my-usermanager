@@ -29,6 +29,11 @@ from my_usermanager.invitations import (
     IssuedInvitation,
     MemoryInvitationStore,
 )
+from my_usermanager.last_admin import (
+    AdminAccessPredicate,
+    LastAdministratorError,
+    count_active_administrators,
+)
 from my_usermanager.manager import (
     AccountTransitionError,
     AuthorizationError,
@@ -113,6 +118,7 @@ __all__: Final = (
     "SESSION_PRINCIPAL_KEY",
     "AccountStatus",
     "AccountTransitionError",
+    "AdminAccessPredicate",
     "AdminGrantOperation",
     "AdminUserGrantSummary",
     "AuditEvent",
@@ -144,6 +150,7 @@ __all__: Final = (
     "InvitationStore",
     "IssuedEnrollment",
     "IssuedInvitation",
+    "LastAdministratorError",
     "MemoryAuditStore",
     "MemoryGrantStore",
     "MemoryInvitationStore",
@@ -173,6 +180,7 @@ __all__: Final = (
     "__version__",
     "clear_session_principal",
     "clear_token_principal",
+    "count_active_administrators",
     "is_valid_permission_name",
     "max_permission_level_claim",
     "permission_claim",

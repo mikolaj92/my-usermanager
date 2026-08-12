@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Final, Literal, override
+from contextlib import nullcontext
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Final, Literal, override
 
-from my_usermanager.claims import (
-    ADMIN_ACCESS_PERMISSION,
-    GrantClaims,
-    GrantClaimsProjector,
+from my_usermanager.claims import GrantClaims, GrantClaimsProjector
+from my_usermanager.last_admin import (
+    AdminAccessPredicate,
+    ensure_admin_revoke_allowed,
 )
 from my_usermanager.models import Grant, Permission, Scope, User, validate_identifier
-from my_usermanager.permissions import ADMIN_ROLE_NAME
 from my_usermanager.stores import GrantStore, RoleStore, UserQuery, UserStore
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from contextlib import AbstractContextManager
 
 __all__: Final[tuple[str, ...]] = (
     "AdminGrantOperation",
@@ -27,9 +31,6 @@ type GrantAction = Literal[
     "grant_permission",
     "revoke_permission",
 ]
-
-_LAST_ADMIN_REASON: Final = "cannot remove the last active admin"
-_SELF_DEMOTION_REASON: Final = "cannot remove your own last admin grant"
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,6 +78,8 @@ class GrantAdminService:
     roles: RoleStore
     grants: GrantStore
     projector: GrantClaimsProjector | None = None
+    admin_predicate: AdminAccessPredicate = field(default_factory=AdminAccessPredicate)
+    atomic: Callable[[], AbstractContextManager[object]] | None = None
 
     def list_users(
         self,
@@ -120,8 +123,13 @@ class GrantAdminService:
         """Revoke a role after checking admin self/last-admin safety."""
         grant_scope = _scope_or_global(scope)
         grant = Grant.for_role(target_user_id, role_name, grant_scope)
-        self._check_admin_revoke_safety(actor_id=actor_id, grant=grant)
-        revoked = self.grants.remove_role_grant(target_user_id, role_name, grant_scope)
+        with self._atomic_boundary():
+            self._check_admin_revoke_safety(actor_id=actor_id, grant=grant)
+            revoked = self.grants.remove_role_grant(
+                target_user_id,
+                role_name,
+                grant_scope,
+            )
         return self._operation("revoke_role", actor_id, target_user_id, revoked)
 
     def grant_permission(
@@ -152,12 +160,13 @@ class GrantAdminService:
         """Revoke a direct permission after checking admin safety."""
         grant_scope = _scope_or_global(scope)
         grant = Grant.for_permission(target_user_id, permission, grant_scope)
-        self._check_admin_revoke_safety(actor_id=actor_id, grant=grant)
-        revoked = self.grants.remove_permission_grant(
-            target_user_id,
-            permission,
-            grant_scope,
-        )
+        with self._atomic_boundary():
+            self._check_admin_revoke_safety(actor_id=actor_id, grant=grant)
+            revoked = self.grants.remove_permission_grant(
+                target_user_id,
+                permission,
+                grant_scope,
+            )
         return self._operation("revoke_permission", actor_id, target_user_id, revoked)
 
     def _operation(
@@ -178,45 +187,20 @@ class GrantAdminService:
         )
 
     def _check_admin_revoke_safety(self, *, actor_id: str, grant: Grant) -> None:
-        if not _is_global_admin_grant(grant, role_store=self.roles):
-            return
-        if _grants_make_global_admin(
-            _remaining_grants(self.grants, grant),
-            role_store=self.roles,
-        ):
-            return
-        actor = validate_identifier(actor_id, field_name="actor_id")
-        if actor == grant.user_id:
-            raise UnsafeGrantMutationError(
-                actor_id=actor,
-                target_user_id=grant.user_id,
-                grant=grant,
-                reason=_SELF_DEMOTION_REASON,
-            )
-        if self._active_admin_count_after(grant) == 0:
-            raise UnsafeGrantMutationError(
-                actor_id=actor,
-                target_user_id=grant.user_id,
-                grant=grant,
-                reason=_LAST_ADMIN_REASON,
-            )
-
-    def _active_admin_count_after(self, removed_grant: Grant) -> int:
-        limit = max(self.users.count_active(), 1)
-        active_users = self.users.list(
-            limit=limit,
-            offset=0,
-            query=UserQuery(disabled=False),
+        ensure_admin_revoke_allowed(
+            actor_id=actor_id,
+            grant=grant,
+            users=self.users,
+            grants=self.grants,
+            roles=self.roles,
+            predicate=self.admin_predicate,
+            on_unsafe=UnsafeGrantMutationError,
         )
-        count = 0
-        for user in active_users:
-            if user.user_id == removed_grant.user_id:
-                grants = _remaining_grants(self.grants, removed_grant)
-            else:
-                grants = self.grants.list_grants_for_user(user.user_id)
-            if _grants_make_global_admin(grants, role_store=self.roles):
-                count += 1
-        return count
+
+    def _atomic_boundary(self) -> AbstractContextManager[object]:
+        if self.atomic is None:
+            return nullcontext()
+        return self.atomic()
 
     def _projector(self) -> GrantClaimsProjector:
         if self.projector is not None:
@@ -224,38 +208,8 @@ class GrantAdminService:
         return GrantClaimsProjector(roles=self.roles, grants=self.grants)
 
 
-def _remaining_grants(grants: GrantStore, removed_grant: Grant) -> tuple[Grant, ...]:
-    return tuple(
-        grant
-        for grant in grants.list_grants_for_user(removed_grant.user_id)
-        if grant != removed_grant
-    )
-
-
 def _scope_or_global(scope: Scope | None) -> Scope:
     return Scope.global_() if scope is None else scope
-
-
-def _grants_make_global_admin(
-    grants: tuple[Grant, ...],
-    *,
-    role_store: RoleStore,
-) -> bool:
-    return any(_is_global_admin_grant(grant, role_store=role_store) for grant in grants)
-
-
-def _is_global_admin_grant(grant: Grant, *, role_store: RoleStore) -> bool:
-    if not grant.scope.is_global():
-        return False
-    if grant.permission == ADMIN_ACCESS_PERMISSION:
-        return True
-    role_name = grant.role_name
-    if role_name is None:
-        return False
-    if role_name == ADMIN_ROLE_NAME:
-        return True
-    role = role_store.get(role_name)
-    return role is not None and ADMIN_ACCESS_PERMISSION in role.permissions
 
 
 def _grant_label(grant: Grant) -> str:
