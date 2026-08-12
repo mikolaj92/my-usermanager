@@ -76,6 +76,8 @@ def _demo_capability_options() -> tuple[CapabilityOption, ...]:
 
 def _set_demo_user_disabled(user_id: str, *, disabled: bool) -> UserRow:
     user = _require_demo_user(user_id)
+    if disabled:
+        _reject_last_demo_admin_mutation(user, action="disable")
     updated = replace(user, disabled=disabled)
     _DEMO_USERS[user.user_id] = updated
     return _user_row(updated)
@@ -91,10 +93,28 @@ def _grant_demo_role(user_id: str, role_name: str) -> UserRow:
 
 def _revoke_demo_role(user_id: str, role_name: str) -> UserRow:
     user = _require_demo_user(user_id)
+    if role_name == "admin":
+        _reject_last_demo_admin_mutation(user, action="revoke")
     roles = tuple(role for role in user.roles if role != role_name)
     updated = replace(user, roles=roles, admin=user.admin and role_name != "admin")
     _DEMO_USERS[user.user_id] = updated
     return _user_row(updated)
+
+
+def _reject_last_demo_admin_mutation(user: _DemoUser, *, action: str) -> None:
+    if not user.admin or user.disabled:
+        return
+    active_admins = sum(
+        1
+        for candidate in _DEMO_USERS.values()
+        if candidate.admin and not candidate.disabled
+    )
+    if active_admins > 1:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=f"cannot {action} the last active admin",
+    )
 
 
 def _grant_demo_permission(

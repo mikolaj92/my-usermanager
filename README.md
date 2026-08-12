@@ -190,9 +190,13 @@ principal = projection.to_session_principal(user)
 ```
 
 The default projection includes `is_admin`, roles, and permissions for the
-requested scope. `GrantAdminService` centralizes safe grant mutations,
-including protection against unsafe self-demotion and removing the last active
-admin. Hosts choose when to compute or refresh session principals.
+requested scope. `GrantAdminService` and `UserManager.transition_account`
+enforce last-active-administrator invariants for grant revoke and
+disable/soft-delete. Hosts declare what counts as administrative access with
+`AdminAccessPredicate` (defaults: global `admin` role or `admin.access`). For
+SQLite concurrency safety, pair `transaction_mode="external"` stores with
+`immediate_transaction` as the `atomic=` boundary so two concurrent removals
+cannot both succeed when they would leave zero administrators.
 
 `write_session_principal` and `read_session_principal` serialize a typed
 principal into a host-owned session mapping. For DB-backed sessions, keep the

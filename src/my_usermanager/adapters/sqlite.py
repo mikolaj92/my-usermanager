@@ -51,11 +51,13 @@ from my_usermanager.stores import (
 from my_usermanager.subjects import ExternalIdentityConflictError
 
 __all__: Final[tuple[str, ...]] = (
+    "ImmediateTransaction",
     "SQLiteAuditStore",
     "SQLiteGrantStore",
     "SQLiteRoleStore",
     "SQLiteUserStore",
     "create_tables",
+    "immediate_transaction",
     "inspect_sqlite_schema",
     "migrate_sqlite_schema",
 )
@@ -119,6 +121,9 @@ _FOREIGN_KEYS_ERROR: Final = (
 )
 _VALUE_ERROR: Final = "transaction_mode must be 'operation' or 'external'"
 _TRANSACTION_MODE_ERROR: Final = "transaction_mode must be 'standalone' or 'external'"
+_IMMEDIATE_PENDING_ERROR: Final = (
+    "immediate_transaction requires a connection that is not already in a transaction"
+)
 _INSERT_IDENTITY_SQL: Final = (
     "INSERT INTO um_external_identities (provider, subject, user_id) VALUES (?, ?, ?)"
 )
@@ -152,6 +157,47 @@ _INSERT_AUDIT_SQL: Final = "INSERT INTO um_audit_events (event_id, timestamp, ac
 _LIST_AUDIT_SQL: Final = (
     "SELECT * FROM um_audit_events {where} ORDER BY rowid LIMIT ? OFFSET ?"
 )
+
+
+class ImmediateTransaction:
+    """Begin an exclusive SQLite transaction for check-and-mutate invariants.
+
+    Pair this with stores constructed using ``transaction_mode="external"`` so
+    last-admin disable/revoke checks and the resulting write commit atomically.
+
+    Implemented as a class (not ``@contextmanager``) so frozen exception
+    dataclasses can propagate out of the ``with`` block unchanged.
+    """
+
+    __slots__: ClassVar[tuple[str, ...]] = ("_conn",)
+    _conn: sqlite3.Connection
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        """Bind the connection that will own the immediate transaction."""
+        self._conn = conn
+
+    def __enter__(self) -> Self:
+        """Start ``BEGIN IMMEDIATE`` or fail if a transaction is already open."""
+        if self._conn.in_transaction:
+            raise RuntimeError(_IMMEDIATE_PENDING_ERROR)
+        _ = self._conn.execute("BEGIN IMMEDIATE")
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: object,
+    ) -> bool:
+        """Roll back on failure; commit on success."""
+        if exc_type is not None:
+            self._conn.rollback()
+        else:
+            self._conn.commit()
+        return False
+
+
+immediate_transaction = ImmediateTransaction
 
 
 def _prepare_schema_transaction(
@@ -618,9 +664,7 @@ def _upgrade_um_schema_to_current(conn: sqlite3.Connection) -> None:
             (_SCHEMA_VERSION,),
         )
     else:
-        _ = conn.execute(
-            "UPDATE um_schema_version SET version = ?", (_SCHEMA_VERSION,)
-        )
+        _ = conn.execute("UPDATE um_schema_version SET version = ?", (_SCHEMA_VERSION,))
 
 
 def migrate_sqlite_schema(  # noqa: C901, PLR0912
