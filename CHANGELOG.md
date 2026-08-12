@@ -2,6 +2,12 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
+## Unreleased
+
+- Admin users UI: show unambiguous account and invitation status; optional
+  reissue/revoke invitation hooks and routes; one-time activation link copy
+  after invite/reissue without retaining raw tokens on listed rows.
+
 ## 0.4.5
 
 - Convert profile validation failures into HTTP 400 responses instead of uncaught 500 errors.

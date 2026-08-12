@@ -274,6 +274,39 @@ def test_disable_enable_fragments_mutate_only_in_memory_demo_users() -> None:
     )
 
 
+def test_admin_users_page_shows_invitation_status_and_lifecycle_actions() -> None:
+    assert_route_contract(
+        """
+        page = client.get("/admin/users")
+        assert page.status_code == 200, page.text
+        assert "Pending Invitee" in page.text
+        assert "Pending" in page.text
+        assert "Invitation pending" in page.text
+        assert "Reissue invitation" in page.text
+        assert "Revoke invitation" in page.text
+        assert "capability=" not in page.text
+
+        reissue = client.post(
+            "/admin/users/invitations/reissue",
+            data={"invitation_id": "invite-pending-user", "csrf": "demo-noop-csrf"},
+            follow_redirects=True,
+        )
+        assert reissue.status_code == 200, reissue.text
+        assert "/activate?capability=pending-user-token-reissued" in reissue.text
+        assert "Copy this activation link now" in reissue.text
+
+        revoke = client.post(
+            "/admin/users/invitations/revoke",
+            data={"invitation_id": "invite-pending-user", "csrf": "demo-noop-csrf"},
+        )
+        assert revoke.status_code == 200, revoke.text
+        assert 'id="user-row-' in revoke.text
+        assert "Invitation revoked" in revoke.text
+        assert "capability=" not in revoke.text
+        """,
+    )
+
+
 def test_demo_rejects_disabling_final_active_administrator() -> None:
     assert_route_contract(
         f"""

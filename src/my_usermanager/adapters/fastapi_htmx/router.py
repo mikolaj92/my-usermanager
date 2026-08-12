@@ -350,6 +350,12 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
                 "labels": labels,
                 "invitation_url": request.query_params.get("invitation_url"),
                 "invite_enabled": callable(getattr(hooks, "invite_user", None)),
+                "reissue_invitation_enabled": callable(
+                    getattr(hooks, "reissue_invitation", None)
+                ),
+                "revoke_invitation_enabled": callable(
+                    getattr(hooks, "revoke_invitation", None)
+                ),
                 "soft_delete_enabled": callable(
                     getattr(hooks, "soft_delete_user", None)
                 ),
@@ -397,7 +403,7 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
             else tuple(form[name] for name in required)
         )
         result = await resolve(callback(request, auth.current_user, *callback_values))
-        if hook_name == "invite_user":
+        if hook_name in {"invite_user", "reissue_invitation"}:
             activation_url = getattr(result, "activation_url", None)
             if not isinstance(activation_url, str) or not activation_url:
                 return error_response(
@@ -494,6 +500,42 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
                 redirect_url=config.users_path,
             )
 
+        async def reissue_invitation(request: Request) -> Response:
+            return await named_action(
+                request,
+                hook_name="reissue_invitation",
+                required=("invitation_id",),
+                redirect_url=config.users_path,
+            )
+
+        async def revoke_invitation(request: Request) -> Response:
+            auth = await admin_user(request, config, hooks)
+            if isinstance(auth, Denied):
+                return auth.response
+            callback = getattr(hooks, "revoke_invitation", None)
+            if not callable(callback):
+                return error_response(
+                    501,
+                    "Action unavailable",
+                    "Host did not provide revoke_invitation.",
+                )
+            form = await read_named_form(request, ("invitation_id",))
+            if isinstance(form, FormError):
+                return error_response(form.status_code, form.title, form.message)
+            csrf_error = await _validate_csrf(request, config, form.get("csrf"))
+            if csrf_error is not None:
+                return csrf_error
+            changed = cast(
+                "UserRow",
+                await resolve(
+                    callback(request, auth.current_user, form["invitation_id"])
+                ),
+            )
+            csrf = await resolve(hooks.csrf_context(request))
+            return await _row_response(
+                templates, request, config, hooks, auth.current_user, changed, csrf
+            )
+
         async def soft_delete(request: Request) -> Response:
             return await named_action(
                 request,
@@ -512,6 +554,12 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
 
         router.add_api_route(config.audit_path, audit, methods=["GET"])
         router.add_api_route(config.invite_path, invite, methods=["POST"])
+        router.add_api_route(
+            config.reissue_invitation_path, reissue_invitation, methods=["POST"]
+        )
+        router.add_api_route(
+            config.revoke_invitation_path, revoke_invitation, methods=["POST"]
+        )
         router.add_api_route(
             config.soft_delete_user_path, soft_delete, methods=["POST"]
         )
@@ -582,6 +630,12 @@ async def _row_response(
             "csrf": csrf,
             "csrf_inputs": _csrf_inputs(config, request, csrf),
             "labels": labels,
+            "reissue_invitation_enabled": callable(
+                getattr(hooks, "reissue_invitation", None)
+            ),
+            "revoke_invitation_enabled": callable(
+                getattr(hooks, "revoke_invitation", None)
+            ),
             "soft_delete_enabled": callable(getattr(hooks, "soft_delete_user", None)),
             "hard_delete_enabled": callable(getattr(hooks, "hard_delete_user", None)),
         }

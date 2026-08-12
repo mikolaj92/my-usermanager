@@ -11,6 +11,8 @@ from my_auth import PasskeyUser
 from my_usermanager.adapters.fastapi_htmx import (
     CapabilityOption,
     ExternalIdentityRow,
+    InvitationResult,
+    InvitationRow,
     PermissionGrantRow,
     UserRow,
 )
@@ -30,6 +32,14 @@ _DEMO_CAPABILITY: Final = CapabilityOption(
 
 
 @dataclass(frozen=True, slots=True)
+class _DemoInvitation:
+    invitation_id: str
+    status: str
+    expires_at: str
+    delivery_suffix: str
+
+
+@dataclass(frozen=True, slots=True)
 class _DemoUser:
     user_id: str
     username: str
@@ -37,8 +47,11 @@ class _DemoUser:
     email: str
     admin: bool = False
     disabled: bool = False
+    deleted: bool = False
+    account_status: str = "active"
     roles: tuple[str, ...] = ()
     permissions: tuple[PermissionGrantRow, ...] = ()
+    invitation: _DemoInvitation | None = None
 
 
 def _all_demo_users() -> tuple[_DemoUser, ...]:
@@ -76,9 +89,61 @@ def _demo_capability_options() -> tuple[CapabilityOption, ...]:
 
 def _set_demo_user_disabled(user_id: str, *, disabled: bool) -> UserRow:
     user = _require_demo_user(user_id)
+    if user.account_status == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="pending invited users cannot be enabled or disabled",
+        )
     if disabled:
         _reject_last_demo_admin_mutation(user, action="disable")
-    updated = replace(user, disabled=disabled)
+    updated = replace(
+        user,
+        disabled=disabled,
+        account_status="disabled" if disabled else "active",
+    )
+    _DEMO_USERS[user.user_id] = updated
+    return _user_row(updated)
+
+
+def _invite_demo_user(username: str, email: str, role: str) -> InvitationResult:
+    user_id = _user_id_from_display_name(username)
+    if user_id in _DEMO_USERS:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="demo user already exists",
+        )
+    invitation = _DemoInvitation(
+        invitation_id=f"invite-{user_id}",
+        status="pending",
+        expires_at="2026-12-31T00:00:00+00:00",
+        delivery_suffix=f"{user_id}-token",
+    )
+    _DEMO_USERS[user_id] = _DemoUser(
+        user_id=user_id,
+        username=username,
+        display_name=username,
+        email=email,
+        account_status="pending",
+        roles=(role,),
+        invitation=invitation,
+    )
+    return InvitationResult(f"/activate?capability={invitation.delivery_suffix}")
+
+
+def _reissue_demo_invitation(invitation_id: str) -> InvitationResult:
+    user, invitation = _require_pending_demo_invitation(invitation_id)
+    reissued = replace(
+        invitation,
+        delivery_suffix=f"{invitation.delivery_suffix}-reissued",
+    )
+    _DEMO_USERS[user.user_id] = replace(user, invitation=reissued)
+    return InvitationResult(f"/activate?capability={reissued.delivery_suffix}")
+
+
+def _revoke_demo_invitation(invitation_id: str) -> UserRow:
+    user, invitation = _require_pending_demo_invitation(invitation_id)
+    revoked = replace(invitation, status="revoked")
+    updated = replace(user, invitation=revoked)
     _DEMO_USERS[user.user_id] = updated
     return _user_row(updated)
 
@@ -191,6 +256,20 @@ def _initial_users() -> dict[str, _DemoUser]:
                 ),
             ),
         ),
+        "pending-user": _DemoUser(
+            user_id="pending-user",
+            username="pending",
+            display_name="Pending Invitee",
+            email="pending@example.invalid",
+            account_status="pending",
+            roles=("member",),
+            invitation=_DemoInvitation(
+                invitation_id="invite-pending-user",
+                status="pending",
+                expires_at="2026-12-31T00:00:00+00:00",
+                delivery_suffix="pending-user-token",
+            ),
+        ),
         DEMO_UNSAFE_USER_ID: _DemoUser(
             user_id=DEMO_UNSAFE_USER_ID,
             username="unsafe-user",
@@ -215,22 +294,35 @@ def _authenticated_subject(user: _DemoUser) -> AuthenticatedSubject:
 
 
 def _user_row(user: _DemoUser) -> UserRow:
+    invitation = None
+    if user.invitation is not None:
+        invitation = InvitationRow(
+            invitation_id=user.invitation.invitation_id,
+            status=user.invitation.status,
+            expires_at=user.invitation.expires_at,
+        )
+    identities: tuple[ExternalIdentityRow, ...] = ()
+    if user.account_status == "active":
+        identities = (
+            ExternalIdentityRow(
+                provider="demo-passkey",
+                subject=f"demo:{user.user_id}",
+            ),
+        )
     return UserRow(
         user_id=user.user_id,
         row_key=user.user_id,
         username=user.username,
         display_name=user.display_name,
         email=user.email,
-        disabled=user.disabled,
+        disabled=user.disabled or user.account_status == "disabled",
         is_admin=user.admin,
         roles=user.roles,
         permissions=user.permissions,
-        external_identities=(
-            ExternalIdentityRow(
-                provider="demo-passkey",
-                subject=f"demo:{user.user_id}",
-            ),
-        ),
+        external_identities=identities,
+        deleted=user.deleted or user.account_status == "deleted",
+        account_status=user.account_status,
+        invitation=invitation,
     )
 
 
@@ -242,6 +334,30 @@ def _require_demo_user(user_id: str) -> _DemoUser:
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Demo user was not found.",
     )
+
+
+def _require_demo_invitation_user(invitation_id: str) -> _DemoUser:
+    for user in _DEMO_USERS.values():
+        invitation = user.invitation
+        if invitation is not None and invitation.invitation_id == invitation_id:
+            return user
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Demo invitation was not found.",
+    )
+
+
+def _require_pending_demo_invitation(
+    invitation_id: str,
+) -> tuple[_DemoUser, _DemoInvitation]:
+    user = _require_demo_invitation_user(invitation_id)
+    invitation = user.invitation
+    if invitation is None or invitation.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="invitation is unavailable",
+        )
+    return user, invitation
 
 
 def _user_id_from_display_name(display_name: str) -> str:

@@ -102,6 +102,12 @@ requires the exact invited user, capability id, and external identity subject.
 All unavailable, expired, revoked, disabled, or replayed invitations fail through
 the same non-enumerating `InvitationError`.
 
+The FastAPI/HTMX admin users UI can expose the same lifecycle when the host
+implements optional hooks: `invite_user`, `reissue_invitation`, and
+`revoke_invitation`. Rows may carry `account_status` plus an `InvitationRow`
+(status and expiry only). Activation URLs are returned once after invite/reissue
+redirects and are never stored on listed rows.
+
 Identity-linking checklist for host apps:
 
 - Provision or choose the local `User` in host code before returning `PasskeyRegistrationLink`.
