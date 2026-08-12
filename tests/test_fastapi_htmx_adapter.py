@@ -95,6 +95,7 @@ def test_public_api_and_resources_are_clean() -> None:
         "CsrfProtection",
         "ExternalIdentityRow",
         "InvitationResult",
+        "InvitationRow",
         "PasskeyPanel",
         "PermissionGrantRow",
         "SessionRow",
@@ -150,6 +151,22 @@ class FakeUiHooks:
             email="user@example.test",
             disabled=False,
             is_admin=False,
+            account_status="active",
+        )
+        self.pending_row = adapter.UserRow(
+            user_id="pending-1",
+            row_key="pending-1",
+            username="pending",
+            display_name="Pending User",
+            email="pending@example.test",
+            disabled=False,
+            is_admin=False,
+            account_status="pending",
+            invitation=adapter.InvitationRow(
+                invitation_id="invite-1",
+                status="pending",
+                expires_at="2026-12-31T00:00:00+00:00",
+            ),
         )
 
     def get_current_user(self, _request: Request) -> AuthenticatedSubject:
@@ -163,7 +180,7 @@ class FakeUiHooks:
     def list_users(
         self, _request: Request, _current_user: AuthenticatedSubject
     ) -> tuple[UserRow, ...]:
-        return (self.row,)
+        return (self.row, self.pending_row)
 
     def role_options(
         self, _request: Request, _current_user: AuthenticatedSubject
@@ -252,6 +269,47 @@ class FakeUiHooks:
 
         self.calls.append(("invite", username, email, role))
         return adapter.InvitationResult(f"/activate?capability={username}-token")
+
+    def reissue_invitation(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        invitation_id: str,
+    ) -> object:
+        import my_usermanager.adapters.fastapi_htmx as adapter
+
+        self.calls.append(("reissue", invitation_id))
+        return adapter.InvitationResult(
+            f"/activate?capability=reissued-{invitation_id}"
+        )
+
+    def revoke_invitation(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        invitation_id: str,
+    ) -> UserRow:
+        import my_usermanager.adapters.fastapi_htmx as adapter
+
+        self.calls.append(("revoke-invitation", invitation_id))
+        self.pending_row = adapter.UserRow(
+            user_id=self.pending_row.user_id,
+            row_key=self.pending_row.row_key,
+            username=self.pending_row.username,
+            display_name=self.pending_row.display_name,
+            email=self.pending_row.email,
+            disabled=False,
+            is_admin=False,
+            account_status="pending",
+            invitation=adapter.InvitationRow(
+                invitation_id=invitation_id,
+                status="revoked",
+                expires_at=self.pending_row.invitation.expires_at
+                if self.pending_row.invitation is not None
+                else None,
+            ),
+        )
+        return self.pending_row
 
     def list_sessions(
         self, _request: Request, _current_user: AuthenticatedSubject
@@ -371,7 +429,7 @@ def _get(client: ClientLike, url: str) -> ResponseLike:
     return _response(client.get(url))
 
 
-def test_route_toggles_and_csrf_guard() -> None:
+def test_route_toggles_and_csrf_guard() -> None:  # noqa: PLR0915
     import my_usermanager.adapters.fastapi_htmx as adapter
 
     calls: list[object] = []
@@ -417,6 +475,12 @@ def test_route_toggles_and_csrf_guard() -> None:
     users_page = _get(client, config.users_path)
     assert users_page.status_code == 200
     assert "Invite user" in users_page.text
+    assert "Pending" in users_page.text
+    assert "Invitation pending" in users_page.text
+    assert "Reissue invitation" in users_page.text
+    assert "Revoke invitation" in users_page.text
+    assert 'name="invitation_id"' in users_page.text
+    assert "capability=" not in users_page.text
     assert _get(client, config.sessions_path).status_code == 200
     assert "session-2" in _get(client, config.sessions_path).text
     assert "invitation.issue" in _get(client, config.audit_path).text
@@ -433,6 +497,30 @@ def test_route_toggles_and_csrf_guard() -> None:
     )
     assert invited.status_code == 200
     assert "/activate?capability=new-user-token" in invited.text
+    assert "Copy this activation link now" in invited.text
+    reissued = _post(
+        client,
+        config.reissue_invitation_path,
+        {"invitation_id": "invite-1", "csrf": "good"},
+    )
+    assert reissued.status_code == 200
+    assert "/activate?capability=reissued-invite-1" in reissued.text
+    assert ("reissue", "invite-1") in calls
+    bad_reissue = _post(
+        client,
+        config.reissue_invitation_path,
+        {"invitation_id": "invite-1", "csrf": "bad"},
+    )
+    assert bad_reissue.status_code == 403
+    revoked_invite = _post(
+        client,
+        config.revoke_invitation_path,
+        {"invitation_id": "invite-1", "csrf": "good"},
+    )
+    assert revoked_invite.status_code == 200
+    assert "Invitation revoked" in revoked_invite.text
+    assert ("revoke-invitation", "invite-1") in calls
+    assert "capability=" not in revoked_invite.text
     wrong_delete = _post(
         client,
         config.hard_delete_user_path,
@@ -561,6 +649,97 @@ def test_passkey_panel_uses_named_packaged_template() -> None:
     response = _get(_client(app), "/account")
     assert response.status_code == 200
     assert "Passkeys" in response.text
+
+
+def test_invitation_mutations_fail_closed_for_non_admin_and_missing_hooks() -> None:
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    class NonAdminHooks(FakeUiHooks):
+        def require_admin(
+            self, _request: Request, _current_user: AuthenticatedSubject
+        ) -> None:
+            message = "admin required"
+            raise PermissionError(message)
+
+    class NoInvitationHooks(FakeUiHooks):
+        invite_user = None
+        reissue_invitation = None
+        revoke_invitation = None
+
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
+    )
+    config = adapter.UserManagerUiConfig(csrf_protection=_csrf())
+
+    denied_app = FastAPI()
+    _ = install_app_factory_ui(
+        denied_app,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    _ = adapter.install_usermanager_ui(
+        denied_app,
+        platform=platform,
+        hooks=cast("UserManagerUiHooks", cast("object", NonAdminHooks())),
+        config=config,
+    )
+    denied_client = _client(denied_app)
+    assert _get(denied_client, config.users_path).status_code == 403
+    assert (
+        _post(
+            denied_client,
+            config.reissue_invitation_path,
+            {"invitation_id": "invite-1", "csrf": "good"},
+        ).status_code
+        == 403
+    )
+    assert (
+        _post(
+            denied_client,
+            config.revoke_invitation_path,
+            {"invitation_id": "invite-1", "csrf": "good"},
+        ).status_code
+        == 403
+    )
+
+    missing_app = FastAPI()
+    _ = install_app_factory_ui(
+        missing_app,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    _ = adapter.install_usermanager_ui(
+        missing_app,
+        platform=platform,
+        hooks=cast("UserManagerUiHooks", cast("object", NoInvitationHooks())),
+        config=config,
+    )
+    missing_client = _client(missing_app)
+    users_page = _get(missing_client, config.users_path)
+    assert users_page.status_code == 200
+    assert "Invite user" not in users_page.text
+    assert "Reissue invitation" not in users_page.text
+    assert "Revoke invitation" not in users_page.text
+    assert (
+        _post(
+            missing_client,
+            config.reissue_invitation_path,
+            {"invitation_id": "invite-1", "csrf": "good"},
+        ).status_code
+        == 501
+    )
+    assert (
+        _post(
+            missing_client,
+            config.revoke_invitation_path,
+            {"invitation_id": "invite-1", "csrf": "good"},
+        ).status_code
+        == 501
+    )
 
 
 def test_admin_requires_csrf_protection() -> None:

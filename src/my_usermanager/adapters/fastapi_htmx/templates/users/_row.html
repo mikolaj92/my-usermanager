@@ -1,3 +1,24 @@
+{% set account_status = user.account_status %}
+{% if not account_status %}
+  {% if user.deleted %}
+    {% set account_status = "deleted" %}
+  {% elif user.disabled %}
+    {% set account_status = "disabled" %}
+  {% else %}
+    {% set account_status = "active" %}
+  {% endif %}
+{% endif %}
+{% if account_status == "pending" %}
+  {% set account_status_label = labels.status_pending %}
+{% elif account_status == "disabled" %}
+  {% set account_status_label = labels.status_disabled %}
+{% elif account_status == "deleted" %}
+  {% set account_status_label = labels.status_deleted %}
+{% else %}
+  {% set account_status_label = labels.status_active %}
+{% endif %}
+{% set invitation = user.invitation %}
+{% set invitation_actionable = invitation and invitation.status == "pending" %}
 <tr id="user-row-{{ user.row_key }}">
   <td>
     <strong>{{ user.display_name or user.username }}</strong>
@@ -37,12 +58,33 @@
       <span class="um-muted">—</span>
     {% endif %}
   </td>
-  <td><span class="badge">{% if user.deleted %}{{ labels.status_deleted }}{% elif user.disabled %}{{ labels.status_disabled }}{% else %}{{ labels.status_active }}{% endif %}</span></td>
+  <td>
+    <div class="um-stack um-gap-xs">
+      <span class="badge">{{ account_status_label }}</span>
+      {% if invitation %}
+        {% if invitation.status == "pending" %}
+          {% set invitation_status_label = labels.invitation_status_pending %}
+        {% elif invitation.status == "used" %}
+          {% set invitation_status_label = labels.invitation_status_used %}
+        {% elif invitation.status == "revoked" %}
+          {% set invitation_status_label = labels.invitation_status_revoked %}
+        {% elif invitation.status == "expired" %}
+          {% set invitation_status_label = labels.invitation_status_expired %}
+        {% else %}
+          {% set invitation_status_label = invitation.status %}
+        {% endif %}
+        <span class="badge">{{ invitation_status_label }}</span>
+        {% if invitation.expires_at %}
+          <span class="um-muted">{{ labels.invitation_expires }}: <time datetime="{{ invitation.expires_at }}">{{ invitation.expires_at }}</time></span>
+        {% endif %}
+      {% endif %}
+    </div>
+  </td>
   <td>
     <div class="um-stack">
-      {% if user.deleted %}
+      {% if account_status == "deleted" %}
         <span class="um-muted">{{ labels.status_deleted }}</span>
-      {% elif user.disabled %}
+      {% elif account_status == "disabled" %}
         <form
           method="post"
           action="{{ config.enable_user_path }}"
@@ -58,7 +100,7 @@
           {% endfor %}
           <button class="btn btn-secondary" type="submit">{{ labels.action_enable }}</button>
         </form>
-      {% else %}
+      {% elif account_status == "active" %}
         <form
           method="post"
           action="{{ config.disable_user_path }}"
@@ -73,6 +115,31 @@
             <input type="hidden" name="{{ name }}" value="{{ value }}">
           {% endfor %}
           <button class="btn btn-destructive" type="submit">{{ labels.action_disable }}</button>
+        </form>
+      {% endif %}
+      {% if invitation_actionable and reissue_invitation_enabled %}
+        <form method="post" action="{{ config.reissue_invitation_path }}" data-no-htmx="true">
+          <input type="hidden" name="invitation_id" value="{{ invitation.invitation_id }}">
+          {% for name, value in csrf_inputs %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <button class="btn btn-secondary" type="submit">{{ labels.action_reissue_invitation }}</button>
+        </form>
+      {% endif %}
+      {% if invitation_actionable and revoke_invitation_enabled %}
+        <form
+          method="post"
+          action="{{ config.revoke_invitation_path }}"
+          hx-post="{{ config.revoke_invitation_path }}"
+          hx-target="#user-row-{{ user.row_key }}"
+          hx-swap="outerHTML"
+          hx-indicator="#user-{{ user.row_key }}-indicator"
+        >
+          <input type="hidden" name="invitation_id" value="{{ invitation.invitation_id }}">
+          {% for name, value in csrf_inputs %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <button class="btn btn-destructive" type="submit">{{ labels.action_revoke_invitation }}</button>
         </form>
       {% endif %}
       {% if role_options %}
@@ -160,14 +227,14 @@
           <button class="btn btn-secondary" type="submit">{{ labels.action_revoke }} {{ permission.label }}</button>
         </form>
       {% endfor %}
-      {% if soft_delete_enabled and not user.deleted %}
+      {% if soft_delete_enabled and account_status != "deleted" %}
         <form method="post" action="{{ config.soft_delete_user_path }}" data-no-htmx="true">
           <input type="hidden" name="user_id" value="{{ user.user_id }}">
           {% for name, value in csrf_inputs %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
           <button class="btn btn-destructive" type="submit">{{ labels.action_soft_delete }}</button>
         </form>
       {% endif %}
-      {% if hard_delete_enabled and user.deleted %}
+      {% if hard_delete_enabled and account_status == "deleted" %}
         <details><summary>{{ labels.action_hard_delete }}</summary>
           <form method="post" action="{{ config.hard_delete_user_path }}" data-no-htmx="true">
             <input type="hidden" name="user_id" value="{{ user.user_id }}">

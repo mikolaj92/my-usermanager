@@ -47,15 +47,23 @@ DEFAULT_UI_LABELS: Final[dict[str, str]] = {
     "badge_user": "User",
     "status_disabled": "Disabled",
     "status_active": "Active",
+    "status_pending": "Pending",
+    "status_deleted": "Deleted",
+    "invitation_status_pending": "Invitation pending",
+    "invitation_status_used": "Invitation used",
+    "invitation_status_revoked": "Invitation revoked",
+    "invitation_status_expired": "Invitation expired",
+    "invitation_expires": "Expires",
     "action_enable": "Enable",
     "action_disable": "Disable",
     "action_grant_role": "Grant role",
     "action_revoke": "Revoke",
     "action_grant": "Grant",
+    "action_reissue_invitation": "Reissue invitation",
+    "action_revoke_invitation": "Revoke invitation",
     "action_soft_delete": "Delete account",
     "action_hard_delete": "Permanently delete",
     "confirm_hard_delete": "Type the user id to permanently delete this account.",
-    "status_deleted": "Deleted",
     "invite_title": "Invite user",
     "invite_description": (
         "Create a pending account and send the activation link through your "
@@ -66,6 +74,10 @@ DEFAULT_UI_LABELS: Final[dict[str, str]] = {
     "invite_role": "Initial role",
     "invite_submit": "Create invitation",
     "invite_activation_link": "Activation link",
+    "invite_activation_once": (
+        "Copy this activation link now. It is shown once and is not stored "
+        "in this admin UI."
+    ),
     "sessions_title": "Sessions",
     "sessions_description": "Review and revoke active application sessions.",
     "sessions_empty": "No active sessions.",
@@ -185,6 +197,15 @@ class PermissionGrantRow:
 
 
 @dataclass(frozen=True, slots=True)
+class InvitationRow:
+    """Safe invitation metadata for admin rows; raw tokens are never included."""
+
+    invitation_id: str
+    status: str
+    expires_at: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class UserRow:
     """Host-provided managed-user row rendered by the administrator UI."""
 
@@ -199,6 +220,8 @@ class UserRow:
     permissions: tuple[PermissionGrantRow, ...] = ()
     external_identities: tuple[ExternalIdentityRow, ...] = ()
     deleted: bool = False
+    account_status: str | None = None
+    invitation: InvitationRow | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -266,6 +289,8 @@ class UserManagerUiConfig:
     grant_permission_path: str = "/admin/users/grant-permission"
     revoke_permission_path: str = "/admin/users/revoke-permission"
     invite_path: str = "/admin/users/invite"
+    reissue_invitation_path: str = "/admin/users/invitations/reissue"
+    revoke_invitation_path: str = "/admin/users/invitations/revoke"
     soft_delete_user_path: str = "/admin/users/delete"
     hard_delete_user_path: str = "/admin/users/delete-permanently"
     sessions_path: str = "/account/sessions"
@@ -415,6 +440,8 @@ class UserManagerUiHooks(Protocol):
 
     # Optional hooks are discovered with getattr so existing hosts remain valid:
     # invite_user(request, current_user, username, email, role) -> InvitationResult
+    # reissue_invitation(request, current_user, invitation_id) -> InvitationResult
+    # revoke_invitation(request, current_user, invitation_id) -> UserRow
     # list_sessions(request, current_user) -> Sequence[SessionRow]
     # revoke_session(request, current_user, session_id) -> None
     # list_audit_events(request, current_user) -> Sequence[AuditRow]

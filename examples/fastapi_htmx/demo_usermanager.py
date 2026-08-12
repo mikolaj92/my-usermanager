@@ -14,7 +14,10 @@ from examples.fastapi_htmx.demo_users import (
     _demo_user_rows,
     _grant_demo_permission,
     _grant_demo_role,
+    _invite_demo_user,
+    _reissue_demo_invitation,
     _require_demo_admin,
+    _revoke_demo_invitation,
     _revoke_demo_permission,
     _revoke_demo_role,
     _set_demo_user_disabled,
@@ -23,6 +26,7 @@ from my_usermanager.adapters.fastapi_htmx import (
     CapabilityOption,
     CsrfContext,
     CsrfProtection,
+    InvitationResult,
     PasskeyPanel,
     PermissionGrantRow,
     UserRow,
@@ -125,6 +129,32 @@ class _UserManagerHooks:
         permission: PermissionGrantRow,
     ) -> UserRow:
         return _revoke_demo_permission(user_id, permission)
+
+    def invite_user(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        username: str,
+        email: str,
+        role: str,
+    ) -> InvitationResult:
+        return _invite_demo_user(username, email, role)
+
+    def reissue_invitation(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        invitation_id: str,
+    ) -> InvitationResult:
+        return _reissue_demo_invitation(invitation_id)
+
+    def revoke_invitation(
+        self,
+        _request: Request,
+        _current_user: AuthenticatedSubject,
+        invitation_id: str,
+    ) -> UserRow:
+        return _revoke_demo_invitation(invitation_id)
 
     def csrf_context(self, _request: Request) -> CsrfContext:
         return CsrfContext(

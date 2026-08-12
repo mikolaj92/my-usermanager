@@ -17,7 +17,13 @@
     {% if invite_enabled %}
       <article class="card um-card um-stack" aria-labelledby="invite-title">
         <div><h2 id="invite-title">{{ labels.invite_title }}</h2><p class="um-muted">{{ labels.invite_description }}</p></div>
-        {% if invitation_url %}<p role="status"><strong>{{ labels.invite_activation_link }}:</strong> <a href="{{ invitation_url }}"><code>{{ invitation_url }}</code></a></p>{% endif %}
+        {% if invitation_url %}
+          <p role="status">
+            <strong>{{ labels.invite_activation_link }}:</strong>
+            <a href="{{ invitation_url }}"><code>{{ invitation_url }}</code></a>
+          </p>
+          <p class="um-muted">{{ labels.invite_activation_once }}</p>
+        {% endif %}
         <form class="um-cluster" method="post" action="{{ config.invite_path }}" data-no-htmx="true">
           {% for name, value in csrf_inputs %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
           <label>{{ labels.invite_username }} <input class="input" name="username" required autocomplete="off"></label>
