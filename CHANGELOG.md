@@ -4,9 +4,15 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
-- Admin users UI: show unambiguous account and invitation status; optional
-  reissue/revoke invitation hooks and routes; one-time activation link copy
-  after invite/reissue without retaining raw tokens on listed rows.
+## 0.5.1
+
+- Complete account management flows (disable/enable, sessions, and audit in
+  the admin UI).
+- Remove SQLite legacy dual-read shims; inspect fails closed on legacy
+  grant/audit layouts (#45).
+- Protect the final active administrator from disable and revoke lockout
+  (#46).
+- Shared admin UI for invitation status, reissue, and revoke (#47).
 
 ## 0.4.5
 
