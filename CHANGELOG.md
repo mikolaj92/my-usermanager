@@ -4,6 +4,11 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+## 0.5.3
+
+- Pin `[tool.uv.sources]` to app-factory `v0.6.4` and my-auth `v0.4.1` so
+  BOM v0.6.4 hosts only need to override `app-factory[platform]`.
+
 ## 0.5.2
 
 - `SQLiteAuthDatabase.initialize()` stamps invitation metadata (`um_invitations`)

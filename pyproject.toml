@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "my-usermanager"
-version = "0.5.2"
+version = "0.5.3"
 description = "Framework-neutral user management and authorization for Python applications."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -66,8 +66,8 @@ exclude = [
 "src/my_usermanager/adapters/fastapi_htmx/static" = "my_usermanager/adapters/fastapi_htmx/static"
 
 [tool.uv.sources]
-app-factory = { git = "https://github.com/mikolaj92/app-factory", tag = "v0.5.18" }
-my-auth = { git = "https://github.com/mikolaj92/my-auth", tag = "v0.4.0" }
+app-factory = { git = "https://github.com/mikolaj92/app-factory", tag = "v0.6.4" }
+my-auth = { git = "https://github.com/mikolaj92/my-auth", tag = "v0.4.1" }
 
 [tool.basedpyright]
 typeCheckingMode = "all"
