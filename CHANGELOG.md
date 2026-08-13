@@ -4,6 +4,12 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+## 0.5.5
+
+- Pin `[tool.uv.sources]` app-factory to `v0.6.5` (my-auth stays `v0.4.2`) so
+  BOM v0.6.5 hosts only need to override `app-factory[platform]`. Extra remains
+  `my-auth>=0.4,<0.5`.
+
 ## 0.5.4
 
 - Pin `[tool.uv.sources]` my-auth to `v0.4.2` (app-factory stays `v0.6.4`) so
