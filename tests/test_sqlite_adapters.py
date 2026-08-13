@@ -52,6 +52,7 @@ from my_usermanager.subjects import (
 
 _INJECTED_MY_AUTH_FAILURE = "injected my-auth migration failure"
 _INJECTED_COMMIT_FAILURE = "injected commit failure"
+_INJECTED_INVITATION_FAILURE = "injected invitation failure"
 
 
 # ---------------------------------------------------------------------------
@@ -608,7 +609,59 @@ def test_auth_database_initialize_rolls_back_um_when_my_auth_fails(
         )
         tables = {row[0] for row in table_rows}
         assert not tables.intersection(
-            {"my_auth_schema", "um_schema_version", "um_users", "um_grants"}
+            {
+                "my_auth_schema",
+                "um_schema_version",
+                "um_users",
+                "um_grants",
+                "um_invitations",
+            }
+        )
+    finally:
+        conn.close()
+
+
+def test_auth_database_initialize_rolls_back_when_invitation_ddl_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invitation DDL stays in initialize's transaction; it must not nested-commit."""
+
+    def fail_after_partial_invitations(
+        connection: sqlite3.Connection, *, transaction_mode: str = "standalone"
+    ) -> None:
+        assert transaction_mode == "external"
+        assert connection.in_transaction
+        _ = connection.execute(
+            "CREATE TABLE um_invitations (invitation_id TEXT PRIMARY KEY)"
+        )
+        raise RuntimeError(_INJECTED_INVITATION_FAILURE)
+
+    monkeypatch.setattr(
+        "my_usermanager.adapters.my_auth_sqlite.create_invitation_tables",
+        fail_after_partial_invitations,
+    )
+    conn = sqlite3.connect(":memory:")
+    try:
+        with pytest.raises(RuntimeError, match=_INJECTED_INVITATION_FAILURE):
+            SQLiteAuthDatabase(conn).initialize()
+
+        table_rows = cast(
+            "list[tuple[object, ...]]",
+            cast(
+                "object",
+                conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall(),
+            ),
+        )
+        tables = {row[0] for row in table_rows}
+        assert not tables.intersection(
+            {
+                "um_schema_version",
+                "um_users",
+                "um_grants",
+                "um_invitations",
+            }
         )
     finally:
         conn.close()
@@ -1023,6 +1076,48 @@ def test_audit_schema_lookalike_is_rejected() -> None:
     connection.fail_commit = False
     with mutation(cast("sqlite3.Connection", cast("object", connection)), "operation"):
         pass
+
+
+def _sqlite_table_names(conn: sqlite3.Connection) -> set[object]:
+    table_rows = cast(
+        "list[tuple[object, ...]]",
+        cast(
+            "object",
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall(),
+        ),
+    )
+    return {row[0] for row in table_rows}
+
+
+def test_auth_database_initialize_creates_invitation_tables() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        SQLiteAuthDatabase(conn).initialize()
+        SQLiteAuthDatabase(conn).initialize()
+
+        assert "um_invitations" in _sqlite_table_names(conn)
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+    finally:
+        conn.close()
+
+
+def test_auth_database_initialize_stamps_invitations_on_current_schema() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        SQLiteAuthDatabase(conn).initialize()
+        conn.execute("DROP TABLE um_invitations")
+        conn.commit()
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+        assert "um_invitations" not in _sqlite_table_names(conn)
+
+        SQLiteAuthDatabase(conn).initialize()
+
+        assert "um_invitations" in _sqlite_table_names(conn)
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+    finally:
+        conn.close()
 
 
 def test_auth_database_initializes_caller_connection_with_foreign_keys() -> None:

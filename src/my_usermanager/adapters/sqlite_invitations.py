@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime
-from typing import cast, final
+from typing import Literal, cast, final
 
 from my_usermanager.invitations import (
     Invitation,
@@ -33,11 +33,59 @@ CREATE UNIQUE INDEX IF NOT EXISTS um_invitations_pending_user
     ON um_invitations(user_id) WHERE status = 'pending';
 """
 
+_TRANSACTION_MODE_ERROR = "transaction_mode must be 'standalone' or 'external'"
+_SCHEMA_PENDING_ERROR = "cannot initialize schema while a transaction is pending"
+_FOREIGN_KEYS_ERROR = "cannot initialize schema without SQLite foreign keys enabled"
 
-def create_invitation_tables(connection: sqlite3.Connection) -> None:
-    """Create durable invitation metadata storage without raw token columns."""
-    connection.executescript(_CREATE_SQL)
-    connection.commit()
+
+def _prepare_invitation_transaction(
+    connection: sqlite3.Connection,
+    *,
+    transaction_mode: Literal["standalone", "external"],
+) -> None:
+    if transaction_mode == "external":
+        if not connection.in_transaction:
+            raise RuntimeError(_SCHEMA_PENDING_ERROR)
+    elif connection.in_transaction:
+        raise RuntimeError(_SCHEMA_PENDING_ERROR)
+
+    if transaction_mode == "standalone":
+        _ = connection.execute("PRAGMA foreign_keys = ON")
+    fk_enabled = cast(
+        "tuple[int] | None", connection.execute("PRAGMA foreign_keys").fetchone()
+    )
+    if fk_enabled is None or fk_enabled[0] != 1:
+        raise RuntimeError(_FOREIGN_KEYS_ERROR)
+
+
+def _apply_invitation_tables(connection: sqlite3.Connection) -> None:
+    for statement in (item.strip() for item in _CREATE_SQL.split(";") if item.strip()):
+        _ = connection.execute(statement)
+
+
+def create_invitation_tables(
+    connection: sqlite3.Connection,
+    *,
+    transaction_mode: Literal["standalone", "external"] = "standalone",
+) -> None:
+    """Create durable invitation metadata storage without raw token columns.
+
+    Standalone mode owns its commit. External mode requires an open
+    transaction and does not commit or roll back.
+    """
+    if transaction_mode not in {"standalone", "external"}:
+        raise ValueError(_TRANSACTION_MODE_ERROR)
+    _prepare_invitation_transaction(connection, transaction_mode=transaction_mode)
+    if transaction_mode == "standalone":
+        _ = connection.execute("BEGIN IMMEDIATE")
+    try:
+        _apply_invitation_tables(connection)
+        if transaction_mode == "standalone":
+            connection.commit()
+    except BaseException:
+        if transaction_mode == "standalone":
+            connection.rollback()
+        raise
 
 
 @final
