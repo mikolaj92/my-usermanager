@@ -52,6 +52,7 @@ from my_usermanager.subjects import (
 
 _INJECTED_MY_AUTH_FAILURE = "injected my-auth migration failure"
 _INJECTED_COMMIT_FAILURE = "injected commit failure"
+_INJECTED_INVITATION_FAILURE = "injected invitation failure"
 
 
 # ---------------------------------------------------------------------------
@@ -610,6 +611,52 @@ def test_auth_database_initialize_rolls_back_um_when_my_auth_fails(
         assert not tables.intersection(
             {
                 "my_auth_schema",
+                "um_schema_version",
+                "um_users",
+                "um_grants",
+                "um_invitations",
+            }
+        )
+    finally:
+        conn.close()
+
+
+def test_auth_database_initialize_rolls_back_when_invitation_ddl_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invitation DDL stays in initialize's transaction; it must not nested-commit."""
+
+    def fail_after_partial_invitations(
+        connection: sqlite3.Connection, *, transaction_mode: str = "standalone"
+    ) -> None:
+        assert transaction_mode == "external"
+        assert connection.in_transaction
+        _ = connection.execute(
+            "CREATE TABLE um_invitations (invitation_id TEXT PRIMARY KEY)"
+        )
+        raise RuntimeError(_INJECTED_INVITATION_FAILURE)
+
+    monkeypatch.setattr(
+        "my_usermanager.adapters.my_auth_sqlite.create_invitation_tables",
+        fail_after_partial_invitations,
+    )
+    conn = sqlite3.connect(":memory:")
+    try:
+        with pytest.raises(RuntimeError, match=_INJECTED_INVITATION_FAILURE):
+            SQLiteAuthDatabase(conn).initialize()
+
+        table_rows = cast(
+            "list[tuple[object, ...]]",
+            cast(
+                "object",
+                conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall(),
+            ),
+        )
+        tables = {row[0] for row in table_rows}
+        assert not tables.intersection(
+            {
                 "um_schema_version",
                 "um_users",
                 "um_grants",

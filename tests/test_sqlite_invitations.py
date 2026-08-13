@@ -62,6 +62,42 @@ def test_sqlite_invitation_store_persists_metadata_without_token() -> None:
     connection.close()
 
 
+def test_create_invitation_tables_external_does_not_commit() -> None:
+    connection = sqlite3.connect(":memory:")
+    connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("BEGIN")
+    create_tables(connection, transaction_mode="external")
+
+    create_invitation_tables(connection, transaction_mode="external")
+
+    assert connection.in_transaction
+    tables = {
+        row[0]
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        )
+    }
+    assert "um_invitations" in tables
+    connection.rollback()
+    tables = {
+        row[0]
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        )
+    }
+    assert "um_invitations" not in tables
+    connection.close()
+
+
+def test_create_invitation_tables_external_requires_open_transaction() -> None:
+    connection = sqlite3.connect(":memory:")
+    connection.execute("PRAGMA foreign_keys = ON")
+    create_tables(connection)
+    with pytest.raises(RuntimeError, match="transaction"):
+        create_invitation_tables(connection, transaction_mode="external")
+    connection.close()
+
+
 def test_invitation_tables_keep_um_schema_inspect_current() -> None:
     connection = sqlite3.connect(":memory:")
     create_tables(connection)
