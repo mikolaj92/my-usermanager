@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime
-from typing import cast, final
+from typing import Literal, cast, final
 
 from my_usermanager.invitations import (
     Invitation,
@@ -33,11 +33,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS um_invitations_pending_user
     ON um_invitations(user_id) WHERE status = 'pending';
 """
 
+_TRANSACTION_MODE_ERROR = "transaction_mode must be 'standalone' or 'external'"
+_SCHEMA_PENDING_ERROR = "cannot initialize schema while a transaction is pending"
 
-def create_invitation_tables(connection: sqlite3.Connection) -> None:
+
+def create_invitation_tables(
+    connection: sqlite3.Connection,
+    *,
+    transaction_mode: Literal["standalone", "external"] = "standalone",
+) -> None:
     """Create durable invitation metadata storage without raw token columns."""
-    connection.executescript(_CREATE_SQL)
-    connection.commit()
+    if transaction_mode not in {"standalone", "external"}:
+        raise ValueError(_TRANSACTION_MODE_ERROR)
+    if transaction_mode == "external" and not connection.in_transaction:
+        raise RuntimeError(_SCHEMA_PENDING_ERROR)
+    for statement in (item.strip() for item in _CREATE_SQL.split(";") if item.strip()):
+        _ = connection.execute(statement)
+    if transaction_mode == "standalone":
+        connection.commit()
 
 
 @final

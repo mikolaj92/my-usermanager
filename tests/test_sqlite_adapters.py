@@ -608,7 +608,13 @@ def test_auth_database_initialize_rolls_back_um_when_my_auth_fails(
         )
         tables = {row[0] for row in table_rows}
         assert not tables.intersection(
-            {"my_auth_schema", "um_schema_version", "um_users", "um_grants"}
+            {
+                "my_auth_schema",
+                "um_schema_version",
+                "um_users",
+                "um_grants",
+                "um_invitations",
+            }
         )
     finally:
         conn.close()
@@ -1023,6 +1029,48 @@ def test_audit_schema_lookalike_is_rejected() -> None:
     connection.fail_commit = False
     with mutation(cast("sqlite3.Connection", cast("object", connection)), "operation"):
         pass
+
+
+def _sqlite_table_names(conn: sqlite3.Connection) -> set[object]:
+    table_rows = cast(
+        "list[tuple[object, ...]]",
+        cast(
+            "object",
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall(),
+        ),
+    )
+    return {row[0] for row in table_rows}
+
+
+def test_auth_database_initialize_creates_invitation_tables() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        SQLiteAuthDatabase(conn).initialize()
+        SQLiteAuthDatabase(conn).initialize()
+
+        assert "um_invitations" in _sqlite_table_names(conn)
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+    finally:
+        conn.close()
+
+
+def test_auth_database_initialize_stamps_invitations_on_current_schema() -> None:
+    conn = sqlite3.connect(":memory:")
+    try:
+        SQLiteAuthDatabase(conn).initialize()
+        conn.execute("DROP TABLE um_invitations")
+        conn.commit()
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+        assert "um_invitations" not in _sqlite_table_names(conn)
+
+        SQLiteAuthDatabase(conn).initialize()
+
+        assert "um_invitations" in _sqlite_table_names(conn)
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+    finally:
+        conn.close()
 
 
 def test_auth_database_initializes_caller_connection_with_foreign_keys() -> None:

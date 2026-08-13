@@ -4,6 +4,12 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+## 0.5.2
+
+- `SQLiteAuthDatabase.initialize()` stamps invitation metadata (`um_invitations`)
+  in the same owned transaction as UM/auth schema. Hosts no longer call
+  `create_invitation_tables` after initialize.
+
 ## 0.5.1
 
 - Complete account management flows (disable/enable, sessions, and audit in

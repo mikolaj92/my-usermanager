@@ -143,13 +143,14 @@ it. Host domain rows and policy state remain host-owned and are supplied after
 policy verification.
 
 The owner must call `initialize()` explicitly at startup. It inspects both
-schemas, creates empty schemas, stamps canonical-unversioned layouts, and runs
-explicit one-shot UM migration for supported upgrade sources (including
-migratable legacy grant/audit layouts). Inspection is fail-closed: legacy
-layouts are not treated as ready dual-read paths. my-auth legacy schemas are
-refused (modern my-auth only). Unsupported schemas and orphan grants are
-refused. Initialization/migration requires no pending transaction. Inspection
-is read-only; do not treat inspection as initialization.
+schemas, creates empty schemas, stamps canonical-unversioned layouts, stamps
+invitation metadata (`um_invitations`), and runs explicit one-shot UM
+migration for supported upgrade sources (including migratable legacy
+grant/audit layouts). Inspection is fail-closed: legacy layouts are not
+treated as ready dual-read paths. my-auth legacy schemas are refused
+(modern my-auth only). Unsupported schemas and orphan grants are refused.
+Initialization/migration requires no pending transaction. Inspection is
+read-only; do not treat inspection as initialization.
 
 `SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
 commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use

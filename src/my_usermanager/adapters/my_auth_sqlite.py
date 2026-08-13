@@ -17,6 +17,7 @@ from my_usermanager.adapters.sqlite import (
     inspect_sqlite_schema,
     migrate_sqlite_schema,
 )
+from my_usermanager.adapters.sqlite_invitations import create_invitation_tables
 from my_usermanager.stores import DuplicateGrantError, DuplicateUserError
 
 if TYPE_CHECKING:
@@ -143,7 +144,7 @@ class SQLiteAuthDatabase:
         return conn
 
     def initialize(self) -> None:
-        """Bootstrap or migrate both schemas in one owned transaction."""
+        """Bootstrap or migrate UM, auth, and invitation schemas together."""
         conn = self._connect()
         try:
             if conn.in_transaction:
@@ -180,6 +181,7 @@ class SQLiteAuthDatabase:
                     _ = auth_schema.ensure_sqlite_schema(
                         conn, transaction_mode="external"
                     )
+                create_invitation_tables(conn, transaction_mode="external")
                 conn.commit()
             except BaseException:
                 conn.rollback()
