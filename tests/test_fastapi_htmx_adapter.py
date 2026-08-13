@@ -5,7 +5,7 @@ import subprocess
 import sys
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Protocol, cast
+from typing import TYPE_CHECKING, Final, Protocol, cast, override
 
 if TYPE_CHECKING:
     from fastapi import Request
@@ -132,6 +132,7 @@ class FakeUiHooks:
     panel: PasskeyPanel | None
     user: AuthenticatedSubject
     row: UserRow
+    pending_row: UserRow
 
     def __init__(
         self, *, panel: PasskeyPanel | None = None, calls: list[object] | None = None
@@ -655,16 +656,16 @@ def test_invitation_mutations_fail_closed_for_non_admin_and_missing_hooks() -> N
     import my_usermanager.adapters.fastapi_htmx as adapter
 
     class NonAdminHooks(FakeUiHooks):
+        @override
         def require_admin(
             self, _request: Request, _current_user: AuthenticatedSubject
         ) -> None:
             message = "admin required"
             raise PermissionError(message)
 
-    class NoInvitationHooks(FakeUiHooks):
-        invite_user = None
-        reissue_invitation = None
-        revoke_invitation = None
+    missing_hooks = FakeUiHooks()
+    for hook_name in ("invite_user", "reissue_invitation", "revoke_invitation"):
+        setattr(missing_hooks, hook_name, None)
 
     platform = AppFactoryUi(
         static_path="/static/platform",
@@ -715,7 +716,7 @@ def test_invitation_mutations_fail_closed_for_non_admin_and_missing_hooks() -> N
     _ = adapter.install_usermanager_ui(
         missing_app,
         platform=platform,
-        hooks=cast("UserManagerUiHooks", cast("object", NoInvitationHooks())),
+        hooks=cast("UserManagerUiHooks", cast("object", missing_hooks)),
         config=config,
     )
     missing_client = _client(missing_app)
