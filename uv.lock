@@ -405,6 +405,7 @@ dev = [
     { name = "httpx" },
     { name = "itsdangerous" },
     { name = "jinja2" },
+    { name = "my-usermanager", extra = ["fastapi-htmx", "myauth"] },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -428,6 +429,7 @@ dev = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "itsdangerous", specifier = ">=2.2" },
     { name = "jinja2", specifier = ">=3.1" },
+    { name = "my-usermanager", extras = ["fastapi-htmx", "myauth"] },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.8" },
 ]
