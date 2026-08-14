@@ -7,6 +7,12 @@ All notable changes to `my-usermanager` will be documented in this file.
 - Include extras `fastapi-htmx` and `myauth` in the `dev` group so default
   `uv sync` installs `app_factory` and `my_auth` for the test suite.
 
+## 0.5.5
+
+- Pin `[tool.uv.sources]` app-factory to `v0.6.5` (my-auth stays `v0.4.2`,
+  extra `my-auth>=0.4,<0.5`) so BOM chrome and the kit lock the same
+  app-factory tag. Hosts only override `app-factory[platform]`.
+
 ## 0.5.4
 
 - Pin `[tool.uv.sources]` my-auth to `v0.4.2` (app-factory stays `v0.6.4`) so

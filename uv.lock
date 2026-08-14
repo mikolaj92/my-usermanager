@@ -35,8 +35,8 @@ wheels = [
 
 [[package]]
 name = "app-factory"
-version = "0.6.4"
-source = { git = "https://github.com/mikolaj92/app-factory?tag=v0.6.4#c9fef03087773b5b60db97e8737643fc86dfe2f7" }
+version = "0.6.5"
+source = { git = "https://github.com/mikolaj92/app-factory?tag=v0.6.5#18edb324de8737537b085592ed9a76bb8484cc0a" }
 dependencies = [
     { name = "jinja2" },
 ]
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "my-usermanager"
-version = "0.5.4"
+version = "0.5.5"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -412,7 +412,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "app-factory", extras = ["fastapi"], marker = "extra == 'fastapi-htmx'", git = "https://github.com/mikolaj92/app-factory?tag=v0.6.4" },
+    { name = "app-factory", extras = ["fastapi"], marker = "extra == 'fastapi-htmx'", git = "https://github.com/mikolaj92/app-factory?tag=v0.6.5" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.115" },
     { name = "fastapi", marker = "extra == 'fastapi-htmx'", specifier = ">=0.115" },
     { name = "itsdangerous", marker = "extra == 'fastapi'", specifier = ">=2.2" },
