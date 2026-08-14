@@ -21,12 +21,12 @@ uv add "my-usermanager[fastapi-htmx,myauth] @ git+https://github.com/mikolaj92/m
 
 ## Run locally
 
-Use the local editable `my-auth` checkout and temporary example-only runtime
+Use the published `my-auth` extra and temporary example-only runtime
 dependencies. This keeps `my-usermanager` core dependencies unchanged.
 
 ```sh
 uv run --no-sync \
-  --with-editable /Users/mini-m4-1/Developer/my-auth \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git" \
   --with "fastapi>=0.115" \
   --with "jinja2>=3.1" \
   --with "uvicorn[standard]>=0.32" \
@@ -39,7 +39,7 @@ Focused test command:
 
 ```sh
 uv run --no-sync \
-  --with-editable /Users/mini-m4-1/Developer/my-auth \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git" \
   --with "fastapi>=0.115" \
   --with "jinja2>=3.1" \
   --with "httpx>=0.27" \
@@ -72,23 +72,20 @@ from my_usermanager.adapters.fastapi_htmx import (
     CsrfContext,
     UserManagerUiConfig,
     UserManagerUiHooks,
-    UserManagerUiRouter,
     UserRow,
-    create_usermanager_ui_router,
+    install_usermanager_ui,
     row_key_from_user_id,
-    usermanager_ui_static_files,
 )
 
 hooks: UserManagerUiHooks = _usermanager_hooks()
-usermanager_ui: UserManagerUiRouter = create_usermanager_ui_router(
-    config=UserManagerUiConfig(login_url=PASSKEY_PATHS.login_page),
+install_usermanager_ui(
+    app,
+    platform=platform,
     hooks=hooks,
-)
-app.include_router(usermanager_ui.router)
-app.mount(
-    usermanager_ui.static_mount_path,
-    usermanager_ui.static_files,
-    name="my_usermanager_fastapi_htmx_static",
+    config=UserManagerUiConfig(
+        login_url=PASSKEY_PATHS.login_page,
+        csrf_protection=csrf,
+    ),
 )
 
 row = UserRow(
@@ -100,38 +97,36 @@ row = UserRow(
     disabled=False,
     is_admin=False,
 )
-csrf = CsrfContext(
+csrf_fields = CsrfContext(
     hidden_inputs=(("_demo_csrf", "demo-noop-csrf"),),
     headers={"X-Demo-CSRF": "demo-noop-csrf"},
 )
 ```
 
-`create_usermanager_ui_router` also returns `router`, `static_mount_path`, and
-`static_files`. `usermanager_ui_static_files()` returns the packaged CSS static
-mount if the host wires static serving separately.
+`install_usermanager_ui` owns the router, templates, and packaged CSS mount.
 
 ## Template override contract
 
-Both adapters use the same override order:
-
-1. A custom Jinja `template_loader` wins.
-2. Otherwise `template_override_directory` is searched before packaged
-   templates.
-3. Otherwise packaged templates are used.
-4. Supplying both `template_loader` and `template_override_directory` is invalid
-   and raises `ValueError`.
+Pass a host Jinja `environment` to `install_usermanager_ui` so packaged
+templates attach with host loaders first. Set `UserManagerUiConfig.base_template`
+to a host template that provides a `content` block. Chrome strings come from
+`UserManagerUiConfig.labels` and an optional hooks `page_context` mapping.
 
 ```python
-from pathlib import Path
-from jinja2 import DictLoader
-from my_auth.fastapi_htmx import PasskeyUiConfig
-from my_usermanager.adapters.fastapi_htmx import UserManagerUiConfig
+from jinja2 import Environment, FileSystemLoader
+from my_usermanager.adapters.fastapi_htmx import UserManagerUiConfig, install_usermanager_ui
 
-passkey_templates = PasskeyUiConfig(
-    template_override_directory=Path("app/templates/my_auth_fastapi_htmx"),
-)
-usermanager_templates = UserManagerUiConfig(
-    template_loader=DictLoader({"account/index.html": "<main>Account</main>"}),
+host_templates = Environment(loader=FileSystemLoader("app/templates"))
+install_usermanager_ui(
+    app,
+    platform=platform,
+    hooks=hooks,
+    config=UserManagerUiConfig(
+        csrf_protection=csrf,
+        base_template="shell.html",
+        labels={"nav_account": "Konto"},
+    ),
+    environment=host_templates,
 )
 ```
 

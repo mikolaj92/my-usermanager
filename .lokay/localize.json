@@ -1,33 +1,35 @@
 {
   "paths": [
-    "pyproject.toml",
-    "uv.lock",
-    "CHANGELOG.md",
-    "src/my_usermanager/__init__.py",
-    "tests/test_imports.py",
-    "tests/test_my_auth_adapter.py",
-    "tests/test_my_auth_fastapi.py"
+    "README.md",
+    "examples/fastapi_htmx/README.md",
+    "tests/test_fastapi_htmx_example.py",
+    "src/my_usermanager/adapters/fastapi_htmx/__init__.py",
+    "src/my_usermanager/adapters/fastapi_htmx/router.py",
+    "src/my_usermanager/adapters/fastapi_htmx/static.py"
   ],
-  "source": "refined-from-inspection",
+  "source": "deterministic",
   "seed_paths": [
-    "pyproject.toml",
-    "uv.lock",
-    "CHANGELOG.md",
-    "src/my_usermanager/__init__.py"
+    "README.md",
+    "examples/fastapi_htmx/README.md",
+    "tests/test_fastapi_htmx_example.py"
   ],
   "matched_tokens": [
-    "0.5.5",
-    "app-factory",
-    "v0.6.5",
+    "README",
+    "demo",
+    "mini-m4-main",
+    "hermes-repos",
+    "mini-m4-1",
     "my-auth",
-    "v0.4.2"
+    "create_usermanager_ui_router",
+    "usermanager_ui_static_files",
+    "install_usermanager_ui"
   ],
   "notes": [
-    "Deterministic localize matched fastapi_htmx/omo evidence via token noise.",
-    "Issue #53 is the same pin shape as #50/#51: bump kit version and app-factory source tag, keep my-auth v0.4.2.",
-    "Inspection of pyproject.toml, CHANGELOG.md, and commits c7ec0b9/37e911e replaced the HTMX path list."
+    "Refined after inspection: issue is docs/demo commands plus a regression test.",
+    "Public adapter API already exports install_usermanager_ui only.",
+    "Root README contained the mini-m4-main hermes-repos path; example README contained mini-m4-1 and unexported imports."
   ],
-  "worktree": "/Users/mini-m4-main/.lokay/worktrees/mikolaj92__my-usermanager/ai__fix__53-v0.5.4-gniazduje-app-factory-v0.6.4-bom-1a7a9d1e",
+  "worktree": "/Users/mini-m4-main/.lokay/worktrees/mikolaj92__my-usermanager/ai__fix__56-readme-demo-mini-m4-sciezki-i-importy-kt-9c5b056f",
   "wrote": true,
   "localize_rel": ".lokay/localize.json"
 }
