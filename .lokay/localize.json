@@ -1,0 +1,33 @@
+{
+  "paths": [
+    "pyproject.toml",
+    "uv.lock",
+    "CHANGELOG.md",
+    "src/my_usermanager/__init__.py",
+    "tests/test_imports.py",
+    "tests/test_my_auth_adapter.py",
+    "tests/test_my_auth_fastapi.py"
+  ],
+  "source": "refined-from-inspection",
+  "seed_paths": [
+    "pyproject.toml",
+    "uv.lock",
+    "CHANGELOG.md",
+    "src/my_usermanager/__init__.py"
+  ],
+  "matched_tokens": [
+    "0.5.5",
+    "app-factory",
+    "v0.6.5",
+    "my-auth",
+    "v0.4.2"
+  ],
+  "notes": [
+    "Deterministic localize matched fastapi_htmx/omo evidence via token noise.",
+    "Issue #53 is the same pin shape as #50/#51: bump kit version and app-factory source tag, keep my-auth v0.4.2.",
+    "Inspection of pyproject.toml, CHANGELOG.md, and commits c7ec0b9/37e911e replaced the HTMX path list."
+  ],
+  "worktree": "/Users/mini-m4-main/.lokay/worktrees/mikolaj92__my-usermanager/ai__fix__53-v0.5.4-gniazduje-app-factory-v0.6.4-bom-1a7a9d1e",
+  "wrote": true,
+  "localize_rel": ".lokay/localize.json"
+}
