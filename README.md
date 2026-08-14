@@ -240,7 +240,7 @@ The complete no-build reference is [`examples/fastapi_htmx`](examples/fastapi_ht
 
 ```sh
 uv run --no-sync \
-  --with-editable /Users/mini-m4-main/Developer/hermes-repos/my-auth \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git" \
   --with "fastapi>=0.115" \
   --with "jinja2>=3.1" \
   --with "uvicorn[standard]>=0.32" \

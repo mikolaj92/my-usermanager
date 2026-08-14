@@ -132,12 +132,31 @@ def test_example_source_consumes_adapters_instead_of_duplicate_templates() -> No
 def test_readme_uses_uv_only_and_names_host_owned_security_boundaries() -> None:
     # Given: the example README documents the composed demo.
     readme = read_required_file(README_PATH)
+    root_readme = read_required_file(REPO_ROOT / "README.md")
 
     # When / Then: commands are uv-only and production security is host-owned.
     assert "uv run --no-sync" in readme
-    assert "--with-editable /Users/mini-m4-1/Developer/my-auth" in readme
+    published_my_auth = (
+        '--with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git"'
+    )
+    assert published_my_auth in readme
+    assert published_my_auth in root_readme
     forbidden_commands = ("pip ", "python -m pip", "npm ", "pnpm ", "yarn ")
     for snippet in forbidden_commands:
+        assert snippet not in readme
+    forbidden_machine_paths = (
+        "/Users/mini-m4-1/Developer/my-auth",
+        "/Users/mini-m4-main/Developer/hermes-repos/my-auth",
+        "/Users/mini-m4-main/Developer/my-auth",
+    )
+    for snippet in forbidden_machine_paths:
+        assert snippet not in readme
+        assert snippet not in root_readme
+    forbidden_unexported = (
+        "create_usermanager_ui_router",
+        "usermanager_ui_static_files",
+    )
+    for snippet in forbidden_unexported:
         assert snippet not in readme
     required_boundaries = (
         "host application owns sessions",
