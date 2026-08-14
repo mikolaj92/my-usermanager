@@ -384,6 +384,17 @@ version = "0.5.5"
 source = { editable = "." }
 
 [package.optional-dependencies]
+dev = [
+    { name = "app-factory", extra = ["fastapi"] },
+    { name = "basedpyright" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "itsdangerous" },
+    { name = "jinja2" },
+    { name = "my-auth" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
 fastapi = [
     { name = "fastapi" },
     { name = "itsdangerous" },
@@ -413,14 +424,22 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "app-factory", extras = ["fastapi"], marker = "extra == 'fastapi-htmx'", git = "https://github.com/mikolaj92/app-factory?tag=v0.6.5" },
+    { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.21" },
+    { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.115" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.115" },
     { name = "fastapi", marker = "extra == 'fastapi-htmx'", specifier = ">=0.115" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
+    { name = "itsdangerous", marker = "extra == 'dev'", specifier = ">=2.2" },
     { name = "itsdangerous", marker = "extra == 'fastapi'", specifier = ">=2.2" },
+    { name = "jinja2", marker = "extra == 'dev'", specifier = ">=3.1" },
     { name = "jinja2", marker = "extra == 'fastapi-htmx'", specifier = ">=3.1" },
     { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?tag=v0.4.2" },
+    { name = "my-usermanager", extras = ["fastapi-htmx", "myauth"], marker = "extra == 'dev'" },
     { name = "pydantic", marker = "extra == 'fastapi'", specifier = ">=2.10" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
 ]
-provides-extras = ["fastapi", "fastapi-htmx", "myauth"]
+provides-extras = ["fastapi", "fastapi-htmx", "myauth", "dev"]
 
 [package.metadata.requires-dev]
 dev = [

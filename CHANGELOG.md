@@ -6,6 +6,7 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 - Include extras `fastapi-htmx` and `myauth` in the `dev` group so default
   `uv sync` installs `app_factory` and `my_auth` for the test suite.
+- Expose the same `dev` tools as a `dev` extra so `uv run --extra dev` works.
 
 ## 0.5.5
 
