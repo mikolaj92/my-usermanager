@@ -4,6 +4,11 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+## 0.5.6
+
+- Pin nested my-auth to `v0.4.5` so packaged activation/recovery/credentials
+  compose app-factory identity shells. Keep app-factory `v0.6.6`. Extra stays
+  `my-auth>=0.4,<0.5`.
 - Include extras `fastapi-htmx` and `myauth` in the `dev` group so default
   `uv sync` installs `app_factory` and `my_auth` for the test suite.
 - Expose the same `dev` tools as a `dev` extra so `uv run --extra dev` works.
