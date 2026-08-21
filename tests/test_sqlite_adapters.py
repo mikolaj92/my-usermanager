@@ -1139,6 +1139,38 @@ def test_auth_database_initializes_caller_connection_with_foreign_keys() -> None
         conn.close()
 
 
+
+def _table_names(connection: sqlite3.Connection) -> set[object]:
+    rows = cast(
+        "list[tuple[object, ...]]",
+        cast(
+            "object",
+            connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall(),
+        ),
+    )
+    return {row[0] for row in rows}
+
+
+def test_auth_database_initialize_stamps_enrollment_on_current_auth_schema() -> None:
+    """Hosts must not call ensure_sqlite_schema after initialize() (#59)."""
+    pytest.importorskip("my_auth")
+
+    conn = sqlite3.connect(":memory:")
+    try:
+        SQLiteAuthDatabase(conn).initialize()
+        assert "passkey_enrollment_capabilities" in _table_names(conn)
+        conn.execute("DROP TABLE passkey_enrollment_capabilities")
+        conn.commit()
+        assert "passkey_enrollment_capabilities" not in _table_names(conn)
+
+        SQLiteAuthDatabase(conn).initialize()
+        assert "passkey_enrollment_capabilities" in _table_names(conn)
+    finally:
+        conn.close()
+
+
 def test_auth_database_transaction_refuses_pending_caller_transaction() -> None:
     conn = sqlite3.connect(":memory:")
     try:

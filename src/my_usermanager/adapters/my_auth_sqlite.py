@@ -177,10 +177,12 @@ class SQLiteAuthDatabase:
                     # Explicit one-shot UM migrate (including migratable legacy
                     # layouts that inspection fails closed on).
                     migrate_sqlite_schema(conn, transaction_mode="external")
-                if auth_state.state in {"empty", "canonical_unversioned"}:
-                    _ = auth_schema.ensure_sqlite_schema(
-                        conn, transaction_mode="external"
-                    )
+                # Additive enrollment DDL must run on current schemas too.
+                # my-auth ensure_sqlite_schema is a no-op besides CREATE IF NOT
+                # EXISTS for passkey_enrollment_capabilities when already current.
+                _ = auth_schema.ensure_sqlite_schema(
+                    conn, transaction_mode="external"
+                )
                 create_invitation_tables(conn, transaction_mode="external")
                 conn.commit()
             except BaseException:
