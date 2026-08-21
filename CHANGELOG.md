@@ -10,9 +10,12 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## 0.5.5
 
-- Pin `[tool.uv.sources]` app-factory to `v0.6.5` (my-auth stays `v0.4.2`,
-  extra `my-auth>=0.4,<0.5`) so BOM chrome and the kit lock the same
-  app-factory tag. Hosts only override `app-factory[platform]`.
+- `SQLiteAuthDatabase.initialize()` calls `my_auth.ensure_sqlite_schema` on
+  already-current auth schemas so additive enrollment DDL
+  (`passkey_enrollment_capabilities`) is stamped without a host second call.
+- Pin `[tool.uv.sources]` app-factory to `v0.6.6` and my-auth to `v0.4.4`
+  (extra stays `my-auth>=0.4,<0.5`) so nested chrome matches tagged TAP
+  `client_shell`. Hosts only override `app-factory[platform]`.
 
 ## 0.5.4
 
