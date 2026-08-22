@@ -273,3 +273,10 @@ uv run pytest
 uv run ruff check .
 uv run basedpyright src tests
 ```
+
+### FastAPI/HTMX session CSRF
+
+`my_usermanager.adapters.fastapi_htmx.SessionCsrfProtection` re-exports the
+app-factory signed-session adapter. Install Starlette `SessionMiddleware`, pass
+the adapter to `UserManagerUiConfig.csrf_protection`, and keep product RBAC in
+the host. Missing session middleware fails explicitly.
