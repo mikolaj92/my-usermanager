@@ -35,7 +35,7 @@ _FOREIGN_KEYS_ERROR: Final = "cannot enable SQLite foreign keys"
 
 
 class _SchemaInspection(Protocol):
-    state: Literal["empty", "canonical_unversioned", "current", "unsupported"]
+    state: Literal["empty", "canonical_unversioned", "current", "legacy", "unsupported"]
 
 
 class _SchemaModule(Protocol):
@@ -44,6 +44,13 @@ class _SchemaModule(Protocol):
     ) -> _SchemaInspection: ...
 
     def ensure_sqlite_schema(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        transaction_mode: Literal["external"],
+    ) -> object: ...
+
+    def migrate_sqlite_schema(
         self,
         connection: sqlite3.Connection,
         *,
@@ -163,8 +170,14 @@ class SQLiteAuthDatabase:
             try:
                 auth_state = auth_schema.inspect_sqlite_schema(conn)
                 um_state = inspect_sqlite_schema(conn)
-                # Fail closed: modern my-auth schema only (no legacy branch).
-                if auth_state.state not in {
+                if auth_state.state == "legacy":
+                    # One supported path only: my-auth owns its explicit legacy
+                    # migration. Run it inside this coordinator transaction so
+                    # auth + UM + invitation DDL commit or roll back together.
+                    _ = auth_schema.migrate_sqlite_schema(
+                        conn, transaction_mode="external"
+                    )
+                elif auth_state.state not in {
                     "empty",
                     "canonical_unversioned",
                     "current",

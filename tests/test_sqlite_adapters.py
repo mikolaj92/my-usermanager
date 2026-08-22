@@ -986,10 +986,10 @@ def test_v2_explicit_rowid_schema_is_inspected_and_repaired(
         conn.close()
 
 
-def test_auth_database_initialize_rejects_my_auth_legacy_schema(
+def test_auth_database_initialize_migrates_supported_my_auth_legacy_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """my-auth legacy layouts fail closed; initialize does not auto-migrate them."""
+    calls: list[str] = []
 
     class LegacyAuthSchema:
         @staticmethod
@@ -997,12 +997,23 @@ def test_auth_database_initialize_rejects_my_auth_legacy_schema(
             return type("Inspection", (), {"state": "legacy"})()
 
         @staticmethod
+        def migrate_sqlite_schema(
+            connection: sqlite3.Connection, *, transaction_mode: str
+        ) -> object:
+            assert transaction_mode == "external"
+            assert connection.in_transaction
+            calls.append("migrate")
+            connection.execute("CREATE TABLE auth_migrated (proof TEXT NOT NULL)")
+            connection.execute("INSERT INTO auth_migrated VALUES ('preserved')")
+            return type("Inspection", (), {"state": "current"})()
+
+        @staticmethod
         def ensure_sqlite_schema(
             connection: sqlite3.Connection, *, transaction_mode: str
         ) -> None:
-            del connection, transaction_mode
-            message = "ensure_sqlite_schema must not run for legacy"
-            raise AssertionError(message)
+            assert transaction_mode == "external"
+            assert connection.in_transaction
+            calls.append("ensure")
 
     def import_legacy_auth_schema(name: str) -> object:
         assert name == "my_auth.sqlite_schema"
@@ -1011,14 +1022,53 @@ def test_auth_database_initialize_rejects_my_auth_legacy_schema(
     monkeypatch.setattr(importlib, "import_module", import_legacy_auth_schema)
     conn = sqlite3.connect(":memory:")
     try:
-        with pytest.raises(RuntimeError, match="unsupported"):
-            SQLiteAuthDatabase(conn).initialize()
-        assert (
-            conn.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
-            ).fetchall()
-            == []
+        SQLiteAuthDatabase(conn).initialize()
+        assert calls == ["migrate", "ensure"]
+        assert conn.execute("SELECT proof FROM auth_migrated").fetchone() == (
+            "preserved",
         )
+        assert sqlite_adapter.inspect_sqlite_schema(conn) == "current"
+    finally:
+        conn.close()
+
+
+def test_auth_database_rolls_back_failed_my_auth_legacy_migration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class BrokenLegacyAuthSchema:
+        @staticmethod
+        def inspect_sqlite_schema(_connection: sqlite3.Connection) -> object:
+            return type("Inspection", (), {"state": "legacy"})()
+
+        @staticmethod
+        def migrate_sqlite_schema(
+            connection: sqlite3.Connection, *, transaction_mode: str
+        ) -> object:
+            assert transaction_mode == "external"
+            connection.execute("CREATE TABLE must_roll_back (value TEXT)")
+            message = "legacy migration failed"
+            raise RuntimeError(message)
+
+        @staticmethod
+        def ensure_sqlite_schema(
+            connection: sqlite3.Connection, *, transaction_mode: str
+        ) -> None:
+            del connection, transaction_mode
+            message = "ensure must not run after migration failure"
+            raise AssertionError(message)
+
+    def import_broken_auth_schema(name: str) -> object:
+        assert name == "my_auth.sqlite_schema"
+        return BrokenLegacyAuthSchema
+
+    monkeypatch.setattr(importlib, "import_module", import_broken_auth_schema)
+    conn = sqlite3.connect(":memory:")
+    try:
+        with pytest.raises(RuntimeError, match="legacy migration failed"):
+            SQLiteAuthDatabase(conn).initialize()
+        assert conn.execute(
+            "SELECT name FROM sqlite_master WHERE name = 'must_roll_back'"
+        ).fetchone() is None
     finally:
         conn.close()
 
