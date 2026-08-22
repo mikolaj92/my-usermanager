@@ -35,8 +35,8 @@ wheels = [
 
 [[package]]
 name = "app-factory"
-version = "0.6.6"
-source = { git = "https://github.com/mikolaj92/app-factory?tag=v0.6.6#1612d635c82f03ae2fcf6441ff87a881a4804500" }
+version = "0.6.11"
+source = { git = "https://github.com/mikolaj92/app-factory?tag=v0.6.11#c5c0d2cfce8f6a390a05dbf721f9a7e9e7cdf7fb" }
 dependencies = [
     { name = "jinja2" },
 ]
@@ -371,8 +371,8 @@ wheels = [
 
 [[package]]
 name = "my-auth"
-version = "0.4.5"
-source = { git = "https://github.com/mikolaj92/my-auth?tag=v0.4.5#906ab9b932462708e4f5a0305b8629c70c65bb4c" }
+version = "0.4.6"
+source = { git = "https://github.com/mikolaj92/my-auth?tag=v0.4.6#7bf180ef5510640b8fe3b86c59607e2b9ca1c1a4" }
 dependencies = [
     { name = "typing-extensions" },
     { name = "webauthn" },
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "my-usermanager"
-version = "0.5.6"
+version = "0.5.7"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -423,7 +423,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "app-factory", extras = ["fastapi"], marker = "extra == 'fastapi-htmx'", git = "https://github.com/mikolaj92/app-factory?tag=v0.6.6" },
+    { name = "app-factory", extras = ["fastapi"], marker = "extra == 'fastapi-htmx'", git = "https://github.com/mikolaj92/app-factory?tag=v0.6.11" },
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.21" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.115" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.115" },
@@ -433,7 +433,7 @@ requires-dist = [
     { name = "itsdangerous", marker = "extra == 'fastapi'", specifier = ">=2.2" },
     { name = "jinja2", marker = "extra == 'dev'", specifier = ">=3.1" },
     { name = "jinja2", marker = "extra == 'fastapi-htmx'", specifier = ">=3.1" },
-    { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?tag=v0.4.5" },
+    { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?tag=v0.4.6" },
     { name = "my-usermanager", extras = ["fastapi-htmx", "myauth"], marker = "extra == 'dev'" },
     { name = "pydantic", marker = "extra == 'fastapi'", specifier = ">=2.10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },

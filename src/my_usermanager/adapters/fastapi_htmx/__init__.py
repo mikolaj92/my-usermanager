@@ -8,6 +8,8 @@ _OPTIONAL_IMPORT_ROOTS: Final = frozenset(
     {"fastapi", "jinja2", "starlette", "app_factory"}
 )
 try:
+    from app_factory.csrf import SessionCsrfProtection
+
     from my_usermanager.adapters.fastapi_htmx.config import (
         DEFAULT_UI_LABELS,
         AuditRow,
@@ -51,6 +53,7 @@ __all__: Final = (
     "InvitationRow",
     "PasskeyPanel",
     "PermissionGrantRow",
+    "SessionCsrfProtection",
     "SessionRow",
     "UserManagerUi",
     "UserManagerUiConfig",

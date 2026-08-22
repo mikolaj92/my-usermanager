@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 warnings.filterwarnings("ignore", message="Using `httpx` with `starlette.testclient`*")
 
 import pytest
+from app_factory.csrf import SessionCsrfProtection as FactorySessionCsrfProtection
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -98,6 +99,7 @@ def test_public_api_and_resources_are_clean() -> None:
         "InvitationRow",
         "PasskeyPanel",
         "PermissionGrantRow",
+        "SessionCsrfProtection",
         "SessionRow",
         "UserManagerUi",
         "UserManagerUiConfig",
@@ -109,6 +111,7 @@ def test_public_api_and_resources_are_clean() -> None:
         "resolve_ui_labels",
         "row_key_from_user_id",
     )
+    assert adapter.SessionCsrfProtection is FactorySessionCsrfProtection
     assert not hasattr(adapter, "create_usermanager_ui_static_files")
     assert not hasattr(adapter, "usermanager_ui_static_files")
     assert not hasattr(adapter.UserManagerUiConfig, "template_loader")
