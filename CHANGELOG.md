@@ -4,6 +4,24 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+- Align `__version__` and `SECURITY.md` with package `0.5.8`. Nested
+  `[tool.uv.sources]` stay app-factory `v0.6.11` and my-auth `v0.4.6`
+  (COMPAT nested pins for this generation). Extra stays `my-auth>=0.4,<0.5`.
+
+## 0.5.8
+
+- Coordinate supported my-auth v2 legacy migration inside
+  `SQLiteAuthDatabase.initialize()` so auth + UM + invitation DDL share one
+  transaction (#66). Nested sources stay app-factory `v0.6.11` / my-auth
+  `v0.4.6`.
+
+## 0.5.7
+
+- Re-export app-factory signed-session CSRF as `SessionCsrfProtection` (#63).
+- Pin `[tool.uv.sources]` app-factory to `v0.6.11` and my-auth to `v0.4.6`
+  (COMPAT chrome generation; hosts override `app-factory[platform]`). Extra
+  stays `my-auth>=0.4,<0.5`.
+
 ## 0.5.6
 
 - Pin nested my-auth to `v0.4.5` so packaged activation/recovery/credentials
