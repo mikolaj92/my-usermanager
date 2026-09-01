@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 warnings.filterwarnings("ignore", message="Using `httpx` with `starlette.testclient`*")
 
 import pytest
+from app_factory import PlatformPaths
 from app_factory.csrf import SessionCsrfProtection as FactorySessionCsrfProtection
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
 from fastapi import FastAPI
@@ -172,6 +173,9 @@ class FakeUiHooks:
                 expires_at="2026-12-31T00:00:00+00:00",
             ),
         )
+
+    def page_context(self, _request: Request) -> dict[str, object]:
+        return {"platform_paths": PlatformPaths()}
 
     def get_current_user(self, _request: Request) -> AuthenticatedSubject:
         return self.user
@@ -763,8 +767,10 @@ def test_labels_and_host_base_template_are_applied() -> None:
     import my_usermanager.adapters.fastapi_htmx as adapter
 
     class LabeledHooks(FakeUiHooks):
+        @override
         def page_context(self, _request: Request) -> dict[str, object]:
             return {
+                "platform_paths": PlatformPaths(),
                 "shell_marker": "host-shell-ok",
                 "labels": {"users_title": "Uzytkownicy"},
             }
@@ -844,3 +850,46 @@ def test_packaged_base_uses_app_factory_identity_shell_without_local_nav() -> No
     assert '{% extends "app_factory/identity_authenticated_shell.html" %}' in template
     assert '<nav class="app-nav"' not in template
     assert "skip_to_content" not in template
+
+
+def test_account_requires_platform_session_context() -> None:
+    """Account fails explicitly instead of drawing a local logout fallback."""
+    from importlib.resources import files
+
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    class MissingPlatformContextHooks(FakeUiHooks):
+        @override
+        def page_context(self, _request: Request) -> dict[str, object]:
+            return {}
+
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
+    )
+    app = FastAPI()
+    _ = install_app_factory_ui(
+        app,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    _ = adapter.install_usermanager_ui(
+        app,
+        platform=platform,
+        hooks=cast("UserManagerUiHooks", cast("object", MissingPlatformContextHooks())),
+        config=adapter.UserManagerUiConfig(csrf_protection=_csrf()),
+    )
+    response = _get(_client(app), "/account")
+    assert response.status_code == 500
+    assert "Platform session unavailable" in response.text
+
+    template = (
+        files("my_usermanager.adapters.fastapi_htmx")
+        .joinpath("templates/account/index.html")
+        .read_text(encoding="utf-8")
+    )
+    assert '{% include "app_factory/platform_session.html" %}' in template
+    assert "logout_path" not in template
+    assert "data-platform-session" not in template

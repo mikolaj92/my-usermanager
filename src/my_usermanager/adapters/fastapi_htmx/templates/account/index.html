@@ -87,16 +87,6 @@
     {{ passkey_panel_html|safe }}
 
     {# Shared platform session: Log out only on the account page (app-factory). #}
-    {% if platform_paths is defined %}
     {% include "app_factory/platform_session.html" %}
-    {% elif logout_path is defined %}
-    <section class="card um-card um-stack" data-platform-session>
-      <h2>{{ labels.session_title }}</h2>
-      <p class="um-muted">{{ labels.session_description }}</p>
-      <form method="post" action="{{ logout_path }}" data-no-htmx="true">
-        <button type="submit" class="btn" data-variant="destructive" data-size="sm">{{ labels.log_out }}</button>
-      </form>
-    </section>
-    {% endif %}
   </section>
 {% endblock %}

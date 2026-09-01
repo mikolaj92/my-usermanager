@@ -4,6 +4,9 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+- Render account logout only through app-factory's `platform_session` and fail
+  explicitly when the host omits `platform_paths` (#78).
+
 - Make packaged user-manager pages extend app-factory's canonical authenticated
   identity shell without a local navigation or skip-link fork (#77).
 
