@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from app_factory import PlatformPaths
+
 from examples.fastapi_htmx.demo_users import (
     DEMO_ADMIN_ID,
     DEMO_CSRF_HEADER,
@@ -53,6 +55,9 @@ def _demo_csrf_protection() -> CsrfProtection:
 
 
 class _UserManagerHooks:
+    def page_context(self, _request: Request) -> dict[str, object]:
+        return {"platform_paths": PlatformPaths()}
+
     def get_current_user(self, request: Request) -> AuthenticatedSubject | None:
         user_id = request.query_params.get("as", DEMO_ADMIN_ID)
         return _current_demo_subject(user_id)

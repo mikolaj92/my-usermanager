@@ -230,6 +230,12 @@ def _account_endpoint(
         if isinstance(auth, Denied):
             return auth.response
         host_context = await _page_context(hooks, request)
+        if "platform_paths" not in host_context:
+            return error_response(
+                500,
+                "Platform session unavailable",
+                "Host page_context must provide platform_paths.",
+            )
         labels = _merge_labels(config, host_context)
         panel = await resolve(hooks.render_passkey_panel(request, auth.current_user))
         panel_html = _render_panel(templates, request, auth.current_user, panel)
@@ -246,7 +252,6 @@ def _account_endpoint(
                 "current_user": auth.current_user,
                 "passkey_panel_html": panel_html,
                 "static_url_path": config.static_url_path,
-                "logout_path": config.logout_path,
                 "base_template": config.base_template,
                 "labels": labels,
                 "profile_editable": profile_editable,
