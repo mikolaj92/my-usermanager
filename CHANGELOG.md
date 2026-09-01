@@ -2,7 +2,7 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
-## Unreleased
+## 0.5.10
 
 - Split SQLite schema lifecycle and store CRUD into single-purpose modules while
   keeping `my_usermanager.adapters.sqlite` as the stable public facade (#79).
@@ -16,9 +16,9 @@ All notable changes to `my-usermanager` will be documented in this file.
 - Make packaged user-manager pages extend app-factory's canonical authenticated
   identity shell without a local navigation or skip-link fork (#77).
 
-- Align `__version__` and `SECURITY.md` with package `0.5.8`. Nested
-  `[tool.uv.sources]` stay app-factory `v0.6.11` and my-auth `v0.4.6`
-  (COMPAT nested pins for this generation). Extra stays `my-auth>=0.4,<0.5`.
+- Align package metadata, `__version__`, and `SECURITY.md` at `0.5.10`.
+  Nested sources use app-factory `v0.6.13` and my-auth `v0.4.7`; the public
+  extra remains `my-auth>=0.4,<0.5`.
 
 ## 0.5.8
 

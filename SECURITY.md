@@ -1,6 +1,6 @@
 # Security Policy
 
-`my-usermanager` is pre-release software at version `0.5.8`.
+`my-usermanager` is pre-release software at version `0.5.10`.
 
 ## Reporting a Vulnerability
 

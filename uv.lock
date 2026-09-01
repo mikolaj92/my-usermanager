@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 
 [[package]]
@@ -35,8 +35,8 @@ wheels = [
 
 [[package]]
 name = "app-factory"
-version = "0.6.12"
-source = { git = "https://github.com/mikolaj92/app-factory?tag=v0.6.12#b764a35aaa8a9d0d1cea034ef044baa9563c6244" }
+version = "0.6.13"
+source = { git = "https://github.com/mikolaj92/app-factory?tag=v0.6.13#aff20eb350b4a3e92b03a7bc5ce510fe3921a18c" }
 dependencies = [
     { name = "jinja2" },
 ]
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "my-usermanager"
-version = "0.5.9"
+version = "0.5.10"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -423,7 +423,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "app-factory", extras = ["fastapi"], marker = "extra == 'fastapi-htmx'", git = "https://github.com/mikolaj92/app-factory?tag=v0.6.12" },
+    { name = "app-factory", extras = ["fastapi"], marker = "extra == 'fastapi-htmx'", git = "https://github.com/mikolaj92/app-factory?tag=v0.6.13" },
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.21" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.115" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.115" },
