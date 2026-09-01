@@ -1,9 +1,9 @@
-# ruff: noqa: TRY003, EM101, ANN202, BLE001, PLR0913
+# ruff: noqa: TRY003, EM101, BLE001, PLR0913
 """FastAPI routes for the reusable server-rendered user-manager UI."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Protocol, cast
 from urllib.parse import urlencode
 
@@ -179,16 +179,52 @@ def _merge_labels(
     return resolve_ui_labels(config.labels, overrides=overrides)
 
 
-def create_usermanager_ui_router(  # noqa: C901, PLR0915
+def create_usermanager_ui_router(
     *,
     config: UserManagerUiConfig,
     hooks: UserManagerUiHooks,
     environment: Environment | None = None,
 ) -> UserManagerUiRouter:
-    """Create enabled account/admin routes and packaged static files."""
+    """Compose enabled account and administrative route groups."""
     templates = environment or create_template_environment()
     router = APIRouter()
+    if config.account_enabled:
+        _add_account_routes(router, templates, config, hooks)
+        _add_session_routes(router, templates, config, hooks)
+    if config.admin_enabled:
+        _add_admin_users_page(router, templates, config, hooks)
+        _add_admin_mutation_routes(router, templates, config, hooks)
+        _add_admin_invitation_routes(router, templates, config, hooks)
+        _add_admin_deletion_routes(router, config, hooks)
+        _add_audit_route(router, templates, config, hooks)
+    return UserManagerUiRouter(
+        router, config.static_mount_path, usermanager_ui_static_files()
+    )
 
+
+def _add_account_routes(
+    router: APIRouter,
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> None:
+    router.add_api_route(
+        config.account_path,
+        _account_endpoint(templates, config, hooks),
+        methods=["GET"],
+    )
+    router.add_api_route(
+        config.profile_path,
+        _profile_endpoint(config, hooks),
+        methods=["POST"],
+    )
+
+
+def _account_endpoint(
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> Callable[[Request], MaybeAwaitable[Response]]:
     async def account(request: Request) -> Response:
         auth = await current_user(request, config, hooks)
         if isinstance(auth, Denied):
@@ -222,6 +258,13 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
         )
         return HTMLResponse(html)
 
+    return account
+
+
+def _profile_endpoint(
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> Callable[[Request], MaybeAwaitable[Response]]:
     async def update_profile(request: Request) -> Response:
         auth = await current_user(request, config, hooks)
         if isinstance(auth, Denied):
@@ -258,6 +301,15 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
             status_code=303,
         )
 
+    return update_profile
+
+
+def _add_session_routes(
+    router: APIRouter,
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> None:
     async def sessions(request: Request) -> Response:
         auth = await current_user(request, config, hooks)
         if isinstance(auth, Denied):
@@ -289,6 +341,26 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
         )
         return HTMLResponse(html)
 
+    async def revoke_session(request: Request) -> Response:
+        return await _named_action(
+            request,
+            config=config,
+            hooks=hooks,
+            hook_name="revoke_session",
+            required=("session_id",),
+            redirect_url=config.sessions_path,
+        )
+
+    router.add_api_route(config.sessions_path, sessions, methods=["GET"])
+    router.add_api_route(config.revoke_session_path, revoke_session, methods=["POST"])
+
+
+def _add_audit_route(
+    router: APIRouter,
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> None:
     async def audit(request: Request) -> Response:
         auth = await admin_user(request, config, hooks)
         if isinstance(auth, Denied):
@@ -318,6 +390,15 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
         )
         return HTMLResponse(html)
 
+    router.add_api_route(config.audit_path, audit, methods=["GET"])
+
+
+def _add_admin_users_page(
+    router: APIRouter,
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> None:
     async def users(request: Request) -> Response:
         auth = await admin_user(request, config, hooks)
         if isinstance(auth, Denied):
@@ -366,224 +447,228 @@ def create_usermanager_ui_router(  # noqa: C901, PLR0915
         )
         return HTMLResponse(html)
 
-    async def named_action(  # noqa: PLR0911
-        request: Request,
-        *,
-        hook_name: str,
-        required: tuple[str, ...],
-        redirect_url: str,
-    ) -> Response:
-        auth = (
-            await current_user(request, config, hooks)
-            if hook_name == "revoke_session"
-            else await admin_user(request, config, hooks)
+    router.add_api_route(config.users_path, users, methods=["GET"])
+
+
+def _add_admin_mutation_routes(
+    router: APIRouter,
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> None:
+    for path, kind in (
+        (config.disable_user_path, "disable"),
+        (config.enable_user_path, "enable"),
+        (config.grant_role_path, "grant-role"),
+        (config.revoke_role_path, "revoke-role"),
+        (config.grant_permission_path, "grant-permission"),
+        (config.revoke_permission_path, "revoke-permission"),
+    ):
+        router.add_api_route(
+            path,
+            _mutation_endpoint(templates, config, hooks, kind),
+            methods=["POST"],
         )
+
+
+def _mutation_endpoint(
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+    kind: str,
+) -> Callable[[Request], MaybeAwaitable[Response]]:
+    async def mutation(request: Request) -> Response:
+        auth = await admin_user(request, config, hooks)
         if isinstance(auth, Denied):
             return auth.response
-        callback = getattr(hooks, hook_name, None)
+        if kind in {"disable", "enable"}:
+            form = await read_mutation_form(request)
+        else:
+            form = await read_grant_form(
+                request,
+                value_field="role_name"
+                if kind in {"grant-role", "revoke-role"}
+                else "permission",
+            )
+        if isinstance(form, FormError):
+            return error_response(form.status_code, form.title, form.message)
+        csrf_error = await _validate_csrf(request, config, form.csrf_token)
+        if csrf_error is not None:
+            return csrf_error
+        if isinstance(form, MutationForm):
+            changed = await resolve(
+                hooks.set_user_disabled(
+                    request, auth.current_user, form.user_id, kind == "disable"
+                )
+            )
+            await resolve(
+                hooks.after_user_disabled_changed(request, auth.current_user, changed)
+            )
+        elif kind in {"grant-role", "revoke-role"}:
+            callback = hooks.grant_role if kind == "grant-role" else hooks.revoke_role
+            changed = await resolve(
+                callback(request, auth.current_user, form.user_id, form.value)
+            )
+        else:
+            permission = PermissionGrantRow(
+                form.value, form.value, form.scope_type, form.scope_id
+            )
+            callback = (
+                hooks.grant_permission
+                if kind == "grant-permission"
+                else hooks.revoke_permission
+            )
+            changed = await resolve(
+                callback(request, auth.current_user, form.user_id, permission)
+            )
+        csrf = await resolve(hooks.csrf_context(request))
+        return await _row_response(
+            templates, request, config, hooks, auth.current_user, changed, csrf
+        )
+
+    return mutation
+
+
+def _add_admin_invitation_routes(
+    router: APIRouter,
+    templates: Environment,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> None:
+    async def invite(request: Request) -> Response:
+        return await _named_action(
+            request,
+            config=config,
+            hooks=hooks,
+            hook_name="invite_user",
+            required=("username", "email", "role"),
+            redirect_url=config.users_path,
+        )
+
+    async def reissue_invitation(request: Request) -> Response:
+        return await _named_action(
+            request,
+            config=config,
+            hooks=hooks,
+            hook_name="reissue_invitation",
+            required=("invitation_id",),
+            redirect_url=config.users_path,
+        )
+
+    async def revoke_invitation(request: Request) -> Response:
+        auth = await admin_user(request, config, hooks)
+        if isinstance(auth, Denied):
+            return auth.response
+        callback = getattr(hooks, "revoke_invitation", None)
         if not callable(callback):
             return error_response(
-                501, "Action unavailable", f"Host did not provide {hook_name}."
+                501,
+                "Action unavailable",
+                "Host did not provide revoke_invitation.",
             )
-        form = await read_named_form(request, required)
+        form = await read_named_form(request, ("invitation_id",))
         if isinstance(form, FormError):
             return error_response(form.status_code, form.title, form.message)
         csrf_error = await _validate_csrf(request, config, form.get("csrf"))
         if csrf_error is not None:
             return csrf_error
-        if hook_name == "hard_delete_user" and form["confirmation"] != form["user_id"]:
-            return error_response(
-                400,
-                "Confirmation failed",
-                "Confirmation must exactly match the user id.",
-            )
-        callback_values = (
-            (form["user_id"],)
-            if hook_name == "hard_delete_user"
-            else tuple(form[name] for name in required)
+        changed = cast(
+            "UserRow",
+            await resolve(callback(request, auth.current_user, form["invitation_id"])),
         )
-        result = await resolve(callback(request, auth.current_user, *callback_values))
-        if hook_name in {"invite_user", "reissue_invitation"}:
-            activation_url = getattr(result, "activation_url", None)
-            if not isinstance(activation_url, str) or not activation_url:
-                return error_response(
-                    500, "Invitation failed", "Invitation result has no activation URL."
-                )
-            return RedirectResponse(
-                url=f"{redirect_url}?{urlencode({'invitation_url': activation_url})}",
-                status_code=303,
-            )
-        return RedirectResponse(url=redirect_url, status_code=303)
-
-    if config.account_enabled:
-        router.add_api_route(config.account_path, account, methods=["GET"])
-        router.add_api_route(config.profile_path, update_profile, methods=["POST"])
-        router.add_api_route(config.sessions_path, sessions, methods=["GET"])
-
-        async def revoke_session(request: Request) -> Response:
-            return await named_action(
-                request,
-                hook_name="revoke_session",
-                required=("session_id",),
-                redirect_url=config.sessions_path,
-            )
-
-        router.add_api_route(
-            config.revoke_session_path, revoke_session, methods=["POST"]
+        csrf = await resolve(hooks.csrf_context(request))
+        return await _row_response(
+            templates, request, config, hooks, auth.current_user, changed, csrf
         )
-    if config.admin_enabled:
 
-        async def mutation(request: Request, kind: str) -> Response:
-            auth = await admin_user(request, config, hooks)
-            if isinstance(auth, Denied):
-                return auth.response
-            if kind in {"disable", "enable"}:
-                form = await read_mutation_form(request)
-            else:
-                form = await read_grant_form(
-                    request,
-                    value_field="role_name"
-                    if kind in {"grant-role", "revoke-role"}
-                    else "permission",
-                )
-            if isinstance(form, FormError):
-                return error_response(form.status_code, form.title, form.message)
-            csrf_error = await _validate_csrf(request, config, form.csrf_token)
-            if csrf_error is not None:
-                return csrf_error
-            if isinstance(form, MutationForm):
-                changed = await resolve(
-                    hooks.set_user_disabled(
-                        request, auth.current_user, form.user_id, kind == "disable"
-                    )
-                )
-                await resolve(
-                    hooks.after_user_disabled_changed(
-                        request, auth.current_user, changed
-                    )
-                )
-            elif kind in {"grant-role", "revoke-role"}:
-                callback = (
-                    hooks.grant_role if kind == "grant-role" else hooks.revoke_role
-                )
-                changed = await resolve(
-                    callback(request, auth.current_user, form.user_id, form.value)
-                )
-            else:
-                permission = PermissionGrantRow(
-                    form.value, form.value, form.scope_type, form.scope_id
-                )
-                callback = (
-                    hooks.grant_permission
-                    if kind == "grant-permission"
-                    else hooks.revoke_permission
-                )
-                changed = await resolve(
-                    callback(request, auth.current_user, form.user_id, permission)
-                )
-            csrf = await resolve(hooks.csrf_context(request))
-            return await _row_response(
-                templates, request, config, hooks, auth.current_user, changed, csrf
-            )
-
-        def make_mutation_endpoint(kind: str):
-            async def endpoint(request: Request) -> Response:
-                return await mutation(request, kind)
-
-            return endpoint
-
-        async def invite(request: Request) -> Response:
-            return await named_action(
-                request,
-                hook_name="invite_user",
-                required=("username", "email", "role"),
-                redirect_url=config.users_path,
-            )
-
-        async def reissue_invitation(request: Request) -> Response:
-            return await named_action(
-                request,
-                hook_name="reissue_invitation",
-                required=("invitation_id",),
-                redirect_url=config.users_path,
-            )
-
-        async def revoke_invitation(request: Request) -> Response:
-            auth = await admin_user(request, config, hooks)
-            if isinstance(auth, Denied):
-                return auth.response
-            callback = getattr(hooks, "revoke_invitation", None)
-            if not callable(callback):
-                return error_response(
-                    501,
-                    "Action unavailable",
-                    "Host did not provide revoke_invitation.",
-                )
-            form = await read_named_form(request, ("invitation_id",))
-            if isinstance(form, FormError):
-                return error_response(form.status_code, form.title, form.message)
-            csrf_error = await _validate_csrf(request, config, form.get("csrf"))
-            if csrf_error is not None:
-                return csrf_error
-            changed = cast(
-                "UserRow",
-                await resolve(
-                    callback(request, auth.current_user, form["invitation_id"])
-                ),
-            )
-            csrf = await resolve(hooks.csrf_context(request))
-            return await _row_response(
-                templates, request, config, hooks, auth.current_user, changed, csrf
-            )
-
-        async def soft_delete(request: Request) -> Response:
-            return await named_action(
-                request,
-                hook_name="soft_delete_user",
-                required=("user_id",),
-                redirect_url=config.users_path,
-            )
-
-        async def hard_delete(request: Request) -> Response:
-            return await named_action(
-                request,
-                hook_name="hard_delete_user",
-                required=("user_id", "confirmation"),
-                redirect_url=config.users_path,
-            )
-
-        router.add_api_route(config.audit_path, audit, methods=["GET"])
-        router.add_api_route(config.invite_path, invite, methods=["POST"])
-        router.add_api_route(
-            config.reissue_invitation_path, reissue_invitation, methods=["POST"]
-        )
-        router.add_api_route(
-            config.revoke_invitation_path, revoke_invitation, methods=["POST"]
-        )
-        router.add_api_route(
-            config.soft_delete_user_path, soft_delete, methods=["POST"]
-        )
-        router.add_api_route(
-            config.hard_delete_user_path, hard_delete, methods=["POST"]
-        )
-        for path, kind in (
-            (config.users_path, "users"),
-            (config.disable_user_path, "disable"),
-            (config.enable_user_path, "enable"),
-            (config.grant_role_path, "grant-role"),
-            (config.revoke_role_path, "revoke-role"),
-            (config.grant_permission_path, "grant-permission"),
-            (config.revoke_permission_path, "revoke-permission"),
-        ):
-            if kind == "users":
-                router.add_api_route(path, users, methods=["GET"])
-            else:
-                router.add_api_route(
-                    path, make_mutation_endpoint(kind), methods=["POST"]
-                )
-    return UserManagerUiRouter(
-        router, config.static_mount_path, usermanager_ui_static_files()
+    router.add_api_route(config.invite_path, invite, methods=["POST"])
+    router.add_api_route(
+        config.reissue_invitation_path, reissue_invitation, methods=["POST"]
     )
+    router.add_api_route(
+        config.revoke_invitation_path, revoke_invitation, methods=["POST"]
+    )
+
+
+def _add_admin_deletion_routes(
+    router: APIRouter,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+) -> None:
+    async def soft_delete(request: Request) -> Response:
+        return await _named_action(
+            request,
+            config=config,
+            hooks=hooks,
+            hook_name="soft_delete_user",
+            required=("user_id",),
+            redirect_url=config.users_path,
+        )
+
+    async def hard_delete(request: Request) -> Response:
+        return await _named_action(
+            request,
+            config=config,
+            hooks=hooks,
+            hook_name="hard_delete_user",
+            required=("user_id", "confirmation"),
+            redirect_url=config.users_path,
+        )
+
+    router.add_api_route(config.soft_delete_user_path, soft_delete, methods=["POST"])
+    router.add_api_route(config.hard_delete_user_path, hard_delete, methods=["POST"])
+
+
+async def _named_action(  # noqa: PLR0911
+    request: Request,
+    *,
+    config: UserManagerUiConfig,
+    hooks: UserManagerUiHooks,
+    hook_name: str,
+    required: tuple[str, ...],
+    redirect_url: str,
+) -> Response:
+    auth = (
+        await current_user(request, config, hooks)
+        if hook_name == "revoke_session"
+        else await admin_user(request, config, hooks)
+    )
+    if isinstance(auth, Denied):
+        return auth.response
+    callback = getattr(hooks, hook_name, None)
+    if not callable(callback):
+        return error_response(
+            501, "Action unavailable", f"Host did not provide {hook_name}."
+        )
+    form = await read_named_form(request, required)
+    if isinstance(form, FormError):
+        return error_response(form.status_code, form.title, form.message)
+    csrf_error = await _validate_csrf(request, config, form.get("csrf"))
+    if csrf_error is not None:
+        return csrf_error
+    if hook_name == "hard_delete_user" and form["confirmation"] != form["user_id"]:
+        return error_response(
+            400,
+            "Confirmation failed",
+            "Confirmation must exactly match the user id.",
+        )
+    callback_values = (
+        (form["user_id"],)
+        if hook_name == "hard_delete_user"
+        else tuple(form[name] for name in required)
+    )
+    result = await resolve(callback(request, auth.current_user, *callback_values))
+    if hook_name in {"invite_user", "reissue_invitation"}:
+        activation_url = getattr(result, "activation_url", None)
+        if not isinstance(activation_url, str) or not activation_url:
+            return error_response(
+                500, "Invitation failed", "Invitation result has no activation URL."
+            )
+        return RedirectResponse(
+            url=f"{redirect_url}?{urlencode({'invitation_url': activation_url})}",
+            status_code=303,
+        )
+    return RedirectResponse(url=redirect_url, status_code=303)
 
 
 async def _validate_csrf(
