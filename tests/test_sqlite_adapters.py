@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from contextlib import AbstractContextManager
 
 from my_usermanager.adapters import sqlite as sqlite_adapter
+from my_usermanager.adapters import sqlite_schema, sqlite_stores
 from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
 from my_usermanager.adapters.sqlite import (
     SQLiteAuditStore,
@@ -1066,9 +1067,12 @@ def test_auth_database_rolls_back_failed_my_auth_legacy_migration(
     try:
         with pytest.raises(RuntimeError, match="legacy migration failed"):
             SQLiteAuthDatabase(conn).initialize()
-        assert conn.execute(
-            "SELECT name FROM sqlite_master WHERE name = 'must_roll_back'"
-        ).fetchone() is None
+        assert (
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE name = 'must_roll_back'"
+            ).fetchone()
+            is None
+        )
     finally:
         conn.close()
 
@@ -1116,7 +1120,7 @@ def test_audit_schema_lookalike_is_rejected() -> None:
     connection = FailingCommitConnection()
     mutation = cast(
         "Callable[[sqlite3.Connection, str], AbstractContextManager[None]]",
-        sqlite_adapter._mutation,  # pyright: ignore[reportPrivateUsage]
+        sqlite_stores._mutation,  # pyright: ignore[reportPrivateUsage]
     )
     with (
         pytest.raises(RuntimeError, match=_INJECTED_COMMIT_FAILURE),
@@ -1187,7 +1191,6 @@ def test_auth_database_initializes_caller_connection_with_foreign_keys() -> None
         assert conn.execute("SELECT * FROM um_grants").fetchall() == []
     finally:
         conn.close()
-
 
 
 def _table_names(connection: sqlite3.Connection) -> set[object]:
@@ -1351,8 +1354,8 @@ def test_operation_connection_locks_cleanup_after_closed_connections(
     setup = sqlite3.connect(database_path)
     create_tables(setup)
     setup.close()
-    connection_locks_guard = sqlite_adapter._CONNECTION_LOCKS_GUARD  # pyright: ignore[reportPrivateUsage]
-    connection_locks = sqlite_adapter._CONNECTION_LOCKS  # pyright: ignore[reportPrivateUsage]
+    connection_locks_guard = sqlite_stores._CONNECTION_LOCKS_GUARD  # pyright: ignore[reportPrivateUsage]
+    connection_locks = sqlite_stores._CONNECTION_LOCKS  # pyright: ignore[reportPrivateUsage]
     with connection_locks_guard:
         connection_locks.clear()
 
@@ -1365,3 +1368,13 @@ def test_operation_connection_locks_cleanup_after_closed_connections(
         stores.close()
 
     assert len(connection_locks) <= 1
+
+
+def test_sqlite_facade_reexports_single_purpose_owners() -> None:
+    """Stable imports delegate schema lifecycle and store CRUD to their owners."""
+    assert sqlite_adapter.create_tables is sqlite_schema.create_tables
+    assert sqlite_adapter.inspect_sqlite_schema is sqlite_schema.inspect_sqlite_schema
+    assert sqlite_adapter.migrate_sqlite_schema is sqlite_schema.migrate_sqlite_schema
+    assert sqlite_adapter.SQLiteUserStore is sqlite_stores.SQLiteUserStore
+    assert sqlite_adapter.SQLiteGrantStore is sqlite_stores.SQLiteGrantStore
+    assert sqlite_adapter.SQLiteAuditStore is sqlite_stores.SQLiteAuditStore
