@@ -1,7 +1,6 @@
 {% extends base_template %}
 {% block title %}{{ labels.sessions_title }}{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ static_url_path }}/usermanager-ui.css">
 <section class="um-shell um-stack" aria-labelledby="sessions-title">
   <div><p class="badge">{{ labels.account_badge }}</p><h1 id="sessions-title">{{ labels.sessions_title }}</h1><p class="um-muted">{{ labels.sessions_description }}</p></div>
   <div class="card um-table-scroll"><table class="table"><thead><tr><th>Created</th><th>Last seen</th><th>Device</th><th>IP</th><th>{{ labels.col_action }}</th></tr></thead><tbody>
