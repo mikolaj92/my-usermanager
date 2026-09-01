@@ -1,13 +1,10 @@
-{% extends "app_factory/shell.html" %}
+{% extends "app_factory/identity_authenticated_shell.html" %}
 
 {% block head_extra %}
+{{ super() }}
 <link rel="stylesheet" href="{{ static_url_path }}/usermanager-ui.css">
 {% endblock %}
 
 {% block navigation %}
-<a class="btn btn-secondary" href="#main-content">{{ labels.skip_to_content }}</a>
-<nav class="app-nav" aria-label="User management navigation">
-  <a href="{{ config.account_path }}">{{ labels.nav_account }}</a>
-  {% if config.admin_enabled %}<a href="{{ config.users_path }}">{{ labels.nav_users }}</a>{% endif %}
-</nav>
+{% if platform_paths is defined %}{{ super() }}{% endif %}
 {% endblock %}

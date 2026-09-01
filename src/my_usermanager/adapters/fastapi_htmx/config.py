@@ -269,11 +269,12 @@ class UserManagerUiConfig:
 
     Host shell integration (optional, backward compatible):
 
-    * ``base_template`` — Jinja name that account/users pages extend. Default
-      ``base.html`` is the packaged shell (``app_factory/shell.html``). Hosts
+    * ``base_template`` — Jinja name that account/users pages extend. The
+      packaged default is a thin extension of app-factory's canonical
+      authenticated identity shell. Hosts
       that pass their own Jinja ``environment`` to ``install_usermanager_ui``
       may point this at a host template that provides a ``content`` block
-      (and any chrome the host owns).
+      without copying platform chrome.
     * ``labels`` — optional chrome string overrides merged over
       :data:`DEFAULT_UI_LABELS`. Per-request i18n can further override via an
       optional hooks ``page_context`` mapping key ``labels``.

@@ -830,3 +830,17 @@ def test_resolve_ui_labels_merges_defaults_config_and_overrides() -> None:
     assert merged["users_title"] == "From request"
     assert merged["action_enable"] == "Wlacz"
     assert merged["nav_account"] == adapter.DEFAULT_UI_LABELS["nav_account"]
+
+
+def test_packaged_base_uses_app_factory_identity_shell_without_local_nav() -> None:
+    """The adapter adds CSS but does not fork authenticated platform chrome."""
+    from importlib.resources import files
+
+    template = (
+        files("my_usermanager.adapters.fastapi_htmx")
+        .joinpath("templates/base.html")
+        .read_text(encoding="utf-8")
+    )
+    assert '{% extends "app_factory/identity_authenticated_shell.html" %}' in template
+    assert '<nav class="app-nav"' not in template
+    assert "skip_to_content" not in template
