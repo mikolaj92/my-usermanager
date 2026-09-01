@@ -108,6 +108,6 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 - Typed FastAPI/HTMX user-management UI adapter.
 
-## 0.1.0 - Unreleased
+## 0.1.0
 
 - Bootstrap repository skeleton with packaging, tests, docs, and CI.
