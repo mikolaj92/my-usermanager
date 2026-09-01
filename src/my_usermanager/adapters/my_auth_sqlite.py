@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING, ClassVar, Final, Literal, Protocol, cast
 
 from my_usermanager.adapters.sqlite import (
     SQLiteGrantStore,
-    SQLiteRoleStore,
     SQLiteUserStore,
     create_tables,
     inspect_sqlite_schema,
     migrate_sqlite_schema,
 )
 from my_usermanager.adapters.sqlite_invitations import create_invitation_tables
+from my_usermanager.memory import MemoryRoleStore
 from my_usermanager.stores import DuplicateGrantError, DuplicateUserError
 
 if TYPE_CHECKING:
@@ -89,7 +89,7 @@ class SQLiteAuthTransaction:
     _connections: tuple[sqlite3.Connection, ...]
     _owns_connection: bool
     grants: SQLiteGrantStore
-    roles: SQLiteRoleStore
+    roles: MemoryRoleStore
     users: SQLiteUserStore
 
     def __init__(
@@ -106,7 +106,7 @@ class SQLiteAuthTransaction:
         grant_conn = conn if grants_conn is None else grants_conn
         self._connections = (conn,) if grant_conn is conn else (conn, grant_conn)
         self.users = SQLiteUserStore(conn, transaction_mode=transaction_mode)
-        self.roles = SQLiteRoleStore()
+        self.roles = MemoryRoleStore()
         self.grants = SQLiteGrantStore(grant_conn, transaction_mode=transaction_mode)
 
     def close(self) -> None:

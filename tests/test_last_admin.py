@@ -12,7 +12,6 @@ from my_usermanager import (
     GrantAdminService,
     LastAdministratorError,
     MemoryGrantStore,
-    MemoryRoleStore,
     MemoryUserStore,
     Permission,
     Scope,
@@ -24,11 +23,11 @@ from my_usermanager import (
 from my_usermanager.adapters.sqlite import (
     ImmediateTransaction,
     SQLiteGrantStore,
-    SQLiteRoleStore,
     SQLiteUserStore,
     create_tables,
     immediate_transaction,
 )
+from my_usermanager.memory import MemoryRoleStore
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -212,7 +211,7 @@ def _sqlite_bundle(
     create_tables(connection)
     users = SQLiteUserStore(connection, transaction_mode="external")
     grants = SQLiteGrantStore(connection, transaction_mode="external")
-    roles = SQLiteRoleStore()
+    roles = MemoryRoleStore()
     admin = GrantAdminService(
         users=users,
         roles=roles,
@@ -246,7 +245,7 @@ def _assert_one_active_admin(database: Path) -> None:
             count_active_administrators(
                 users=SQLiteUserStore(check),
                 grants=SQLiteGrantStore(check),
-                roles=SQLiteRoleStore(),
+                roles=MemoryRoleStore(),
             )
             == 1
         )
@@ -266,7 +265,7 @@ def test_concurrent_disable_leaves_one_active_admin(tmp_path: Path) -> None:
         try:
             local = UserManager(
                 users=SQLiteUserStore(connection, transaction_mode="external"),
-                roles=SQLiteRoleStore(),
+                roles=MemoryRoleStore(),
                 grants=SQLiteGrantStore(connection, transaction_mode="external"),
                 atomic=lambda: _sqlite_atomic(connection),
             )
@@ -306,7 +305,7 @@ def test_concurrent_role_revoke_leaves_one_active_admin(tmp_path: Path) -> None:
         try:
             service = GrantAdminService(
                 users=SQLiteUserStore(connection, transaction_mode="external"),
-                roles=SQLiteRoleStore(),
+                roles=MemoryRoleStore(),
                 grants=SQLiteGrantStore(connection, transaction_mode="external"),
                 atomic=lambda: _sqlite_atomic(connection),
             )
@@ -361,7 +360,7 @@ def test_migrated_active_admin_remains_protected(tmp_path: Path) -> None:
 
         manager = UserManager(
             users=users,
-            roles=SQLiteRoleStore(),
+            roles=MemoryRoleStore(),
             grants=grants,
             atomic=lambda: _sqlite_atomic(connection),
         )

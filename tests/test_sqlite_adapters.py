@@ -19,11 +19,11 @@ from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
 from my_usermanager.adapters.sqlite import (
     SQLiteAuditStore,
     SQLiteGrantStore,
-    SQLiteRoleStore,
     SQLiteUserStore,
     create_tables,
     migrate_sqlite_schema,
 )
+from my_usermanager.memory import MemoryRoleStore
 from my_usermanager.models import (
     AuditEvent,
     ExternalIdentity,
@@ -304,26 +304,26 @@ def test_link_external_identity_idempotent_for_same_user(
 
 
 # ---------------------------------------------------------------------------
-# SQLiteRoleStore
+# MemoryRoleStore
 # ---------------------------------------------------------------------------
 
 
 def test_role_store_lists_builtin_roles() -> None:
-    store = SQLiteRoleStore()
+    store = MemoryRoleStore()
     roles = store.list()
     assert len(roles) > 0
     assert all(r.name for r in roles)
 
 
 def test_role_store_get_known_role() -> None:
-    store = SQLiteRoleStore()
+    store = MemoryRoleStore()
     roles = store.list()
     first_role = roles[0]
     assert store.get(first_role.name) == first_role
 
 
 def test_role_store_get_unknown_returns_none() -> None:
-    store = SQLiteRoleStore()
+    store = MemoryRoleStore()
     assert store.get("nonexistent_role") is None
 
 

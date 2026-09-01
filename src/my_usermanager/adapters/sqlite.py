@@ -30,13 +30,11 @@ from my_usermanager.models import (
     Gender,
     Grant,
     Permission,
-    Role,
     Scope,
     User,
     validate_gender,
     validate_identifier,
 )
-from my_usermanager.permissions import BUILTIN_ROLES
 from my_usermanager.stores import (
     AuditFilters,
     DuplicateAuditEventError,
@@ -54,7 +52,6 @@ __all__: Final[tuple[str, ...]] = (
     "ImmediateTransaction",
     "SQLiteAuditStore",
     "SQLiteGrantStore",
-    "SQLiteRoleStore",
     "SQLiteUserStore",
     "create_tables",
     "immediate_transaction",
@@ -1582,24 +1579,6 @@ class SQLiteUserStore:
             raise UserNotFoundError(user_id)
         return result
 
-
-class SQLiteRoleStore:
-    """Read-only SQLite-backed RoleStore seeded with built-in roles."""
-
-    __slots__: ClassVar[tuple[str, ...]] = ("_roles",)
-
-    def __init__(self) -> None:
-        """Create a role store containing only built-in roles."""
-        self._roles: dict[str, Role] = dict(BUILTIN_ROLES)
-
-    def get(self, role_name: str) -> Role | None:
-        """Return a role by name or None when missing."""
-        checked = validate_identifier(role_name, field_name="role_name")
-        return self._roles.get(checked)
-
-    def list(self) -> tuple[Role, ...]:
-        """Return built-in roles sorted by role name."""
-        return tuple(sorted(self._roles.values(), key=lambda role: role.name))
 
 
 class SQLiteGrantStore:
