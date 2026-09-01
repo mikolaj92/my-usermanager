@@ -1,6 +1,6 @@
 # my-usermanager Design System
 
-This design system is the source of truth for the planned FastAPI, Jinja, HTMX, and Basecoat CDN proof. It defines the product-facing UI layer only. The Python core remains generic and must not require UI, template, HTMX, Basecoat, or browser dependencies.
+This design system is the source of truth for the optional FastAPI, Jinja, HTMX, and Basecoat adapter. Basecoat and shared shell assets are bundled and served same-origin by app-factory; this package defines only the product-facing user-management layer. The Python core remains generic and must not require UI, template, HTMX, Basecoat, or browser dependencies.
 
 ## 1. Atmosphere & Identity
 
@@ -60,7 +60,7 @@ The UI should read like system documentation attached to an admin console: preci
 
 ### Rules
 
-- Use system fonts to avoid mandatory font dependencies and keep the proof CDN-light.
+- Use system fonts to avoid mandatory font dependencies; do not load fonts or UI assets from a CDN.
 - Body text must not render below `14px`.
 - Use monospace sparingly for identifiers, provider keys, grant scopes, request IDs, and timestamps.
 - Avoid marketing language. Use direct operational copy: "Invite user", "Grant pending", "Session expires", "Provider subject".
@@ -182,7 +182,7 @@ Motion is quiet feedback for server-rendered interactions. It should never becom
 - HTMX loaders may toggle visibility, opacity, or `aria-busy`; do not animate height, width, margins, or table layout.
 - Every interactive control needs visible hover, active, disabled, and keyboard focus states.
 - Respect `prefers-reduced-motion` by removing non-essential transitions.
-- Do not add animation libraries for the proof. Native CSS and HTMX state classes are enough.
+- Do not add animation libraries. Native CSS and HTMX state classes are enough.
 
 ## 7. Depth & Surface
 
