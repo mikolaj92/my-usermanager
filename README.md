@@ -215,14 +215,19 @@ cookie settings, CSRF, login/logout, and persistence.
 The optional adapter installs into the host's canonical app-factory shell and shared platform asset mount. It remains usable without `my-auth`; passkey UI is an optional typed panel hook.
 
 ```python
-from app_factory.fastapi import install_app_factory_ui
-from my_usermanager.adapters.fastapi_htmx import (
-    UserManagerUiConfig, install_usermanager_ui,
-)
+from app_factory.adapters import UserManagerBinding, install_identity_adapters
 
-platform = install_app_factory_ui(app, environments=(templates.env,))
-ui = install_usermanager_ui(app, platform=platform, hooks=hooks, config=UserManagerUiConfig(csrf_protection=csrf))
+identity = install_identity_adapters(
+    app,
+    environments=(templates.env,),
+    config=platform_config,
+    usermanager=UserManagerBinding(hooks=hooks, csrf_protection=csrf),
+)
+ui = identity.usermanager_ui
 ```
+
+When passkeys are enabled, add a `PasskeyBinding` to the same composer call.
+Hosts do not call the two adapter installers independently.
 
 The host owns sessions, CSRF validation, persistence, authorization, provisioning, redirects, and audit effects. Every enabled mutation route requires a `CsrfProtection` implementation and validates its submitted token before callbacks. Account and admin route groups can be independently disabled. The adapter ships package-specific CSS; its packaged `base.html` is a thin extension of `app_factory/identity_authenticated_shell.html` and does not draw a second navigation shell.
 

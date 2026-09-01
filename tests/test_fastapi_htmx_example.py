@@ -120,9 +120,12 @@ def test_example_source_consumes_adapters_instead_of_duplicate_templates() -> No
     # Given: the composed example host source.
     app_source = read_required_file(APP_PATH)
 
-    assert "install_passkey_ui" in app_source
-    assert "install_usermanager_ui" in app_source
-    assert "install_app_factory_ui" in app_source
+    assert "install_identity_adapters" in app_source
+    assert "PasskeyBinding" in app_source
+    assert "UserManagerBinding" in app_source
+    assert "install_passkey_ui" not in app_source
+    assert "install_usermanager_ui" not in app_source
+    assert "install_app_factory_ui" not in app_source
     assert "Jinja2Templates" not in app_source
     assert "StaticFiles(directory=" not in app_source
     assert tuple((EXAMPLE_ROOT / "templates").glob("**/*.html")) == ()
@@ -136,9 +139,7 @@ def test_readme_uses_uv_only_and_names_host_owned_security_boundaries() -> None:
 
     # When / Then: commands are uv-only and production security is host-owned.
     assert "uv run --no-sync" in readme
-    published_my_auth = (
-        '--with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.7"'
-    )
+    published_my_auth = '--with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.7"'
     assert published_my_auth in readme
     assert published_my_auth in root_readme
     forbidden_commands = ("pip ", "python -m pip", "npm ", "pnpm ", "yarn ")

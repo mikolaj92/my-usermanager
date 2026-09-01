@@ -1,13 +1,11 @@
 # FastAPI HTMX adapter composition example
 
-This directory is a no-build FastAPI host app that composes two reusable UI
-adapters instead of implementing reusable auth or user-management UI itself:
+This directory is a no-build FastAPI host app that uses app-factory's one
+identity composer instead of copying auth or user-management installer glue:
 
-- `my_auth.fastapi_htmx.install_passkey_ui(...)` installs passkey login and
-  registration pages plus `/api/auth/*` JSON WebAuthn endpoints.
-- `my_usermanager.adapters.fastapi_htmx.install_usermanager_ui(...)` installs
-  the account page, admin users page, and HTMX user-row fragments.
-  Both installers receive the same `AppFactoryUi` platform.
+- `app_factory.adapters.install_identity_adapters(...)` installs shared chrome,
+  passkey routes, account/admin pages, and their static assets.
+- The host supplies only typed bindings, paths, persistence and policy hooks.
 The example remains an optional consumer. Importing or installing core
 `my_usermanager` does not import FastAPI, Jinja, Pydantic, `my_auth`, HTMX,
 Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler.
@@ -46,18 +44,21 @@ uv run --no-sync \
   pytest tests/test_fastapi_htmx_example.py
 ```
 
-The passkey UI uses the typed installer contracts:
+The identity stack uses the app-factory composer:
 
 ```python
-from app_factory.fastapi import install_app_factory_ui
-from my_auth.fastapi_htmx import PasskeyUiConfig, install_passkey_ui
-from my_usermanager.adapters.fastapi_htmx import UserManagerUiConfig, install_usermanager_ui
+from app_factory.adapters import PasskeyBinding, UserManagerBinding, install_identity_adapters
 
-platform = install_app_factory_ui(app, environments=())
-install_passkey_ui(app, platform=platform, service=service, hooks=passkey_hooks,
-                   config=PasskeyUiConfig(paths=PASSKEY_PATHS))
-install_usermanager_ui(app, platform=platform, hooks=usermanager_hooks,
-                       config=UserManagerUiConfig(csrf_protection=csrf))
+install_identity_adapters(
+    app,
+    environments=(),
+    config=platform_config,
+    passkey=PasskeyBinding(service=service, hooks=passkey_hooks, ui_config=passkey_ui),
+    usermanager=UserManagerBinding(
+        hooks=usermanager_hooks,
+        csrf_protection=csrf,
+    ),
+)
 ```
 
 The host supplies typed `PasskeyPanel` and `CsrfProtection` implementations.
@@ -65,28 +66,11 @@ The latter validates submitted tokens before any user-management mutation.
 The adapters own their routers, templates, and static mounts; hosts do not
 call legacy `create_*` router factories or manually mount adapter static files.
 
-The account/admin UI comes from `my_usermanager.adapters.fastapi_htmx`:
+The account/admin UI remains owned by `my_usermanager`; the binding only passes
+host hooks and CSRF policy. Hosts do not call either adapter installer directly.
 
 ```python
-from my_usermanager.adapters.fastapi_htmx import (
-    CsrfContext,
-    UserManagerUiConfig,
-    UserManagerUiHooks,
-    UserRow,
-    install_usermanager_ui,
-    row_key_from_user_id,
-)
-
-hooks: UserManagerUiHooks = _usermanager_hooks()
-install_usermanager_ui(
-    app,
-    platform=platform,
-    hooks=hooks,
-    config=UserManagerUiConfig(
-        login_url=PASSKEY_PATHS.login_page,
-        csrf_protection=csrf,
-    ),
-)
+from my_usermanager.adapters.fastapi_htmx import CsrfContext, UserRow, row_key_from_user_id
 
 row = UserRow(
     user_id="unsafe/id space",
@@ -103,7 +87,7 @@ csrf_fields = CsrfContext(
 )
 ```
 
-`install_usermanager_ui` owns the router, templates, and packaged CSS mount.
+The user-manager adapter owns its router, templates, and packaged CSS mount.
 
 ## Template override contract
 
