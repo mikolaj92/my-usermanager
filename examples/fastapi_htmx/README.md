@@ -107,10 +107,10 @@ csrf_fields = CsrfContext(
 
 ## Template override contract
 
-Pass a host Jinja `environment` to `install_usermanager_ui` so packaged
-templates attach with host loaders first. Set `UserManagerUiConfig.base_template`
-to a host template that provides a `content` block. Chrome strings come from
-`UserManagerUiConfig.labels` and an optional hooks `page_context` mapping.
+The packaged default extends `app_factory/identity_authenticated_shell.html`.
+Pass a host Jinja `environment` only when the product owns a template that
+extends that canonical shell. Do not copy app-factory navigation. Strings come
+from `UserManagerUiConfig.labels` and an optional hooks `page_context` mapping.
 
 ```python
 from jinja2 import Environment, FileSystemLoader
@@ -123,7 +123,7 @@ install_usermanager_ui(
     hooks=hooks,
     config=UserManagerUiConfig(
         csrf_protection=csrf,
-        base_template="shell.html",
+        base_template="app_factory/identity_authenticated_shell.html",
         labels={"nav_account": "Konto"},
     ),
     environment=host_templates,

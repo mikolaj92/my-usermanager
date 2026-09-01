@@ -224,15 +224,13 @@ platform = install_app_factory_ui(app, environments=(templates.env,))
 ui = install_usermanager_ui(app, platform=platform, hooks=hooks, config=UserManagerUiConfig(csrf_protection=csrf))
 ```
 
-The host owns sessions, CSRF validation, persistence, authorization, provisioning, redirects, and audit effects. Every enabled mutation route requires a `CsrfProtection` implementation and validates its submitted token before callbacks. Account and admin route groups can be independently disabled. The adapter ships package-specific CSS and, by default, extends packaged `base.html` → `app_factory/shell.html`.
+The host owns sessions, CSRF validation, persistence, authorization, provisioning, redirects, and audit effects. Every enabled mutation route requires a `CsrfProtection` implementation and validates its submitted token before callbacks. Account and admin route groups can be independently disabled. The adapter ships package-specific CSS; its packaged `base.html` is a thin extension of `app_factory/identity_authenticated_shell.html` and does not draw a second navigation shell.
 
-Optional host shell integration (v0.3.3+, backward compatible):
+Host shell integration:
 
-* Pass the host Jinja `environment=` so package templates attach with **host loaders first** (host `base.html` can win the name).
-* Set `UserManagerUiConfig.base_template` to a host template that provides a `content` block.
-* Override chrome strings via `UserManagerUiConfig.labels` and/or an optional hooks `page_context(request) -> Mapping` that may include a nested `labels` dict (merged last for per-request i18n) plus any shell variables the host base needs.
-
-Hosts that omit these options keep the previous package-only shell and English defaults.
+* Pass the host Jinja `environment=` so package templates attach with **host loaders first**.
+* Keep the packaged default, or set `UserManagerUiConfig.base_template` to a host template that provides a `content` block without copying app-factory chrome.
+* Override strings via `UserManagerUiConfig.labels` and/or an optional hooks `page_context(request) -> Mapping` that may include a nested `labels` dict (merged last for per-request i18n) plus any shell variables the shared shell needs.
 
 ## Canonical runnable FastAPI stack
 

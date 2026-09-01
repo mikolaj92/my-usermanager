@@ -4,6 +4,9 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+- Make packaged user-manager pages extend app-factory's canonical authenticated
+  identity shell without a local navigation or skip-link fork (#77).
+
 - Align `__version__` and `SECURITY.md` with package `0.5.8`. Nested
   `[tool.uv.sources]` stay app-factory `v0.6.11` and my-auth `v0.4.6`
   (COMPAT nested pins for this generation). Extra stays `my-auth>=0.4,<0.5`.
