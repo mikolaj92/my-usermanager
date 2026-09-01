@@ -137,7 +137,7 @@ def test_readme_uses_uv_only_and_names_host_owned_security_boundaries() -> None:
     # When / Then: commands are uv-only and production security is host-owned.
     assert "uv run --no-sync" in readme
     published_my_auth = (
-        '--with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git"'
+        '--with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.6"'
     )
     assert published_my_auth in readme
     assert published_my_auth in root_readme

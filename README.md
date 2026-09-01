@@ -19,18 +19,18 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
   `my_usermanager.adapters.fastapi_htmx`
 
 ```sh
-uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git"
-uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git"
-uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git"
-uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git"
+uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.8"
+uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.8"
+uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.8"
+uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.8"
 ```
 
 For the shared passkey stack, install the `myauth` and UI extras plus the
 public `my-auth` UI extra:
 
 ```sh
-uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git"
-uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git"
+uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.8"
+uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.6"
 ```
 
 ## `my-auth` identity and FastAPI integration
@@ -240,7 +240,7 @@ The complete no-build reference is [`examples/fastapi_htmx`](examples/fastapi_ht
 
 ```sh
 uv run --no-sync \
-  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git" \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.6" \
   --with "fastapi>=0.115" \
   --with "jinja2>=3.1" \
   --with "uvicorn[standard]>=0.32" \
@@ -251,19 +251,6 @@ Open `http://127.0.0.1:8000/auth/login`. The host demo uses in-memory users,
 explicit demo-only CSRF metadata, and host callbacks; it is not a production
 session, persistence, admin, or audit implementation. WebAuthn requires HTTPS
 or a local secure context such as localhost, and `/api/auth/*` remains JSON.
-
-## 0.1 to 0.2 mapping
-
-| 0.1 API or behavior | 0.2 API or behavior |
-| --- | --- |
-| `build_make_registration_user_with_identity_link` | `build_prepare_registration` + host-owned `complete_registration` |
-| `PasskeyRouteHooks.make_registration_user` | `prepare_registration` + `complete_registration` |
-| `finish_registration` result passed to identity lookup | `verify_registration` returns `VerifiedRegistration`, then shared atomic completion |
-| Implicit SQLite bootstrap | Explicit `SQLiteAuthDatabase.initialize()` or inspect then `create_tables`/`migrate_sqlite_schema` |
-| Independent my-auth and UM DB owners | One `SQLiteAuthDatabase` owner and one shared configured connection/path |
-| `transaction_mode` absent from direct stores | `operation` (independent commit) or `external` (savepoint; caller commits) |
-| `PasskeyCookies.challenge` / `register_name` | Separate my-auth authentication/registration challenge cookies |
-| `Initial version: 0.1.0` | `__version__ == "0.2.0"`; schema version 2 |
 
 ## Development
 
