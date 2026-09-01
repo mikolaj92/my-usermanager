@@ -4,6 +4,9 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+- Split SQLite schema lifecycle and store CRUD into single-purpose modules while
+  keeping `my_usermanager.adapters.sqlite` as the stable public facade (#79).
+
 - Teach the runnable FastAPI example to use app-factory's single
   `install_identity_adapters` composer instead of copying adapter installers (#81).
 
