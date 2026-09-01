@@ -4,6 +4,9 @@ All notable changes to `my-usermanager` will be documented in this file.
 
 ## Unreleased
 
+- Teach the runnable FastAPI example to use app-factory's single
+  `install_identity_adapters` composer instead of copying adapter installers (#81).
+
 - Render account logout only through app-factory's `platform_session` and fail
   explicitly when the host omits `platform_paths` (#78).
 

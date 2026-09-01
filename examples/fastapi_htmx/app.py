@@ -5,10 +5,15 @@ from __future__ import annotations
 from typing import Final
 from warnings import filterwarnings
 
-from app_factory.fastapi import install_app_factory_ui
+from app_factory import PlatformConfig, PlatformPaths
+from app_factory.adapters import (
+    PasskeyBinding,
+    UserManagerBinding,
+    install_identity_adapters,
+)
 from fastapi import APIRouter, FastAPI, status
 from fastapi.responses import PlainTextResponse, RedirectResponse, Response
-from my_auth.fastapi_htmx import PasskeyUiConfig, install_passkey_ui
+from my_auth.fastapi_htmx import PasskeyUiConfig
 
 from examples.fastapi_htmx.demo_passkeys import (
     PASSKEY_PATHS,
@@ -21,10 +26,7 @@ from examples.fastapi_htmx.demo_usermanager import (
 )
 from examples.fastapi_htmx.demo_users import DEMO_CSRF_HEADER
 from examples.fastapi_htmx.demo_users import DEMO_UNSAFE_USER_ID as _DEMO_UNSAFE_USER_ID
-from my_usermanager.adapters.fastapi_htmx import (
-    UserManagerUiConfig,
-    install_usermanager_ui,
-)
+from my_usermanager.adapters.fastapi_htmx import UserManagerUiConfig
 
 _HOST_ROUTER: Final = APIRouter()
 DEMO_UNSAFE_USER_ID: Final = _DEMO_UNSAFE_USER_ID
@@ -45,26 +47,44 @@ filterwarnings(
 def create_app() -> FastAPI:
     """Create the optional no-build adapter composition example."""
     demo_app = FastAPI(title="my-usermanager FastAPI HTMX adapter composition example")
-    platform = install_app_factory_ui(demo_app, environments=())
-    install_passkey_ui(
-        demo_app,
-        platform=platform,
-        service=_demo_passkey_service(),
-        hooks=_passkey_hooks(),
-        config=PasskeyUiConfig(
-            paths=PASSKEY_PATHS,
-            csrf_header_name=DEMO_CSRF_HEADER,
-            csrf_token=lambda _request: "demo-noop-csrf",
-        ),
+    paths = PlatformPaths(
+        login=PASSKEY_PATHS.login_page,
+        logout=PASSKEY_PATHS.logout,
+        register=PASSKEY_PATHS.register_page,
+        recovery=PASSKEY_PATHS.recovery_page,
+        activation=PASSKEY_PATHS.activation_page,
+        credentials=PASSKEY_PATHS.credentials_page,
+        account="/account",
+        admin_users="/admin/users",
+        invite="/admin/users",
     )
-    install_usermanager_ui(
+    _ = install_identity_adapters(
         demo_app,
-        platform=platform,
-        config=UserManagerUiConfig(
-            login_url=PASSKEY_PATHS.login_page,
-            csrf_protection=_demo_csrf_protection(),
+        environments=(),
+        config=PlatformConfig(
+            app_name="my-usermanager demo",
+            paths=paths,
+            enable_account=True,
+            enable_credentials=True,
+            enable_admin_users=True,
+            enable_invite=True,
         ),
-        hooks=_usermanager_hooks(),
+        passkey=PasskeyBinding(
+            service=_demo_passkey_service(),
+            hooks=_passkey_hooks(),
+            ui_config=PasskeyUiConfig(
+                paths=PASSKEY_PATHS,
+                csrf_header_name=DEMO_CSRF_HEADER,
+                csrf_token=lambda _request: "demo-noop-csrf",
+            ),
+        ),
+        usermanager=UserManagerBinding(
+            hooks=_usermanager_hooks(),
+            ui_config=UserManagerUiConfig(
+                login_url=PASSKEY_PATHS.login_page,
+                csrf_protection=_demo_csrf_protection(),
+            ),
+        ),
     )
     demo_app.include_router(_HOST_ROUTER)
     return demo_app
