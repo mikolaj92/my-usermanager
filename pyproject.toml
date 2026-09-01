@@ -35,7 +35,7 @@ fastapi = [
     "pydantic>=2.10",
 ]
 fastapi-htmx = [
-    "app-factory[fastapi]>=0.5",
+    "app-factory[fastapi]>=0.6.11",
     "fastapi>=0.115",
     "jinja2>=3.1",
 ]
