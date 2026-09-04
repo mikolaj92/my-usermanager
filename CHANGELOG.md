@@ -2,13 +2,15 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
-## Unreleased
+## 0.6.1
 
 - Require an explicit host-selected role for every SQLite self-registration;
   registration order no longer confers a special first-user role (#99).
 - Allow an administrator to revoke their own final admin grant when another
   active administrator remains, while retaining zero-admin lockout protection
   (#99).
+- Require the neutral `my-auth` 0.5 line for the 0.6 API and release metadata
+  (#103).
 
 ## 0.5.10
 

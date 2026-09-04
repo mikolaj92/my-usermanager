@@ -106,7 +106,6 @@ def _passkey_hooks() -> PasskeyRouteHooks:
         get_auth_user=_get_auth_user,
         login=_login,
         logout=_logout,
-        registration_allowed=_registration_allowed,
         render_login=_unused_render_login,
         render_register=_unused_render_register,
         after_register=_after_register,
@@ -162,17 +161,12 @@ def _logout(_response: Response, _request: Request) -> None:
     return None
 
 
-def _registration_allowed(request: Request) -> bool:
-    return request.query_params.get("registration") != "closed"
-
-
 def _unused_render_login(_request: Request) -> HTMLResponse:
     return HTMLResponse("my-auth fastapi_htmx replaces this host placeholder")
 
 
-def _unused_render_register(_request: Request, *, bootstrap: bool) -> HTMLResponse:
-    body = "bootstrap" if bootstrap else "current account"
-    return HTMLResponse(f"my-auth fastapi_htmx replaces this {body} placeholder")
+def _unused_render_register(_request: Request) -> HTMLResponse:
+    return HTMLResponse("my-auth fastapi_htmx replaces this host placeholder")
 
 
 def _after_register(
