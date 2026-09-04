@@ -29,7 +29,6 @@ from my_usermanager.adapters.fastapi_htmx import (
     CsrfContext,
     CsrfProtection,
     InvitationResult,
-    PasskeyPanel,
     PermissionGrantRow,
     UserRow,
 )
@@ -179,8 +178,9 @@ class _UserManagerHooks:
         self,
         _request: Request,
         _current_user: AuthenticatedSubject,
-    ) -> PasskeyPanel:
-        return PasskeyPanel(template_name="auth/_integration_panel.html", context={})
+    ) -> None:
+        """Omit the optional panel; my-auth still owns its credential pages."""
+        return
 
 
 def _usermanager_hooks() -> _UserManagerHooks:

@@ -222,8 +222,8 @@ def test_registration_policy_denial_remains_host_owned_json_edge() -> None:
     )
 
 
-def test_account_page_uses_usermanager_hook_for_passkey_panel() -> None:
-    # Given / When / Then: account HTML comes from the usermanager adapter hook seam.
+def test_account_page_omits_optional_passkey_panel() -> None:
+    # Given / When / Then: returning None leaves the optional section absent.
     assert_route_contract(
         """
         response = client.get("/account")
@@ -231,7 +231,8 @@ def test_account_page_uses_usermanager_hook_for_passkey_panel() -> None:
 
         assert response.status_code == 200, response.text
         assert content_type.startswith("text/html"), content_type
-        assert "Passkey integration" in response.text
+        assert "Passkey integration" not in response.text
+        assert "Provide render_passkey_panel" not in response.text
         """,
     )
 

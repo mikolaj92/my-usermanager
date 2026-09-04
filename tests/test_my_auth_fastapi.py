@@ -495,7 +495,7 @@ def test_login_session_principal_writer_requires_existing_identity_link() -> Non
         external_identities=frozenset({identity}),
     )
     store = FakeExternalIdentityUserStore(users=(user,))
-    login: Callable[[str, str, FakePasskeyUser], None | Awaitable[None]] = (
+    login: Callable[[str, str, FakePasskeyUser], Awaitable[None] | None] = (
         fastapi_adapter.build_login_session_principal_writer(
             store,
             lambda _response, _request, _principal: None,

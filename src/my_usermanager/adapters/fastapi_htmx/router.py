@@ -528,7 +528,13 @@ def _mutation_endpoint(
             )
         csrf = await resolve(hooks.csrf_context(request))
         return await _row_response(
-            templates, request, config, hooks, auth.current_user, changed, csrf
+            templates,
+            request,
+            config=config,
+            hooks=hooks,
+            current_user=auth.current_user,
+            row=changed,
+            csrf=csrf,
         )
 
     return mutation
@@ -583,7 +589,13 @@ def _add_admin_invitation_routes(
         )
         csrf = await resolve(hooks.csrf_context(request))
         return await _row_response(
-            templates, request, config, hooks, auth.current_user, changed, csrf
+            templates,
+            request,
+            config=config,
+            hooks=hooks,
+            current_user=auth.current_user,
+            row=changed,
+            csrf=csrf,
         )
 
     router.add_api_route(config.invite_path, invite, methods=["POST"])
@@ -697,6 +709,7 @@ async def _validate_csrf(
 async def _row_response(
     templates: Environment,
     request: Request,
+    *,
     config: UserManagerUiConfig,
     hooks: UserManagerUiHooks,
     current_user: AuthenticatedSubject,
@@ -739,9 +752,9 @@ def _render_panel(
     current_user: AuthenticatedSubject,
     panel: PasskeyPanel | None,
 ) -> str:
-    """Render a named packaged template with merged safe context."""
+    """Render a named host/package template, or omit the optional panel."""
     if panel is None:
-        panel = PasskeyPanel("auth/_integration_panel.html", {})
+        return ""
     context: dict[str, object] = {
         "request": request,
         "current_user": current_user,

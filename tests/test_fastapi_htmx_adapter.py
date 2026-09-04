@@ -28,6 +28,7 @@ from app_factory.csrf import SessionCsrfProtection as FactorySessionCsrfProtecti
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from jinja2 import DictLoader, Environment
 
 from my_usermanager.subjects import AuthenticatedSubject
 
@@ -125,7 +126,6 @@ def test_public_api_and_resources_are_clean() -> None:
         "templates/users/_row.html",
         "templates/sessions/list.html",
         "templates/audit/list.html",
-        "templates/auth/_integration_panel.html",
         "static/usermanager-ui.css",
     ):
         assert package.joinpath(resource).is_file(), resource
@@ -629,13 +629,9 @@ def test_profile_update_rejects_future_birth_date_with_400() -> None:
     assert first_call[0] == "update"
 
 
-def test_passkey_panel_uses_named_packaged_template() -> None:
+def test_account_omits_passkey_section_when_hook_returns_none() -> None:
     import my_usermanager.adapters.fastapi_htmx as adapter
 
-    panel = adapter.PasskeyPanel(
-        template_name="auth/_integration_panel.html",
-        context={"integration_name": "Passkeys"},
-    )
     platform = AppFactoryUi(
         static_path="/static/platform",
         mount_name="platform",
@@ -651,12 +647,50 @@ def test_passkey_panel_uses_named_packaged_template() -> None:
     _ = adapter.install_usermanager_ui(
         app,
         platform=platform,
-        hooks=_hooks(panel=panel),
+        hooks=_hooks(panel=None),
         config=adapter.UserManagerUiConfig(csrf_protection=_csrf()),
     )
     response = _get(_client(app), "/account")
     assert response.status_code == 200
-    assert "Passkeys" in response.text
+    assert "Passkey integration" not in response.text
+    assert "Provide render_passkey_panel" not in response.text
+
+
+def test_passkey_panel_uses_explicit_named_host_template() -> None:
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    panel = adapter.PasskeyPanel(
+        template_name="host/passkey_panel.html",
+        context={"integration_name": "Host passkeys"},
+    )
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
+    )
+    app = FastAPI()
+    environment = Environment(
+        loader=DictLoader(
+            {"host/passkey_panel.html": "<section>{{ integration_name }}</section>"}
+        ),
+        autoescape=True,
+    )
+    _ = install_app_factory_ui(
+        app,
+        environments=[environment],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    _ = adapter.install_usermanager_ui(
+        app,
+        platform=platform,
+        hooks=_hooks(panel=panel),
+        config=adapter.UserManagerUiConfig(csrf_protection=_csrf()),
+        environment=environment,
+    )
+    response = _get(_client(app), "/account")
+    assert response.status_code == 200
+    assert "Host passkeys" in response.text
 
 
 def test_invitation_mutations_fail_closed_for_non_admin_and_missing_hooks() -> None:
