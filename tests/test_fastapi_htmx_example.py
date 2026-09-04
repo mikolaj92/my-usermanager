@@ -204,24 +204,6 @@ def test_passkey_login_and_register_pages_are_my_auth_adapter_html() -> None:
     )
 
 
-def test_registration_policy_denial_remains_host_owned_json_edge() -> None:
-    # Given / When / Then: demo policy can deny registration before service work.
-    assert_route_contract(
-        """
-        response = client.post(
-            "/api/auth/register/options?registration=closed",
-            json={"display_name": "Denied User"},
-        )
-        content_type = response.headers.get("content-type", "")
-
-        assert response.status_code == 403, response.text
-        assert content_type.startswith("application/json"), content_type
-        assert response.json()["detail"] == "passkey registration is not allowed"
-        assert "passkey_challenge" not in response.cookies
-        """,
-    )
-
-
 def test_account_page_omits_optional_passkey_panel() -> None:
     # Given / When / Then: returning None leaves the optional section absent.
     assert_route_contract(

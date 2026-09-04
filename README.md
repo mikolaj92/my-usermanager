@@ -77,7 +77,6 @@ hooks = PasskeyRouteHooks(
     complete_registration=complete,
     login=login,
     logout=logout,
-    registration_allowed=registration_allowed,
     render_login=render_login,
     render_register=render_register,
 )

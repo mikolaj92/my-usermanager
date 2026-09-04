@@ -146,7 +146,7 @@ role/grant changes; audit logging; redirects; logout effects.
 
 - in-memory users only
 - no-op demo CSRF hidden input and `X-Demo-CSRF` metadata only
-- demo registration policy via `?registration=closed` for denial testing
+- enrollment exposure and registration policy remain host-owned; this demo exposes registration
 - demo current user selected from local in-memory data
 - demo admin requirement callback before user-management mutations
 - demo-only in-memory role/capability grant callbacks and no production audit logging
