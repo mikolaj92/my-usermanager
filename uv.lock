@@ -409,8 +409,8 @@ wheels = [
 
 [[package]]
 name = "my-auth"
-version = "0.4.8"
-source = { git = "https://github.com/mikolaj92/my-auth?tag=v0.5.0#7bc2214c06cf6d663decfa6ae132563a287f328c" }
+version = "0.5.1"
+source = { git = "https://github.com/mikolaj92/my-auth?tag=v0.5.1#73ed218d1f50cb07020fb8b28875d062c603b430" }
 dependencies = [
     { name = "typing-extensions" },
     { name = "webauthn" },
@@ -418,7 +418,7 @@ dependencies = [
 
 [[package]]
 name = "my-usermanager"
-version = "0.6.1"
+version = "0.6.2"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -471,7 +471,7 @@ requires-dist = [
     { name = "itsdangerous", marker = "extra == 'fastapi'", specifier = ">=2.2" },
     { name = "jinja2", marker = "extra == 'dev'", specifier = ">=3.1" },
     { name = "jinja2", marker = "extra == 'fastapi-htmx'", specifier = ">=3.1" },
-    { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?tag=v0.5.0" },
+    { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?tag=v0.5.1" },
     { name = "my-usermanager", extras = ["fastapi-htmx", "myauth"], marker = "extra == 'dev'" },
     { name = "pydantic", marker = "extra == 'fastapi'", specifier = ">=2.10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },

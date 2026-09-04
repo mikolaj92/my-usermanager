@@ -2,6 +2,10 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
+## 0.6.2
+
+- Pin the final neutral `my-auth` source tag `v0.5.1` (#105).
+
 ## 0.6.1
 
 - Require an explicit host-selected role for every SQLite self-registration;
