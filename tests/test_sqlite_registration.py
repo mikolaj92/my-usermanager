@@ -15,10 +15,7 @@ from my_usermanager.adapters.sqlite import (
     SQLiteUserStore,
     create_tables,
 )
-from my_usermanager.adapters.sqlite_registration import (
-    SelfRegistrationPolicy,
-    SQLiteSelfRegistrationService,
-)
+from my_usermanager.adapters.sqlite_registration import SQLiteSelfRegistrationService
 
 
 class Roles:
@@ -37,48 +34,41 @@ class Roles:
 def _database(path: Path) -> sqlite3.Connection:
     connection = sqlite3.connect(path, isolation_level=None)
     create_tables(connection)
-    _ = connection.execute(
-        "CREATE TABLE auth_subjects (subject TEXT PRIMARY KEY)"
-    )
+    _ = connection.execute("CREATE TABLE auth_subjects (subject TEXT PRIMARY KEY)")
     return connection
 
 
 def _service(connection: sqlite3.Connection) -> SQLiteSelfRegistrationService:
-    return SQLiteSelfRegistrationService(
-        connection=connection,
-        roles=Roles(),
-        policy=SelfRegistrationPolicy(
-            first_user_role="admin", default_user_role="client"
-        ),
-    )
+    return SQLiteSelfRegistrationService(connection=connection, roles=Roles())
 
 
-def test_first_user_is_admin_and_later_user_gets_default_role(tmp_path: Path) -> None:
+def test_each_user_receives_the_explicit_host_selected_role(tmp_path: Path) -> None:
     connection = _database(tmp_path / "registration.sqlite3")
     service = _service(connection)
 
     def persist(subject: str) -> Callable[[sqlite3.Connection], None]:
         def save(conn: sqlite3.Connection) -> None:
-            _ = conn.execute(
-                "INSERT INTO auth_subjects VALUES (?)", (subject,)
-            )
+            _ = conn.execute("INSERT INTO auth_subjects VALUES (?)", (subject,))
 
         return save
 
     first, first_role = service.register(
         user=User(user_id="alice", username="alice"),
+        initial_role="client",
         persist_auth=persist("alice"),
     )
     second, second_role = service.register(
         user=User(user_id="bob", username="bob"),
+        initial_role="admin",
         persist_auth=persist("bob"),
     )
 
-    assert (first.user_id, first_role.name) == ("alice", "admin")
-    assert (second.user_id, second_role.name) == ("bob", "client")
+    assert (first.user_id, first_role.name) == ("alice", "client")
+    assert (second.user_id, second_role.name) == ("bob", "admin")
     grants = SQLiteGrantStore(connection)
-    assert grants.list_grants_for_user("alice")[0].role_name == "admin"
-    assert grants.list_grants_for_user("bob")[0].role_name == "client"
+    assert grants.list_grants_for_user("alice")[0].role_name == "client"
+    assert grants.list_grants_for_user("bob")[0].role_name == "admin"
+    connection.close()
 
 
 def test_auth_failure_rolls_back_user_and_grant(tmp_path: Path) -> None:
@@ -91,9 +81,27 @@ def test_auth_failure_rolls_back_user_and_grant(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="credential persistence failed"):
         _ = service.register(
-            user=User(user_id="alice", username="alice"), persist_auth=fail
+            user=User(user_id="alice", username="alice"),
+            initial_role="client",
+            persist_auth=fail,
         )
 
     assert SQLiteUserStore(connection).get("alice") is None
     assert SQLiteGrantStore(connection).list_grants_for_user("alice") == ()
     assert connection.execute("SELECT * FROM auth_subjects").fetchall() == []
+    connection.close()
+
+
+def test_unknown_explicit_role_fails_before_creating_user(tmp_path: Path) -> None:
+    connection = _database(tmp_path / "unknown-role.sqlite3")
+    service = _service(connection)
+
+    with pytest.raises(ValueError, match="unknown self-registration role"):
+        _ = service.register(
+            user=User(user_id="alice", username="alice"),
+            initial_role="unknown",
+            persist_auth=lambda _connection: None,
+        )
+
+    assert SQLiteUserStore(connection).get("alice") is None
+    connection.close()

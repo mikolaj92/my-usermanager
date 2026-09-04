@@ -118,6 +118,12 @@ Identity-linking checklist for host apps:
 Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
 
 
+## Neutral self-registration
+
+`SQLiteSelfRegistrationService.register(..., initial_role=...)` requires the host
+to select the initial role for every new user. Registration order never confers
+administrative access. Bootstrap and provisioning policy remain host-owned.
+
 ## Canonical shared SQLite owner
 
 Use one `SQLiteAuthDatabase` for a product that stores both passkeys and

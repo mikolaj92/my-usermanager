@@ -20,14 +20,6 @@ class SelfRegistrationError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
-class SelfRegistrationPolicy:
-    """Host role policy for a newly created account."""
-
-    first_user_role: str
-    default_user_role: str
-
-
-@dataclass(frozen=True, slots=True)
 class SQLiteSelfRegistrationService:
     """Create one user, authentication identity, and initial grant atomically.
 
@@ -38,26 +30,24 @@ class SQLiteSelfRegistrationService:
 
     connection: sqlite3.Connection
     roles: RoleStore
-    policy: SelfRegistrationPolicy
 
     def register(
         self,
         *,
         user: User,
+        initial_role: str,
         persist_auth: Callable[[sqlite3.Connection], None],
     ) -> tuple[User, Role]:
-        """Register a fresh active user and return its host-approved role."""
+        """Register a fresh user with the role explicitly selected by its host."""
         self._validate(user)
         try:
             _ = self.connection.execute("BEGIN IMMEDIATE")
             users = SQLiteUserStore(self.connection, transaction_mode="external")
             grants = SQLiteGrantStore(self.connection, transaction_mode="external")
-            role = self._role_for_registration(users)
+            role = self._role_for_registration(initial_role)
             created = users.create(user)
             persist_auth(self.connection)
-            _ = grants.add_role_grant(
-                created.user_id, role.name, Scope.global_()
-            )
+            _ = grants.add_role_grant(created.user_id, role.name, Scope.global_())
             self.connection.commit()
         except Exception:
             self.connection.rollback()
@@ -73,12 +63,7 @@ class SQLiteSelfRegistrationService:
             message = "self-registration owns its SQLite transaction"
             raise SelfRegistrationError(message)
 
-    def _role_for_registration(self, users: SQLiteUserStore) -> Role:
-        role_name = (
-            self.policy.first_user_role
-            if users.count_active() == 0
-            else self.policy.default_user_role
-        )
+    def _role_for_registration(self, role_name: str) -> Role:
         role = self.roles.get(role_name)
         if role is None:
             message = f"unknown self-registration role: {role_name}"
