@@ -26,7 +26,6 @@ __all__: Final[tuple[str, ...]] = (
 )
 
 _LAST_ADMIN_REASON: Final = "cannot remove the last active admin"
-_SELF_DEMOTION_REASON: Final = "cannot remove your own last admin grant"
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,20 +201,6 @@ def ensure_admin_revoke_allowed(  # noqa: PLR0913
     if access.grants_qualify(remaining_for_target, roles=roles):
         return
     actor = validate_identifier(actor_id, field_name="actor_id")
-
-    def _raise(reason: str) -> None:
-        if on_unsafe is not None:
-            raise on_unsafe(actor, grant.user_id, grant, reason)
-        if reason == _SELF_DEMOTION_REASON:
-            raise LastAdministratorError(
-                user_id=grant.user_id,
-                action="revoke",
-                reason=reason,
-            )
-        raise LastAdministratorError(user_id=grant.user_id, action="revoke")
-
-    if actor == grant.user_id:
-        _raise(_SELF_DEMOTION_REASON)
     remaining_admins = count_active_administrators(
         users=users,
         grants=grants,
@@ -224,4 +209,6 @@ def ensure_admin_revoke_allowed(  # noqa: PLR0913
         grants_for_user=(grant.user_id, remaining_for_target),
     )
     if remaining_admins == 0:
-        _raise(_LAST_ADMIN_REASON)
+        if on_unsafe is not None:
+            raise on_unsafe(actor, grant.user_id, grant, _LAST_ADMIN_REASON)
+        raise LastAdministratorError(user_id=grant.user_id, action="revoke")

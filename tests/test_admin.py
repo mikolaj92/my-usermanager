@@ -112,8 +112,42 @@ def test_admin_service_preserves_duplicate_and_missing_grant_errors() -> None:
         )
 
 
-def test_admin_service_rejects_self_demoting_last_admin_grant() -> None:
-    # Given: an admin whose only global admin grant is the built-in admin role.
+def test_admin_service_allows_self_demotion_when_another_admin_remains() -> None:
+    # Given: two active administrators with independent global admin grants.
+    service, users, _grants = _service()
+    _ = users.create(User(user_id="admin-a", username="admin-a"))
+    _ = users.create(User(user_id="admin-b", username="admin-b"))
+    for user_id in ("admin-a", "admin-b"):
+        _ = service.grant_role(
+            actor_id="admin-a",
+            target_user_id=user_id,
+            role_name="admin",
+        )
+
+    # When: one administrator revokes their own admin grant.
+    result = service.revoke_role(
+        actor_id="admin-a",
+        target_user_id="admin-a",
+        role_name="admin",
+    )
+
+    # Then: the ordinary grant mutation succeeds because another admin remains.
+    assert result.action == "revoke_role"
+    assert (
+        service.summary_for_user(
+            User(user_id="admin-a", username="admin-a")
+        ).projection.claims["is_admin"]
+        is False
+    )
+    assert (
+        service.summary_for_user(
+            User(user_id="admin-b", username="admin-b")
+        ).projection.claims["is_admin"]
+        is True
+    )
+
+
+def test_admin_service_rejects_self_demotion_when_no_other_admin_remains() -> None:
     service, users, _grants = _service()
     _ = users.create(User(user_id="admin", username="admin"))
     _ = service.grant_role(
@@ -122,19 +156,12 @@ def test_admin_service_rejects_self_demoting_last_admin_grant() -> None:
         role_name="admin",
     )
 
-    # When / Then: revoking that own grant is rejected before mutation.
-    with pytest.raises(UnsafeGrantMutationError, match="own last admin grant"):
+    with pytest.raises(UnsafeGrantMutationError, match="last active admin"):
         _ = service.revoke_role(
             actor_id="admin",
             target_user_id="admin",
             role_name="admin",
         )
-    assert (
-        service.summary_for_user(
-            User(user_id="admin", username="admin")
-        ).projection.claims["is_admin"]
-        is True
-    )
 
 
 def test_admin_service_rejects_removing_last_active_admin_from_another_user() -> None:

@@ -2,6 +2,14 @@
 
 All notable changes to `my-usermanager` will be documented in this file.
 
+## Unreleased
+
+- Require an explicit host-selected role for every SQLite self-registration;
+  registration order no longer confers a special first-user role (#99).
+- Allow an administrator to revoke their own final admin grant when another
+  active administrator remains, while retaining zero-admin lockout protection
+  (#99).
+
 ## 0.5.10
 
 - Split SQLite schema lifecycle and store CRUD into single-purpose modules while
