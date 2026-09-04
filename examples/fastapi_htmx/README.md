@@ -61,8 +61,10 @@ install_identity_adapters(
 )
 ```
 
-The host supplies typed `PasskeyPanel` and `CsrfProtection` implementations.
-The latter validates submitted tokens before any user-management mutation.
+`PasskeyPanel` is optional: returning `None` omits the account-page section. A
+host that wants an embedded panel returns a named template plus context. The host
+supplies a typed `CsrfProtection` implementation, which validates submitted tokens
+before any user-management mutation.
 The adapters own their routers, templates, and static mounts; hosts do not
 call legacy `create_*` router factories or manually mount adapter static files.
 
@@ -125,7 +127,7 @@ install_usermanager_ui(
 | `POST /api/auth/login/verify` | `my_auth.fastapi.PasskeyAuthRouter` | JSON | WebAuthn login verification. |
 | `POST /api/auth/register/options` | `my_auth.fastapi.PasskeyAuthRouter` | JSON | WebAuthn registration options. |
 | `POST /api/auth/register/verify` | `my_auth.fastapi.PasskeyAuthRouter` | JSON | WebAuthn registration verification. |
-| `GET /account` | `my_usermanager.adapters.fastapi_htmx` | HTML | Account page with a host-rendered passkey panel. |
+| `GET /account` | `my_usermanager.adapters.fastapi_htmx` | HTML | Account page; the optional passkey panel is omitted in this demo. |
 | `GET /admin/users` | `my_usermanager.adapters.fastapi_htmx` | HTML | Admin users table. |
 | `POST /admin/users/disable` | `my_usermanager.adapters.fastapi_htmx` | HTML | HTMX row fragment after disabling one user. |
 | `POST /admin/users/enable` | `my_usermanager.adapters.fastapi_htmx` | HTML | HTMX row fragment after enabling one user. |
