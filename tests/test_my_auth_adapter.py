@@ -59,7 +59,7 @@ def test_core_import_and_adapter_package_import_do_not_load_optional_dependencie
         import my_usermanager
         import my_usermanager.adapters
 
-        assert my_usermanager.__version__ == "0.6.3"
+        assert my_usermanager.__version__ == "0.6.4"
         assert "my_auth" not in sys.modules
         assert "fastapi" not in sys.modules
         assert "pydantic" not in sys.modules
