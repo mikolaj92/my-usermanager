@@ -19,17 +19,17 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
   `my_usermanager.adapters.fastapi_htmx`
 
 ```sh
-uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.11"
-uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.11"
-uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.11"
-uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.11"
+uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.3"
+uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.3"
+uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.3"
+uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.3"
 ```
 
 For the shared passkey stack, install the `myauth` and UI extras plus the
 public `my-auth` UI extra:
 
 ```sh
-uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.5.11"
+uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.3"
 uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.8"
 ```
 

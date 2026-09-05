@@ -107,7 +107,7 @@ from my_usermanager.stores import (
     UserStore,
 )
 
-__version__: Final = "0.5.11"
+__version__: Final = "0.6.3"
 
 __all__: Final = (
     "ADMIN_ROLE_NAME",
