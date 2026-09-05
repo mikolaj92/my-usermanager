@@ -19,18 +19,18 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
   `my_usermanager.adapters.fastapi_htmx`
 
 ```sh
-uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.4"
-uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.4"
-uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.4"
-uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.4"
+uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
+uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
+uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
+uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
 ```
 
 For the shared passkey stack, install the `myauth` and UI extras plus the
 public `my-auth` UI extra:
 
 ```sh
-uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.4"
-uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.8"
+uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
+uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.4"
 ```
 
 ## `my-auth` identity and FastAPI integration
@@ -106,6 +106,26 @@ implements optional hooks: `invite_user`, `reissue_invitation`, and
 `revoke_invitation`. Rows may carry `account_status` plus an `InvitationRow`
 (status and expiry only). Activation URLs are returned once after invite/reissue
 redirects and are never stored on listed rows.
+
+For hosts using the package's standard `UserManager` and stores,
+`StandardUserManagerUiHooks` supplies the mechanical user listing, row mapping,
+profile update, account transition, and global role/permission mutations. The
+host still provides session lookup, administrator policy, assignable roles and
+capabilities, CSRF configuration, invitations, auditing, and product effects:
+
+```python
+from my_usermanager.adapters.fastapi_htmx import StandardUserManagerUiHooks
+
+hooks = StandardUserManagerUiHooks(
+    manager=user_manager,
+    current_user=current_subject_from_session,
+    require_admin=require_product_admin,
+    role_names=("member", "admin"),
+)
+```
+
+Use focused host hooks or a small subclass for optional surfaces; this adapter
+does not infer registration or authorization policy.
 
 Identity-linking checklist for host apps:
 
@@ -248,7 +268,7 @@ The complete no-build reference is [`examples/fastapi_htmx`](examples/fastapi_ht
 
 ```sh
 uv run --no-sync \
-  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.4.8" \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.4" \
   --with "fastapi>=0.115" \
   --with "jinja2>=3.1" \
   --with "uvicorn[standard]>=0.32" \

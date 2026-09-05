@@ -103,6 +103,7 @@ def test_public_api_and_resources_are_clean() -> None:
         "PermissionGrantRow",
         "SessionCsrfProtection",
         "SessionRow",
+        "StandardUserManagerUiHooks",
         "UserManagerUi",
         "UserManagerUiConfig",
         "UserManagerUiConflict",

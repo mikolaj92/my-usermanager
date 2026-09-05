@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5
+
+- Add optional `StandardUserManagerUiHooks` for mechanical `UserManager`-backed row projection, profile updates, account transitions, and global role/permission mutations. Session lookup, administrator policy, role catalog, CSRF, invitations, auditing, and product side effects remain host-owned.
+- Align development sources with app-factory `v0.6.22` and my-auth `v0.5.4`.
+
 All notable changes to `my-usermanager` will be documented in this file.
 
 ## 0.6.2
