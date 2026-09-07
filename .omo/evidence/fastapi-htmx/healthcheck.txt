@@ -1,3 +1,0 @@
-ok
-health_status=ok
-server_pid=64644
