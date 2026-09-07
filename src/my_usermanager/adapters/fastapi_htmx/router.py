@@ -24,6 +24,7 @@ from my_usermanager.adapters.fastapi_htmx.config import (
     UserManagerUi,
     UserManagerUiConfig,
     UserManagerUiConflict,
+    UserManagerUiHooks,
     UserManagerUiRouter,
     UserRow,
     resolve_ui_labels,
@@ -35,9 +36,6 @@ from my_usermanager.adapters.fastapi_htmx.forms import (
     read_mutation_form,
     read_named_form,
     read_profile_form,
-)
-from my_usermanager.adapters.fastapi_htmx.protocols import (  # noqa: TC001
-    UserManagerUiHooks,
 )
 from my_usermanager.adapters.fastapi_htmx.responses import error_response
 from my_usermanager.adapters.fastapi_htmx.rows import safe_row

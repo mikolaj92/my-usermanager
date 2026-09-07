@@ -25,12 +25,12 @@ try:
         UserManagerUi,
         UserManagerUiConfig,
         UserManagerUiConflict,
+        UserManagerUiHooks,
         UserManagerUiRouter,
         UserRow,
         resolve_ui_labels,
     )
     from my_usermanager.adapters.fastapi_htmx.ids import row_key_from_user_id
-    from my_usermanager.adapters.fastapi_htmx.protocols import UserManagerUiHooks
     from my_usermanager.adapters.fastapi_htmx.router import install_usermanager_ui
     from my_usermanager.adapters.fastapi_htmx.standard import StandardUserManagerUiHooks
 except (ModuleNotFoundError, ImportError) as exc:
