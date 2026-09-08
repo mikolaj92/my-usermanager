@@ -1,5 +1,7 @@
 # my-usermanager
 
+[Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
+
 `my-usermanager` is a framework-neutral Python package for user management and
 authorization. It accepts an already-authenticated subject from a host or
 authentication provider and provides typed users, external identities, roles,
