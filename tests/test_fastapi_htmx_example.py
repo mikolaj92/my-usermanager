@@ -24,7 +24,7 @@ FORBIDDEN_CORE_IMPORTS: Final = (
     "my_auth",
     "my_usermanager.adapters.fastapi_htmx",
 )
-OPTIONAL_EXAMPLE_DEPENDENCIES: Final = ("fastapi", "jinja2", "httpx", "my_auth")
+OPTIONAL_EXAMPLE_DEPENDENCIES: Final = ("fastapi", "jinja2", "httpx2", "my_auth")
 FORBIDDEN_APP_SOURCE_SNIPPETS: Final = (
     "request.session",
     "set_cookie(",

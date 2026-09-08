@@ -30,13 +30,13 @@ dependencies = []
 
 [project.optional-dependencies]
 fastapi = [
-    "fastapi>=0.115",
+    "fastapi>=0.141.1",
     "itsdangerous>=2.2",
     "pydantic>=2.10",
 ]
 fastapi-htmx = [
     "app-factory[fastapi]>=0.6.22",
-    "fastapi>=0.115",
+    "fastapi>=0.141.1",
     "jinja2>=3.1",
 ]
 myauth = [
@@ -44,8 +44,8 @@ myauth = [
 ]
 dev = [
     "basedpyright>=1.21",
-    "fastapi>=0.115",
-    "httpx>=0.27",
+    "fastapi>=0.141.1",
+    "httpx2>=2.12.0",
     "itsdangerous>=2.2",
     "jinja2>=3.1",
     "my-usermanager[fastapi-htmx,myauth]",
@@ -56,8 +56,8 @@ dev = [
 [dependency-groups]
 dev = [
     "basedpyright>=1.21",
-    "fastapi>=0.115",
-    "httpx>=0.27",
+    "fastapi>=0.141.1",
+    "httpx2>=2.12.0",
     "itsdangerous>=2.2",
     "jinja2>=3.1",
     "my-usermanager[fastapi-htmx,myauth]",

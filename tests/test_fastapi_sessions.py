@@ -8,18 +8,9 @@ from textwrap import dedent
 def test_fastapi_session_dependencies_round_trip_signed_cookie_session() -> None:
     code = dedent(
         """
-        import warnings
         from typing import Annotated
 
         from fastapi import Depends, FastAPI, Request
-        from starlette.exceptions import StarletteDeprecationWarning
-
-        warnings.filterwarnings(
-            "ignore",
-            category=StarletteDeprecationWarning,
-            message="Using `httpx` with `starlette.testclient` is deprecated*",
-        )
-
         from fastapi.testclient import TestClient
         from starlette.middleware.sessions import SessionMiddleware
 
@@ -108,18 +99,9 @@ def test_fastapi_session_dependencies_round_trip_signed_cookie_session() -> None
 def test_fastapi_authorization_dependencies_support_policies_and_redirects() -> None:
     code = dedent(
         """
-        import warnings
         from typing import Annotated
 
         from fastapi import Depends, FastAPI, Request
-        from starlette.exceptions import StarletteDeprecationWarning
-
-        warnings.filterwarnings(
-            "ignore",
-            category=StarletteDeprecationWarning,
-            message="Using `httpx` with `starlette.testclient` is deprecated*",
-        )
-
         from fastapi.testclient import TestClient
         from starlette.middleware.sessions import SessionMiddleware
 

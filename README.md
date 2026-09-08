@@ -269,9 +269,9 @@ The complete no-build reference is [`examples/fastapi_htmx`](examples/fastapi_ht
 ```sh
 uv run --no-sync \
   --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.4" \
-  --with "fastapi>=0.115" \
+  --with "fastapi>=0.141.1" \
   --with "jinja2>=3.1" \
-  --with "uvicorn[standard]>=0.32" \
+  --with "uvicorn[standard]>=0.52.4" \
   uvicorn examples.fastapi_htmx.app:app --reload
 ```
 

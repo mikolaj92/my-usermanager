@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Final
-from warnings import filterwarnings
 
 from app_factory import PlatformConfig, PlatformPaths
 from app_factory.adapters import (
@@ -36,13 +35,6 @@ _FAVICON_SVG: Final = (
     'fill="currentColor"/>'
     "</svg>"
 )
-
-filterwarnings(
-    "ignore",
-    message="Using `httpx` with `starlette.testclient` is deprecated*",
-    module="fastapi.testclient",
-)
-
 
 def create_app() -> FastAPI:
     """Create the optional no-build adapter composition example."""

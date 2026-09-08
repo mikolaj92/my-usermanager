@@ -1,9 +1,8 @@
-# ruff: noqa: E402, PLC0415, S105
+# ruff: noqa: PLC0415, S105
 from __future__ import annotations
 
 import subprocess
 import sys
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Protocol, cast, override
 
@@ -19,8 +18,6 @@ if TYPE_CHECKING:
         UserManagerUiHooks,
         UserRow,
     )
-
-warnings.filterwarnings("ignore", message="Using `httpx` with `starlette.testclient`*")
 
 import pytest
 from app_factory import PlatformPaths
