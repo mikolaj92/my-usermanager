@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import TYPE_CHECKING, Final, Protocol, TypeVar, override, runtime_checkable
 
 if TYPE_CHECKING:
     from datetime import date
 
+from my_usermanager.auth_context import AuthenticationContext
 from my_usermanager.models import (
     ExternalIdentity,
     Gender,
@@ -97,6 +98,7 @@ class AuthenticatedSubject:
     email: str | None = None
     birth_date: date | None = None
     gender: Gender | None = None
+    authentication: AuthenticationContext = field(default_factory=AuthenticationContext)
 
     def __post_init__(self) -> None:
         """Validate identity and profile fields after dataclass creation."""

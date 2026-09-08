@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import TYPE_CHECKING, Final, Protocol, TypeGuard, override
 
+from my_usermanager.auth_context import AuthenticationContext
 from my_usermanager.models import ValidationError, validate_identifier
 from my_usermanager.subjects import (
     AuthenticatedSubject,
@@ -104,9 +105,14 @@ class MyAuthSubjectAdapter(SubjectAdapter[PasskeyUserLike]):
     def to_authenticated_subject(
         self,
         raw_subject: PasskeyUserLike,
+        *,
+        authentication: AuthenticationContext | None = None,
     ) -> AuthenticatedSubject:
-        """Map a my-auth PasskeyUser-like value to an authenticated subject."""
-        return passkey_user_to_authenticated_subject(raw_subject)
+        """Map a verified user; host supplies evidence only after verification."""
+        return passkey_user_to_authenticated_subject(
+            raw_subject,
+            authentication=authentication,
+        )
 
 
 def require_my_auth() -> PasskeyUserFactory:
@@ -128,6 +134,8 @@ def _has_passkey_user(module: ModuleType) -> TypeGuard[_MyAuthModule]:
 
 def passkey_user_to_authenticated_subject(
     passkey_user: PasskeyUserLike,
+    *,
+    authentication: AuthenticationContext | None = None,
 ) -> AuthenticatedSubject:
     """Map a my-auth PasskeyUser-like value to the core subject seam."""
     try:
@@ -143,4 +151,7 @@ def passkey_user_to_authenticated_subject(
         user_id=local_user_id,
         username=local_user_id,
         display_name=passkey_user.display_name or passkey_user.name,
+        authentication=authentication
+        if authentication is not None
+        else AuthenticationContext(),
     )
