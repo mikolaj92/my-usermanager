@@ -154,6 +154,7 @@ def test_readme_uses_uv_only_and_names_host_owned_security_boundaries() -> None:
         assert snippet not in readme
         assert snippet not in root_readme
     forbidden_unexported = (
+        "install_usermanager_ui",
         "create_usermanager_ui_router",
         "usermanager_ui_static_files",
     )

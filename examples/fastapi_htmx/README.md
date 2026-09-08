@@ -99,22 +99,30 @@ extends that canonical shell. Do not copy app-factory navigation. Strings come
 from `UserManagerUiConfig.labels` and an optional hooks `page_context` mapping.
 
 ```python
-from jinja2 import Environment, FileSystemLoader
-from my_usermanager.adapters.fastapi_htmx import UserManagerUiConfig, install_usermanager_ui
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from app_factory.adapters import UserManagerBinding, install_identity_adapters
 
-host_templates = Environment(loader=FileSystemLoader("app/templates"))
-install_usermanager_ui(
+host_templates = Environment(
+    loader=FileSystemLoader("app/templates"),
+    autoescape=select_autoescape(),
+)
+install_identity_adapters(
     app,
-    platform=platform,
-    hooks=hooks,
-    config=UserManagerUiConfig(
+    environments=(host_templates,),
+    config=platform_config,
+    usermanager=UserManagerBinding(
+        hooks=hooks,
         csrf_protection=csrf,
+        environment=host_templates,
         base_template="app_factory/identity_authenticated_shell.html",
         labels={"nav_account": "Konto"},
     ),
-    environment=host_templates,
 )
 ```
+
+This is an alternative configuration of the single composer call above, not a
+second installation. When enabling passkeys, supply the `PasskeyBinding` in that
+same call. Host template loaders take precedence; no shell copying is required.
 
 ## Routes
 
