@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from my_usermanager.adapters.fastapi_htmx.account_capabilities import account_providers
 from my_usermanager.adapters.fastapi_htmx.auth import Denied, current_user
 from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.forms import FormError, read_profile_form
@@ -72,7 +73,15 @@ def _account_endpoint(
                 "Host page_context must provide platform_paths.",
             )
         labels = merge_labels(config, host_context)
-        panel = await resolve(hooks.render_passkey_panel(request, auth.current_user))
+        providers = await account_providers(hooks, request, auth.current_user)
+        local_credentials = providers is None or any(
+            p.credentials.mode == "local" for p in providers
+        )
+        panel = (
+            await resolve(hooks.render_passkey_panel(request, auth.current_user))
+            if local_credentials
+            else None
+        )
         panel_html = _render_panel(templates, request, auth.current_user, panel)
         profile_editable = callable(getattr(hooks, "update_own_profile", None))
         csrf_fields: tuple[tuple[str, str], ...] = ()
@@ -86,6 +95,7 @@ def _account_endpoint(
                 "config": config,
                 "current_user": auth.current_user,
                 "passkey_panel_html": panel_html,
+                "identity_providers": providers or (),
                 "static_url_path": config.static_url_path,
                 "base_template": config.base_template,
                 "labels": labels,

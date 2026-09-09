@@ -1,0 +1,22 @@
+{# Trusted descriptors are filtered by current links in the standard hooks. #}
+{% for provider in identity_providers %}
+<article class="card" data-identity-provider="{{ provider.provider }}">
+  <header><h2>{{ provider.label }}</h2></header>
+  <section>
+    {% for feature in ('credentials', 'recovery', 'profile', 'reauthentication', 'sessions', 'revoke_sessions', 'logout') %}
+      {% set capability = provider|attr(feature) %}
+      {% if capability.mode != 'unavailable' %}
+      <p data-identity-feature="{{ feature }}">
+        <a class="btn" data-variant="outline" href="{{ capability.url }}" data-no-htmx="true" rel="noreferrer">
+          {{ labels['identity_' ~ feature] }}
+        </a>
+        <span class="text-muted-foreground">{{ labels.identity_provider_managed if capability.mode == 'provider' else labels.identity_local_managed }}</span>
+        {% if feature in ('sessions', 'revoke_sessions', 'logout') %}
+        <span>{{ labels.identity_provider_sessions if capability.mode == 'provider' else labels.identity_application_sessions }}</span>
+        {% endif %}
+      </p>
+      {% endif %}
+    {% endfor %}
+  </section>
+</article>
+{% endfor %}

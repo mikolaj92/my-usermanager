@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from fastapi import Request
 
@@ -30,6 +31,9 @@ from my_usermanager.models import Permission, Scope, User
 from my_usermanager.permissions import ADMIN_ROLE_NAME
 from my_usermanager.stores import UserNotFoundError, UserQuery
 from my_usermanager.subjects import AuthenticatedSubject
+
+if TYPE_CHECKING:
+    from my_usermanager.identity_capabilities import IdentityProviderCapabilities
 
 CurrentUser = Callable[[Request], AuthenticatedSubject | None]
 RequireAdmin = Callable[[Request, AuthenticatedSubject], None]
@@ -54,6 +58,7 @@ class StandardUserManagerUiHooks:
     page_size: int = 200
     after_disabled: AfterDisabled | None = None
     passkey_panel: PasskeyPanelProvider | None = None
+    identity_providers: tuple[IdentityProviderCapabilities, ...] | None = None
 
     def __init__(  # noqa: PLR0913
         self,
@@ -66,6 +71,7 @@ class StandardUserManagerUiHooks:
         page_size: int = 200,
         after_disabled: AfterDisabled | None = None,
         passkey_panel: PasskeyPanelProvider | None = None,
+        identity_providers: tuple[IdentityProviderCapabilities, ...] | None = None,
     ) -> None:
         """Bind standard stores to the small set of host-owned policies."""
         if page_size < 1:
@@ -79,6 +85,7 @@ class StandardUserManagerUiHooks:
         self.page_size = page_size
         self.after_disabled = after_disabled
         self.passkey_panel = passkey_panel
+        self.identity_providers = identity_providers
 
     def get_current_user(self, request: Request) -> AuthenticatedSubject | None:
         """Delegate request/session interpretation to the host."""
@@ -252,6 +259,22 @@ class StandardUserManagerUiHooks:
         """Run an optional host side effect after the manager mutation."""
         if self.after_disabled is not None:
             self.after_disabled(request, current_user, row)
+
+    def account_identity_providers(
+        self, request: Request, current_user: AuthenticatedSubject
+    ) -> tuple[IdentityProviderCapabilities, ...] | None:
+        """Select configured capabilities from current local identity links.
+
+        None retains legacy panel hooks; an explicit empty tuple opts out.
+        """
+        del request
+        if self.identity_providers is None:
+            return None
+        user = self.manager.users.get(current_user.user_id)
+        if user is None or user.status != "active":
+            return ()
+        linked = {identity.provider for identity in user.external_identities}
+        return tuple(p for p in self.identity_providers if p.provider in linked)
 
     def render_passkey_panel(
         self, request: Request, current_user: AuthenticatedSubject

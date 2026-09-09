@@ -49,7 +49,7 @@ cannot eliminate a concurrent deactivation after its read.
 
 ## Still required before portability is complete
 
-- Provider capabilities and account UI (#129).
+- Provider capabilities and account UI: [implemented configuration/rendering](account-capabilities.md), with actual provider/session integration still pending (#129).
 - Canonical issuer/sub mapping and migration/rollback (#128).
 - A real OIDC code-flow integration outside core (#124).
 - One host tested with actual WebAuthn and Keycloak (#130).

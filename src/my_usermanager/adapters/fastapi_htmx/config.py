@@ -78,6 +78,17 @@ DEFAULT_UI_LABELS: Final[dict[str, str]] = {
         "Copy this activation link now. It is shown once and is not stored "
         "in this admin UI."
     ),
+    "identity_credentials": "Credentials",
+    "identity_recovery": "Account recovery",
+    "identity_profile": "Identity profile",
+    "identity_reauthentication": "Verify identity again",
+    "identity_sessions": "Review sessions",
+    "identity_revoke_sessions": "Manage session revocation",
+    "identity_logout": "Provider sign-out options",
+    "identity_provider_managed": "Managed by provider",
+    "identity_local_managed": "Managed by this application",
+    "identity_provider_sessions": "Provider sessions; application logout is separate.",
+    "identity_application_sessions": "Application sessions only.",
     "sessions_title": "Sessions",
     "sessions_description": "Review and revoke active application sessions.",
     "sessions_empty": "No active sessions.",

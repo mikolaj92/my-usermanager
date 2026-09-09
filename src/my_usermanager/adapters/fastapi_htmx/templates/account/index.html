@@ -84,6 +84,7 @@
     </article>
     {% endif %}
 
+    {% include "account/_identity_providers.html" %}
     {{ passkey_panel_html|safe }}
 
     {# Shared platform session: Log out only on the account page (app-factory). #}
