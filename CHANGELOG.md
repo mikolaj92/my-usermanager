@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add the optional SQLite opaque session store with hashed tokens, TTL,
+  owner-scoped revocation, explicit schema initialization, and host-driven
+  principal refresh.
+
 ## 0.6.5
 
 - Add optional `StandardUserManagerUiHooks` for mechanical `UserManager`-backed row projection, profile updates, account transitions, and global role/permission mutations. Session lookup, administrator policy, role catalog, CSRF, invitations, auditing, and product side effects remain host-owned.

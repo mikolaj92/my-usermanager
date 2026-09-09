@@ -17,6 +17,7 @@ from my_usermanager.adapters.sqlite import (
     migrate_sqlite_schema,
 )
 from my_usermanager.adapters.sqlite_invitations import create_invitation_tables
+from my_usermanager.adapters.sqlite_sessions import create_session_tables
 from my_usermanager.memory import MemoryRoleStore
 from my_usermanager.stores import DuplicateGrantError, DuplicateUserError
 
@@ -193,10 +194,9 @@ class SQLiteAuthDatabase:
                 # Additive enrollment DDL must run on current schemas too.
                 # my-auth ensure_sqlite_schema is a no-op besides CREATE IF NOT
                 # EXISTS for passkey_enrollment_capabilities when already current.
-                _ = auth_schema.ensure_sqlite_schema(
-                    conn, transaction_mode="external"
-                )
+                _ = auth_schema.ensure_sqlite_schema(conn, transaction_mode="external")
                 create_invitation_tables(conn, transaction_mode="external")
+                create_session_tables(conn, transaction_mode="external")
                 conn.commit()
             except BaseException:
                 conn.rollback()

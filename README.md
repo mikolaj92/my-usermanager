@@ -205,7 +205,7 @@ logical database.
 | Passkey users, credentials, challenges, auth schema | `my-auth` |
 | One shared DB path and cross-library transaction | `SQLiteAuthDatabase` |
 | Registration policy, local provisioning, identity conflict policy | host callbacks |
-| Application sessions, cookies, CSRF, login/logout, audit side effects | host application |
+| Application sessions, cookies, CSRF, login/logout, audit side effects | host application; optional SQLite session metadata adapter |
 | Claim projection and authorization decisions | `my-usermanager` primitives + host policy |
 | HTML rendering, static mounts, route integration | optional adapters; host owns policy and persistence |
 
@@ -235,7 +235,14 @@ cannot both succeed when they would leave zero administrators.
 `write_session_principal` and `read_session_principal` serialize a typed
 principal into a host-owned session mapping. For DB-backed sessions, keep the
 cookie opaque and implement `SessionTokenStore`; the host owns session lifetime,
-cookie settings, CSRF, login/logout, and persistence.
+cookie settings, CSRF, login/logout, and persistence. The optional
+`my_usermanager.adapters.sqlite_sessions.SQLiteSessionStore` stores only a
+SHA-256 token hash and safe principal metadata. Call `create_session_tables()`
+explicitly during startup; CRUD never performs DDL. Use its
+`refresh_principal` callback to re-resolve current local status and grants, and
+use `transaction_mode="external"` when it participates in a host-owned
+transaction. It provides owner-scoped listing and single/all-session
+revocation; the host still generates/rotates the raw token and owns retention.
 
 ## FastAPI/Jinja/HTMX user-management UI
 

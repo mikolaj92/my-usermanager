@@ -13,6 +13,11 @@ from my_usermanager.adapters.sqlite_schema import (
     inspect_sqlite_schema,
     migrate_sqlite_schema,
 )
+from my_usermanager.adapters.sqlite_sessions import (
+    SessionRecord,
+    SQLiteSessionStore,
+    create_session_tables,
+)
 from my_usermanager.adapters.sqlite_stores import (
     ImmediateTransaction,
     SQLiteAuditStore,
@@ -25,7 +30,10 @@ __all__: Final[tuple[str, ...]] = (
     "ImmediateTransaction",
     "SQLiteAuditStore",
     "SQLiteGrantStore",
+    "SQLiteSessionStore",
     "SQLiteUserStore",
+    "SessionRecord",
+    "create_session_tables",
     "create_tables",
     "immediate_transaction",
     "inspect_sqlite_schema",
