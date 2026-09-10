@@ -1,7 +1,9 @@
 # Authentication boundary (implementation in progress)
 
 Related: #127 and the portability tracker #131. This document describes the
-implemented boundary, not a claim that OIDC or provider migration already works.
+UM side of a swappable identity stack: the host is a generic relying party,
+my-auth is a minimal OpenID Provider, and local `user_id` / grants stay here.
+It is not a claim that issuer swap or Keycloak migration already works.
 
 ## Decision
 
@@ -51,10 +53,12 @@ cannot eliminate a concurrent deactivation after its read.
 
 - Provider capabilities and account UI: [implemented configuration/rendering](account-capabilities.md), with actual provider/session integration still pending (#129).
 - Canonical issuer/sub mapping and migration/rollback (#128).
-- A real OIDC code-flow integration outside core (#124).
-- One host tested with actual WebAuthn and Keycloak (#130).
+- A real OIDC code-flow relying party outside core (#124 / #149).
+- One host tested against two issuers: my-auth as a minimal OP, then Keycloak
+  (#130). Domain routes stay identical; only the issuer URL changes.
 - Same-route adapter contract coverage and integration of the completion helper
   into those host examples (#127).
 
-No OIDC Provider implementation, token generation, or app-factory domain routes
-are introduced by this boundary.
+This UM boundary does not implement an OpenID Provider, mint tokens, or add
+app-factory domain routes. The OP lives in my-auth. Product hosts must not import
+passkey SDK types onto domain routes if they want the issuer to remain swappable.

@@ -25,7 +25,8 @@ installer glue, and do not call `install_usermanager_ui` from product hosts.
 | Shared SQLite owner (`SQLiteAuthDatabase`) for passkeys + UM | Host provisioning, identity conflict policy, product effects |
 
 Do **not** absorb product workflows, Fala graphs, or host business logic.
-Passkey ceremony lives in `my-auth`. Packaged pages extend
+Passkey ceremony and the minimal OpenID Provider live in `my-auth`. This package
+is the local account/grants side of a swappable RP. Packaged pages extend
 `app_factory/identity_authenticated_shell.html`. Pin one immutable BOM row;
 nested sources in this package are app-factory v0.6.22 / my-auth v0.5.4 /
 my-usermanager v0.6.5. The full matrix lives in app-factory

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Record the product split: my-auth is a minimal, pluggable OpenID Provider;
+  this package keeps local users, issuer/sub links, and grants so a host can
+  swap the issuer without rewriting domain routes.
 - Add GET filters and prev/next paging to the packaged users and audit
   panels, wrapping store `UserQuery` / `AuditFilters` and the shared
   app-factory pager. Legacy two-argument list hooks still work.

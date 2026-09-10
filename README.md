@@ -7,6 +7,11 @@ authorization. It accepts an already-authenticated subject from a host or
 authentication provider and provides typed users, external identities, roles,
 grants, claims, sessions, stores, and the `UserManager` facade.
 
+Product split: my-auth is a minimal OpenID Provider (passkeys behind discovery).
+This package keeps local users, `(issuer, sub)` links, and grants so a host can
+act as a generic relying party and later swap the issuer without rewriting
+domain routes. The core does not implement an OpenID Provider or mint tokens.
+
 The core package is dependency-free and does not import FastAPI, Jinja,
 Pydantic, `my-auth`, or adapter resources as an import side effect.
 
