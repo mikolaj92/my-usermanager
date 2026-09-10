@@ -16,6 +16,11 @@
     {% if invite_enabled %}
       <article class="card um-card um-stack" aria-labelledby="invite-title">
         <div><h2 id="invite-title">{{ labels.invite_title }}</h2><p class="um-muted">{{ labels.invite_description }}</p></div>
+        {% if invitation_delivery == "delivered" %}
+          <p role="status">{{ labels.invite_delivery_sent }}</p>
+        {% elif invitation_delivery == "delivery_failed" %}
+          <p role="status">{{ labels.invite_delivery_failed }}</p>
+        {% endif %}
         {% if invitation_url %}
           <p role="status">
             <strong>{{ labels.invite_activation_link }}:</strong>

@@ -103,16 +103,23 @@ enrollment capability issuer. The included `build_enrollment_capability_issuer`
 adapter binds this contract to `my-auth` v0.4 enrollment capabilities.
 Invitation metadata may be stored with `SQLiteInvitationStore`; the raw token is
 returned only in `IssuedInvitation` for host delivery and is never persisted by
-my-usermanager. Reissue revokes previous capability material, while activation
-requires the exact invited user, capability id, and external identity subject.
-All unavailable, expired, revoked, disabled, or replayed invitations fail through
-the same non-enumerating `InvitationError`.
+my-usermanager. Optional `deliver_issued_invitation` hands that committed
+invitation to host-owned transport after durable commit. Missing transport keeps
+the one-time manual link. Transport failure leaves the invitation pending and
+returns `delivery_failed`; it does not roll back SQL, unsend mail, or pretend
+success. Lost raw tokens require reissue, which revokes the previous capability.
+Core does not include SMTP, an outbox, or a broker. Reissue revokes previous
+capability material, while activation requires the exact invited user, capability
+id, and external identity subject. All unavailable, expired, revoked, disabled,
+or replayed invitations fail through the same non-enumerating `InvitationError`.
 
 The FastAPI/HTMX admin users UI can expose the same lifecycle when the host
 implements optional hooks: `invite_user`, `reissue_invitation`, and
 `revoke_invitation`. Rows may carry `account_status` plus an `InvitationRow`
-(status and expiry only). Activation URLs are returned once after invite/reissue
-redirects and are never stored on listed rows.
+(status and expiry only). Automatic delivery hides the raw URL unless the host
+sets `reveal_activation_url`. Manual one-time links are returned once after
+invite/reissue redirects and are never stored on listed rows, audit events, or
+flash cookies.
 
 For hosts using the package's standard `UserManager` and stores,
 `StandardUserManagerUiHooks` supplies the mechanical user listing, row mapping,

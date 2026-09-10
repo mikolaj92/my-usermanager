@@ -360,16 +360,30 @@ async def named_action(  # noqa: PLR0911
     )
     result = await resolve(callback(request, auth.current_user, *callback_values))
     if hook_name in {"invite_user", "reissue_invitation"}:
-        activation_url = getattr(result, "activation_url", None)
-        if not isinstance(activation_url, str) or not activation_url:
-            return error_response(
-                500, "Invitation failed", "Invitation result has no activation URL."
-            )
-        return RedirectResponse(
-            url=f"{redirect_url}?{urlencode({'invitation_url': activation_url})}",
-            status_code=303,
-        )
+        return _invitation_redirect(result, redirect_url)
     return RedirectResponse(url=redirect_url, status_code=303)
+
+
+def _invitation_redirect(result: object, redirect_url: str) -> Response:
+    """Redirect after invite/reissue without leaking tokens into query by default."""
+    delivery_status = getattr(result, "delivery_status", "manual")
+    if delivery_status not in {"manual", "delivered", "delivery_failed"}:
+        delivery_status = "manual"
+    reveal = getattr(result, "reveal_activation_url", None)
+    if not isinstance(reveal, bool):
+        reveal = delivery_status == "manual"
+    activation_url = getattr(result, "activation_url", None)
+    if reveal and (not isinstance(activation_url, str) or not activation_url):
+        return error_response(
+            500, "Invitation failed", "Invitation result has no activation URL."
+        )
+    params: dict[str, str] = {"invitation_delivery": str(delivery_status)}
+    if reveal and isinstance(activation_url, str) and activation_url:
+        params["invitation_url"] = activation_url
+    return RedirectResponse(
+        url=f"{redirect_url}?{urlencode(params)}",
+        status_code=303,
+    )
 
 
 async def validate_csrf(

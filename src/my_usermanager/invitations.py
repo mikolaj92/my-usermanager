@@ -1,4 +1,4 @@
-# ruff: noqa: D101, D102, D105, D107, EM101, EM102, PLR0913, TRY003
+# ruff: noqa: BLE001, D101, D102, D105, D107, EM101, EM102, PLR0913, TRY003
 """Administrator-authorized user invitation lifecycle."""
 
 from __future__ import annotations
@@ -37,16 +37,22 @@ __all__: Final = (
     "EnrollmentCapabilityIssuer",
     "Invitation",
     "InvitationActivation",
+    "InvitationDeliveryResult",
     "InvitationError",
     "InvitationGrant",
+    "InvitationRecipient",
     "InvitationService",
     "InvitationStore",
+    "InvitationTransport",
+    "InvitationTransportError",
     "IssuedEnrollment",
     "IssuedInvitation",
     "MemoryInvitationStore",
+    "deliver_issued_invitation",
 )
 
 InvitationStatus = Literal["pending", "used", "revoked"]
+InvitationDeliveryStatus = Literal["manual", "delivered", "delivery_failed"]
 _INVITE_PERMISSION = Permission("users.invite")
 _INVITATION_UNAVAILABLE = "invitation is unavailable"
 
@@ -100,6 +106,75 @@ class IssuedInvitation:
         if not activation_path.startswith("/"):
             raise ValueError("activation_path must be absolute")
         return f"{activation_path}?{urlencode({'capability': self.token})}"
+
+
+@dataclass(frozen=True, slots=True)
+class InvitationRecipient:
+    """Host-owned delivery address; not persisted by invitation metadata."""
+
+    address: str
+
+
+@dataclass(frozen=True, slots=True)
+class InvitationDeliveryResult:
+    """Outcome of optional host delivery after a durable invitation commit."""
+
+    invitation: Invitation
+    status: InvitationDeliveryStatus
+    reveal_activation_url: bool
+    activation_url: str | None = None
+
+
+class InvitationTransportError(Exception):
+    """Raised by host transport after the invitation was already committed."""
+
+
+@runtime_checkable
+class InvitationTransport(Protocol):
+    """Optional host-owned delivery channel. Core does not send mail."""
+
+    def deliver(
+        self, issued: IssuedInvitation, recipient: InvitationRecipient
+    ) -> None: ...
+
+
+def deliver_issued_invitation(
+    issued: IssuedInvitation,
+    *,
+    transport: InvitationTransport | None = None,
+    recipient: InvitationRecipient | None = None,
+    reveal_activation_url: bool = False,
+    activation_path: str = "/activate",
+) -> InvitationDeliveryResult:
+    """Hand a committed invitation to optional host transport.
+
+    Delivery happens after durable commit. Transport failure does not revoke
+    the pending invitation or pretend success. Lost raw tokens require reissue.
+    Raw activation material is returned only when the host asks to reveal it.
+    """
+    if transport is None:
+        return InvitationDeliveryResult(
+            invitation=issued.invitation,
+            status="manual",
+            reveal_activation_url=True,
+            activation_url=issued.activation_url(activation_path),
+        )
+    delivered = False
+    if recipient is not None and recipient.address != "":
+        try:
+            transport.deliver(issued, recipient)
+        except Exception:
+            delivered = False
+        else:
+            delivered = True
+    return InvitationDeliveryResult(
+        invitation=issued.invitation,
+        status="delivered" if delivered else "delivery_failed",
+        reveal_activation_url=reveal_activation_url,
+        activation_url=(
+            issued.activation_url(activation_path) if reveal_activation_url else None
+        ),
+    )
 
 
 @dataclass(frozen=True, slots=True)
