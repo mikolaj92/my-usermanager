@@ -296,8 +296,9 @@ def test_admin_users_page_shows_invitation_status_and_lifecycle_actions() -> Non
             follow_redirects=True,
         )
         assert reissue.status_code == 200, reissue.text
-        assert "/activate?capability=pending-user-token-reissued" in reissue.text
-        assert "Copy this activation link now" in reissue.text
+        assert "Invitation sent" in reissue.text
+        assert "capability=" not in reissue.text
+        assert "Copy this activation link now" not in reissue.text
 
         revoke = client.post(
             "/admin/users/invitations/revoke",

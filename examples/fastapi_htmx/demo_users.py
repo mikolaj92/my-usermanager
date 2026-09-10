@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from typing import Final
 
 from fastapi import HTTPException, status
@@ -15,6 +16,13 @@ from my_usermanager.adapters.fastapi_htmx import (
     InvitationRow,
     PermissionGrantRow,
     UserRow,
+)
+from my_usermanager.invitations import (
+    Invitation,
+    InvitationRecipient,
+    InvitationTransportError,
+    IssuedInvitation,
+    deliver_issued_invitation,
 )
 from my_usermanager.subjects import AuthenticatedSubject
 
@@ -37,6 +45,18 @@ class _DemoInvitation:
     status: str
     expires_at: str
     delivery_suffix: str
+
+
+class _SilentDemoInvitationTransport:
+    """Example-only transport; never writes tokens to ordinary logs."""
+
+    def deliver(self, issued: IssuedInvitation, recipient: InvitationRecipient) -> None:
+        _ = issued
+        if recipient.address == "":
+            raise InvitationTransportError
+
+
+_DEMO_TRANSPORT = _SilentDemoInvitationTransport()
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,7 +147,7 @@ def _invite_demo_user(username: str, email: str, role: str) -> InvitationResult:
         roles=(role,),
         invitation=invitation,
     )
-    return InvitationResult(f"/activate?capability={invitation.delivery_suffix}")
+    return _delivered_demo_invitation(invitation, user_id=user_id, email=email)
 
 
 def _reissue_demo_invitation(invitation_id: str) -> InvitationResult:
@@ -137,7 +157,7 @@ def _reissue_demo_invitation(invitation_id: str) -> InvitationResult:
         delivery_suffix=f"{invitation.delivery_suffix}-reissued",
     )
     _DEMO_USERS[user.user_id] = replace(user, invitation=reissued)
-    return InvitationResult(f"/activate?capability={reissued.delivery_suffix}")
+    return _delivered_demo_invitation(reissued, user_id=user.user_id, email=user.email)
 
 
 def _revoke_demo_invitation(invitation_id: str) -> UserRow:
@@ -323,6 +343,32 @@ def _user_row(user: _DemoUser) -> UserRow:
         deleted=user.deleted or user.account_status == "deleted",
         account_status=user.account_status,
         invitation=invitation,
+    )
+
+
+def _delivered_demo_invitation(
+    invitation: _DemoInvitation, *, user_id: str, email: str
+) -> InvitationResult:
+    issued = IssuedInvitation(
+        invitation=Invitation(
+            invitation_id=invitation.invitation_id,
+            user_id=user_id,
+            capability_id="demo-capability",
+            expires_at=datetime(2026, 12, 31, tzinfo=UTC),
+            issued_by=DEMO_ADMIN_ID,
+            grants=(),
+        ),
+        token=invitation.delivery_suffix,
+    )
+    result = deliver_issued_invitation(
+        issued,
+        transport=_DEMO_TRANSPORT,
+        recipient=InvitationRecipient(address=email),
+    )
+    return InvitationResult(
+        activation_url=result.activation_url,
+        delivery_status=result.status,
+        reveal_activation_url=result.reveal_activation_url,
     )
 
 

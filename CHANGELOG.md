@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add optional `deliver_issued_invitation` after durable commit. Hosts own
+  transport; missing transport keeps the one-time manual link, while transport
+  failure returns explicit `delivery_failed` without rolling back the pending
+  invitation or pretending mail+SQL atomicity. Automatic delivery hides the raw
+  URL unless the host reveals it. Core does not add SMTP, an outbox, or a broker.
 - Record the product split: my-auth is a minimal, pluggable OpenID Provider;
   this package keeps local users, issuer/sub links, and grants so a host can
   swap the issuer without rewriting domain routes.

@@ -276,6 +276,22 @@ class FakeUiHooks:
         import my_usermanager.adapters.fastapi_htmx as adapter
 
         self.calls.append(("invite", username, email, role))
+        if username == "delivery-fail":
+            return adapter.InvitationResult(
+                activation_url="/activate?capability=fail-token",
+                delivery_status="delivery_failed",
+            )
+        if username == "delivered-user":
+            return adapter.InvitationResult(
+                activation_url="/activate?capability=delivered-token",
+                delivery_status="delivered",
+            )
+        if username == "reveal-user":
+            return adapter.InvitationResult(
+                activation_url="/activate?capability=reveal-token",
+                delivery_status="delivered",
+                reveal_activation_url=True,
+            )
         return adapter.InvitationResult(f"/activate?capability={username}-token")
 
     def reissue_invitation(
@@ -287,6 +303,11 @@ class FakeUiHooks:
         import my_usermanager.adapters.fastapi_htmx as adapter
 
         self.calls.append(("reissue", invitation_id))
+        if invitation_id == "invite-delivered":
+            return adapter.InvitationResult(
+                activation_url="/activate?capability=reissued-delivered",
+                delivery_status="delivered",
+            )
         return adapter.InvitationResult(
             f"/activate?capability=reissued-{invitation_id}"
         )
@@ -401,6 +422,7 @@ def _csrf(valid: bool = True) -> CsrfProtection:
 class ResponseLike(Protocol):
     status_code: int
     text: str
+    headers: dict[str, str]
 
 
 class ClientLike(Protocol):
@@ -555,6 +577,71 @@ def test_route_toggles_and_csrf_guard() -> None:  # noqa: PLR0915
     )
     assert revoked.status_code == 200
     assert ("revoke-session", "session-2") in calls
+
+    delivered_redirect = _post(
+        client,
+        config.invite_path,
+        {
+            "username": "delivered-user",
+            "email": "delivered@example.test",
+            "role": "member",
+            "csrf": "good",
+        },
+        follow_redirects=False,
+    )
+    assert delivered_redirect.status_code == 303
+    location = getattr(delivered_redirect, "headers", {}).get("location", "")
+    assert "invitation_delivery=delivered" in location
+    assert "invitation_url=" not in location
+    assert "capability=" not in location
+    delivered = _post(
+        client,
+        config.invite_path,
+        {
+            "username": "delivered-user",
+            "email": "delivered@example.test",
+            "role": "member",
+            "csrf": "good",
+        },
+    )
+    assert delivered.status_code == 200
+    assert "Invitation sent" in delivered.text
+    assert "capability=" not in delivered.text
+    assert "Copy this activation link now" not in delivered.text
+    failed_delivery = _post(
+        client,
+        config.invite_path,
+        {
+            "username": "delivery-fail",
+            "email": "fail@example.test",
+            "role": "member",
+            "csrf": "good",
+        },
+    )
+    assert failed_delivery.status_code == 200
+    assert "Invitation delivery failed" in failed_delivery.text
+    assert "capability=" not in failed_delivery.text
+    revealed = _post(
+        client,
+        config.invite_path,
+        {
+            "username": "reveal-user",
+            "email": "reveal@example.test",
+            "role": "member",
+            "csrf": "good",
+        },
+    )
+    assert revealed.status_code == 200
+    assert "/activate?capability=reveal-token" in revealed.text
+    assert "Copy this activation link now" in revealed.text
+    delivered_reissue = _post(
+        client,
+        config.reissue_invitation_path,
+        {"invitation_id": "invite-delivered", "csrf": "good"},
+    )
+    assert delivered_reissue.status_code == 200
+    assert "Invitation sent" in delivered_reissue.text
+    assert "capability=" not in delivered_reissue.text
 
     disabled = adapter.UserManagerUiConfig(
         account_enabled=False,

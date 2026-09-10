@@ -91,6 +91,8 @@ DEFAULT_UI_LABELS: Final[dict[str, str]] = {
         "Copy this activation link now. It is shown once and is not stored "
         "in this admin UI."
     ),
+    "invite_delivery_sent": "Invitation sent",
+    "invite_delivery_failed": "Invitation delivery failed",
     "identity_credentials": "Credentials",
     "identity_recovery": "Account recovery",
     "identity_profile": "Identity profile",
@@ -298,9 +300,15 @@ class AuditPage:
 
 @dataclass(frozen=True, slots=True)
 class InvitationResult:
-    """Invitation delivery result linked to my-auth's activation page."""
+    """Invitation delivery result linked to my-auth's activation page.
 
-    activation_url: str
+    Automatic delivery hides the raw URL unless ``reveal_activation_url`` is
+    explicitly true. Listed rows never store activation material.
+    """
+
+    activation_url: str | None = None
+    delivery_status: str = "manual"
+    reveal_activation_url: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)

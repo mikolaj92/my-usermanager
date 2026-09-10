@@ -95,6 +95,7 @@ def add_admin_users_page(
             "base_template": config.base_template,
             "labels": labels,
             "invitation_url": request.query_params.get("invitation_url"),
+            "invitation_delivery": request.query_params.get("invitation_delivery"),
             "invite_enabled": callable(getattr(hooks, "invite_user", None)),
             "reissue_invitation_enabled": callable(
                 getattr(hooks, "reissue_invitation", None)
