@@ -18,6 +18,7 @@ from my_usermanager.adapters.fastapi_htmx.config import (
     ExternalIdentityRow,
     PasskeyPanel,
     PermissionGrantRow,
+    UserPage,
     UserRow,
 )
 from my_usermanager.adapters.fastapi_htmx.ids import row_key_from_user_id
@@ -29,7 +30,7 @@ from my_usermanager.manager import (
 )
 from my_usermanager.models import Permission, Scope, User
 from my_usermanager.permissions import ADMIN_ROLE_NAME
-from my_usermanager.stores import UserNotFoundError, UserQuery
+from my_usermanager.stores import InvalidPageError, UserNotFoundError, UserQuery
 from my_usermanager.subjects import AuthenticatedSubject
 
 if TYPE_CHECKING:
@@ -98,23 +99,39 @@ class StandardUserManagerUiHooks:
         self.require_admin_policy(request, current_user)
 
     def list_users(
-        self, request: Request, current_user: AuthenticatedSubject
-    ) -> tuple[UserRow, ...]:
-        """List all manager users as packaged-UI rows."""
+        self,
+        request: Request,
+        current_user: AuthenticatedSubject,
+        *,
+        limit: int | None = None,
+        offset: int = 0,
+        query: UserQuery | None = None,
+    ) -> UserPage:
+        """Return one deterministic page of manager users as packaged-UI rows."""
         del request, current_user
-        users: list[User] = []
-        offset = 0
-        while True:
-            page = self.manager.users.list(
-                limit=self.page_size,
-                offset=offset,
-                query=UserQuery(),
-            )
-            users.extend(page)
-            if len(page) < self.page_size:
-                break
-            offset += self.page_size
-        return tuple(self._row(user) for user in users)
+        selected_limit = self.page_size if limit is None else limit
+        if selected_limit < 1 or selected_limit > self.page_size:
+            field_name = "limit"
+            reason = "must be between 1 and page_size"
+            raise InvalidPageError(field_name, selected_limit, reason)
+        if offset < 0:
+            field_name = "offset"
+            reason = "must be greater than or equal to zero"
+            raise InvalidPageError(field_name, offset, reason)
+        user_query = UserQuery() if query is None else query
+        page = self.manager.users.list(
+            limit=selected_limit + 1,
+            offset=offset,
+            query=user_query,
+        )
+        return UserPage(
+            items=tuple(self._row(user) for user in page[:selected_limit]),
+            limit=selected_limit,
+            offset=offset,
+            has_previous=offset > 0,
+            has_next=len(page) > selected_limit,
+            filtered=user_query != UserQuery(),
+        )
 
     def role_options(
         self, request: Request, current_user: AuthenticatedSubject

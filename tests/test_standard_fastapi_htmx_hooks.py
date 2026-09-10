@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi import Request
 
 from my_usermanager.adapters.fastapi_htmx import (
     PermissionGrantRow,
     StandardUserManagerUiHooks,
+    UserPage,
 )
 from my_usermanager.manager import UserManager, UserProfileUpdate
 from my_usermanager.memory import MemoryGrantStore, MemoryRoleStore, MemoryUserStore
 from my_usermanager.models import Permission, Scope, User
+from my_usermanager.stores import InvalidPageError, UserQuery
 from my_usermanager.subjects import AuthenticatedSubject
 
 
@@ -35,6 +38,7 @@ def _hooks() -> tuple[StandardUserManagerUiHooks, UserManager]:
         current_user=lambda _request: _subject("admin"),
         require_admin=lambda _request, _subject: None,
         role_names=("admin", "member"),
+        page_size=2,
     )
     return hooks, manager
 
@@ -45,9 +49,9 @@ def test_standard_hooks_project_manager_users_and_grants_to_ui_rows() -> None:
         "member", Permission("reports.read"), Scope.global_()
     )
 
-    rows = hooks.list_users(_request(), _subject("admin"))
+    page = hooks.list_users(_request(), _subject("admin"))
 
-    member = next(row for row in rows if row.user_id == "member")
+    member = next(row for row in page.items if row.user_id == "member")
     assert member.display_name is None
     assert member.email == "member@example.test"
     assert member.account_status == "active"
@@ -56,6 +60,58 @@ def test_standard_hooks_project_manager_users_and_grants_to_ui_rows() -> None:
     )
     assert hooks.role_options(_request(), _subject("admin")) == ("admin", "member")
     assert hooks.capability_options(_request(), _subject("admin")) == ()
+
+
+def test_standard_hooks_page_users_with_query_and_deterministic_order() -> None:
+    hooks, manager = _hooks()
+    _ = manager.users.create(User("carol", "carol", display_name="Carol"))
+    _ = manager.users.create(User("dave", "dave", display_name="Dave", disabled=True))
+    request = _request()
+    admin = _subject("admin")
+
+    first = hooks.list_users(request, admin, limit=2, offset=0)
+    second = hooks.list_users(request, admin, limit=2, offset=2)
+    disabled = hooks.list_users(
+        request,
+        admin,
+        limit=2,
+        query=UserQuery(status="disabled"),
+    )
+    search = hooks.list_users(
+        request,
+        admin,
+        limit=2,
+        query=UserQuery(text="carol"),
+    )
+
+    assert isinstance(first, UserPage)
+    assert isinstance(second, UserPage)
+    assert [row.user_id for row in first.items] == ["admin", "carol"]
+    assert first.limit == 2
+    assert first.offset == 0
+    assert first.has_previous is False
+    assert first.has_next is True
+    assert first.filtered is False
+    assert [row.user_id for row in second.items] == ["dave", "member"]
+    assert second.has_previous is True
+    assert second.has_next is False
+    assert [row.user_id for row in disabled.items] == ["dave"]
+    assert disabled.filtered is True
+    assert [row.user_id for row in search.items] == ["carol"]
+    assert search.filtered is True
+
+
+def test_standard_hooks_reject_invalid_user_page_parameters() -> None:
+    hooks, _manager = _hooks()
+    request = _request()
+    admin = _subject("admin")
+
+    with pytest.raises(InvalidPageError, match="limit"):
+        _ = hooks.list_users(request, admin, limit=0)
+    with pytest.raises(InvalidPageError, match="offset"):
+        _ = hooks.list_users(request, admin, offset=-1)
+    with pytest.raises(InvalidPageError, match="limit"):
+        _ = hooks.list_users(request, admin, limit=3)
 
 
 def test_standard_hooks_apply_account_role_permission_and_profile_mutations() -> None:
@@ -104,5 +160,5 @@ def test_standard_hooks_keep_policy_and_optional_surfaces_host_owned() -> None:
     hooks.after_user_disabled_changed(
         _request(),
         _subject("admin"),
-        hooks.list_users(_request(), _subject("admin"))[0],
+        hooks.list_users(_request(), _subject("admin")).items[0],
     )

@@ -1,0 +1,50 @@
+{% from "app_factory/components/pagination.html" import pagination %}
+<div id="users-results" data-filter-query="{{ filter_query }}">
+  <form class="um-cluster" method="get" action="{{ results_url }}" hx-get="{{ results_url }}" hx-target="#users-results" hx-swap="outerHTML">
+    <label>{{ labels.filter_search }} <input class="input" name="q" value="{{ query_params.get('q', '') }}"></label>
+    <label>{{ labels.filter_status }}
+      <select class="select" name="status">
+        <option value="">{{ labels.filter_all }}</option>
+        <option value="active"{% if query_params.get('status') == 'active' %} selected{% endif %}>{{ labels.status_active }}</option>
+        <option value="pending"{% if query_params.get('status') == 'pending' %} selected{% endif %}>{{ labels.status_pending }}</option>
+        <option value="disabled"{% if query_params.get('status') == 'disabled' %} selected{% endif %}>{{ labels.status_disabled }}</option>
+        <option value="deleted"{% if query_params.get('status') == 'deleted' %} selected{% endif %}>{{ labels.status_deleted }}</option>
+      </select>
+    </label>
+    {% if query_params.get('limit') %}<input type="hidden" name="limit" value="{{ query_params.limit }}">{% endif %}
+    <button class="btn" data-variant="outline">{{ labels.filter_apply }}</button>
+  </form>
+  <div id="users-table" class="card um-table-scroll" data-htmx-target="#users-table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">{{ labels.col_user }}</th>
+          <th scope="col">{{ labels.col_email }}</th>
+          <th scope="col">{{ labels.col_access }}</th>
+          <th scope="col">{{ labels.col_identities }}</th>
+          <th scope="col">{{ labels.col_status }}</th>
+          <th scope="col">{{ labels.col_action }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+          {% include "users/_row.html" %}
+        {% else %}
+          <tr>
+            <td colspan="6">{% if pager.filtered %}{{ labels.empty_filtered_users }}{% else %}{{ labels.empty_users }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(
+    current_page=pager.current_page,
+    total_pages=pager.total_pages,
+    base_url=results_url,
+    query_params=query_params,
+    hx_target="#users-results",
+    hx_swap="outerHTML",
+    previous_label=labels.pager_previous,
+    next_label=labels.pager_next
+  ) }}
+</div>

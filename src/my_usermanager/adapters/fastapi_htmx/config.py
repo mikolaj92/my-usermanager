@@ -43,6 +43,19 @@ DEFAULT_UI_LABELS: Final[dict[str, str]] = {
     "col_status": "Status",
     "col_action": "Action",
     "empty_users": "No users are available.",
+    "empty_filtered_users": "No users match the selected filters.",
+    "pager_previous": "Previous",
+    "pager_next": "Next",
+    "pager_page": "Page",
+    "filter_search": "Search",
+    "filter_status": "Status",
+    "filter_all": "All",
+    "filter_apply": "Apply filters",
+    "filter_actor": "Actor",
+    "filter_action": "Action",
+    "filter_since": "Since",
+    "filter_until": "Until",
+    "empty_filtered_audit": "No audit events match the selected filters.",
     "badge_admin": "Admin",
     "badge_user": "User",
     "status_disabled": "Disabled",
@@ -260,6 +273,30 @@ class AuditRow:
 
 
 @dataclass(frozen=True, slots=True)
+class UserPage:
+    """A bounded user result with deterministic pager state."""
+
+    items: tuple[UserRow, ...]
+    limit: int
+    offset: int
+    has_previous: bool
+    has_next: bool
+    filtered: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class AuditPage:
+    """A bounded audit result with deterministic pager state."""
+
+    items: tuple[AuditRow, ...]
+    limit: int
+    offset: int
+    has_previous: bool
+    has_next: bool
+    filtered: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class InvitationResult:
     """Invitation delivery result linked to my-auth's activation page."""
 
@@ -359,8 +396,12 @@ class UserManagerUiHooks(Protocol):
         self,
         request: Request,
         current_user: AuthenticatedSubject,
-    ) -> MaybeAwaitable[Sequence[UserRow]]:
-        """Return rows for the admin user list."""
+        *,
+        limit: int | None = None,
+        offset: int = 0,
+        query: object | None = None,
+    ) -> MaybeAwaitable[Sequence[UserRow] | UserPage]:
+        """Return a bounded page or a legacy sequence of user rows."""
         ...
 
     def role_options(
@@ -456,7 +497,7 @@ class UserManagerUiHooks(Protocol):
     # revoke_invitation(request, current_user, invitation_id) -> UserRow
     # list_sessions(request, current_user) -> Sequence[SessionRow]
     # revoke_session(request, current_user, session_id) -> None
-    # list_audit_events(request, current_user) -> Sequence[AuditRow]
+    # list_audit_events(request, current_user, *, limit, offset, filters) -> AuditPage
     # soft_delete_user(request, current_user, user_id) -> UserRow
     # hard_delete_user and update_own_profile follow the same host-owned pattern.
 

@@ -35,28 +35,6 @@
 
     <nav class="um-cluster" aria-label="Administration"><a class="btn" data-variant="outline" href="{{ config.audit_path }}">{{ labels.audit_title }}</a></nav>
 
-    <div id="users-table" class="card um-table-scroll" data-htmx-target="#users-table">
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">{{ labels.col_user }}</th>
-            <th scope="col">{{ labels.col_email }}</th>
-            <th scope="col">{{ labels.col_access }}</th>
-            <th scope="col">{{ labels.col_identities }}</th>
-            <th scope="col">{{ labels.col_status }}</th>
-            <th scope="col">{{ labels.col_action }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for user in users %}
-            {% include "users/_row.html" %}
-          {% else %}
-            <tr>
-              <td colspan="6">{{ labels.empty_users }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    {% include "users/_results.html" %}
   </section>
 {% endblock %}

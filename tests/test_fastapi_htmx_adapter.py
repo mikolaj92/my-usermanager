@@ -89,6 +89,7 @@ def test_public_api_and_resources_are_clean() -> None:
 
     assert tuple(adapter.__all__) == (
         "DEFAULT_UI_LABELS",
+        "AuditPage",
         "AuditRow",
         "CapabilityOption",
         "CsrfContext",
@@ -106,6 +107,7 @@ def test_public_api_and_resources_are_clean() -> None:
         "UserManagerUiConflict",
         "UserManagerUiHooks",
         "UserManagerUiRouter",
+        "UserPage",
         "UserRow",
         "install_usermanager_ui",
         "resolve_ui_labels",
@@ -925,3 +927,270 @@ def test_account_requires_platform_session_context() -> None:
     assert '{% include "app_factory/platform_session.html" %}' in template
     assert "logout_path" not in template
     assert "data-platform-session" not in template
+
+
+def _paged_app(
+    *,
+    users: tuple[UserRow, ...] | None = None,
+    events: tuple[object, ...] | None = None,
+    deny_admin: bool = False,
+) -> tuple[ClientLike, object]:
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    class PagedHooks(FakeUiHooks):
+        def __init__(self) -> None:
+            super().__init__()
+            if users is not None:
+                self._users = users
+            else:
+                self._users = tuple(
+                    adapter.UserRow(
+                        user_id=f"user-{index}",
+                        row_key=f"user-{index}",
+                        username=f"user{index}",
+                        display_name=f"User {index}",
+                        email=f"user{index}@example.test",
+                        disabled=index == 3,
+                        is_admin=False,
+                        account_status="disabled" if index == 3 else "active",
+                    )
+                    for index in range(1, 4)
+                )
+            if events is not None:
+                self._events = events
+            else:
+                self._events = (
+                    adapter.AuditRow(
+                        "2026-01-01T00:00:00+00:00",
+                        "admin",
+                        "user.created",
+                        "user",
+                        "user-1",
+                        "success",
+                    ),
+                    adapter.AuditRow(
+                        "2026-01-02T00:00:00+00:00",
+                        "admin",
+                        "user.updated",
+                        "user",
+                        "user-2",
+                        "success",
+                    ),
+                    adapter.AuditRow(
+                        "2026-01-03T00:00:00+00:00",
+                        "member",
+                        "session.revoke",
+                        "session",
+                        "session-1",
+                        "success",
+                    ),
+                )
+            self.list_calls: list[object] = []
+
+        @override
+        def require_admin(
+            self, _request: Request, _current_user: AuthenticatedSubject
+        ) -> None:
+            if deny_admin:
+                message = "admin required"
+                raise PermissionError(message)
+
+        @override
+        def list_users(
+            self,
+            request: Request,
+            _current_user: AuthenticatedSubject,
+            *,
+            limit: int | None = None,
+            offset: int = 0,
+            query: object | None = None,
+        ) -> object:
+            from my_usermanager.stores import UserQuery
+
+            selected_limit = 1 if limit is None else limit
+            user_query = UserQuery() if query is None else query
+            assert isinstance(user_query, UserQuery)
+            matching = tuple(
+                row
+                for row in self._users
+                if (user_query.text is None or user_query.text in row.username)
+                and (
+                    user_query.status is None or row.account_status == user_query.status
+                )
+            )
+            page_items = matching[offset : offset + selected_limit]
+            self.list_calls.append(("users", request.url.query, user_query))
+            return adapter.UserPage(
+                items=page_items,
+                limit=selected_limit,
+                offset=offset,
+                has_previous=offset > 0,
+                has_next=offset + selected_limit < len(matching),
+                filtered=user_query != UserQuery(),
+            )
+
+        @override
+        def list_audit_events(
+            self,
+            request: Request,
+            _current_user: AuthenticatedSubject,
+            *,
+            limit: int | None = None,
+            offset: int = 0,
+            filters: object | None = None,
+        ) -> object:
+            from datetime import datetime
+
+            from my_usermanager.stores import AuditFilters
+
+            selected_limit = 1 if limit is None else limit
+            audit_filters = AuditFilters() if filters is None else filters
+            assert isinstance(audit_filters, AuditFilters)
+            matching = tuple(
+                event
+                for event in self._events
+                if isinstance(event, adapter.AuditRow)
+                and (
+                    audit_filters.actor_id is None
+                    or event.actor_id == audit_filters.actor_id
+                )
+                and (
+                    audit_filters.action is None or event.action == audit_filters.action
+                )
+                and (
+                    audit_filters.since is None
+                    or datetime.fromisoformat(event.timestamp) >= audit_filters.since
+                )
+                and (
+                    audit_filters.until is None
+                    or datetime.fromisoformat(event.timestamp) <= audit_filters.until
+                )
+            )
+            page_items = matching[offset : offset + selected_limit]
+            self.list_calls.append(("audit", request.url.query, audit_filters))
+            return adapter.AuditPage(
+                items=page_items,
+                limit=selected_limit,
+                offset=offset,
+                has_previous=offset > 0,
+                has_next=offset + selected_limit < len(matching),
+                filtered=audit_filters != AuditFilters(),
+            )
+
+    platform = AppFactoryUi(
+        static_path="/static/platform",
+        mount_name="platform",
+        asset_prefix="/static/platform",
+    )
+    config = adapter.UserManagerUiConfig(csrf_protection=_csrf())
+    app = FastAPI()
+    _ = install_app_factory_ui(
+        app,
+        environments=[],
+        static_path=platform.static_path,
+        mount_name=platform.mount_name,
+    )
+    hooks = PagedHooks()
+    _ = adapter.install_usermanager_ui(
+        app,
+        platform=platform,
+        hooks=cast("UserManagerUiHooks", cast("object", hooks)),
+        config=config,
+    )
+    return _client(app), config
+
+
+def test_users_page_filters_paginates_and_returns_htmx_fragment() -> None:
+    client, config = _paged_app()
+    page = _get(client, f"{config.users_path}?q=user&status=active&page=2&limit=1")
+    assert page.status_code == 200
+    assert "User 2" in page.text
+    assert "User 1" not in page.text
+    assert "No users match the selected filters." not in page.text
+    assert 'id="users-results"' in page.text
+    assert 'hx-target="#users-results"' in page.text
+    assert "status=active" in page.text
+    assert "q=user" in page.text
+    assert "page=1" in page.text
+    assert "page=2" in page.text
+    assert 'name="q"' in page.text
+    assert 'name="status"' in page.text
+    assert "Previous" in page.text
+    assert "Next" in page.text
+
+    filtered_empty = _get(client, f"{config.users_path}?q=missing")
+    assert filtered_empty.status_code == 200
+    assert "No users match the selected filters." in filtered_empty.text
+    assert "No users are available." not in filtered_empty.text
+
+    fragment = _response(
+        client.get(
+            f"{config.users_path}?q=user&status=active&page=2",
+            headers={"HX-Request": "true"},
+        )
+    )
+    assert fragment.status_code == 200
+    assert 'id="users-results"' in fragment.text
+    assert "User 2" in fragment.text
+    assert "Invite user" not in fragment.text
+
+    unauthorized = _paged_app(deny_admin=True)[0]
+    denied = _get(unauthorized, config.users_path)
+    assert denied.status_code == 403
+
+
+def test_audit_page_filters_paginates_and_rejects_invalid_dates() -> None:
+    client, config = _paged_app()
+    page = _get(
+        client,
+        f"{config.audit_path}?actor_id=admin&action=user.updated&page=1&limit=1",
+    )
+    assert page.status_code == 200
+    assert "user.updated" in page.text
+    assert "user.created" not in page.text
+    assert 'id="audit-results"' in page.text
+    assert 'hx-target="#audit-results"' in page.text
+    assert "actor_id=admin" in page.text
+    assert "action=user.updated" in page.text
+    assert 'name="actor_id"' in page.text
+    assert 'name="action"' in page.text
+    assert 'name="since"' in page.text
+    assert 'name="until"' in page.text
+
+    ranged = _get(
+        client,
+        f"{config.audit_path}?since=2026-01-03T00:00:00%2B00:00&until=2026-01-03T00:00:00%2B00:00",
+    )
+    assert ranged.status_code == 200
+    assert "session.revoke" in ranged.text
+    assert "user.created" not in ranged.text
+
+    empty = _get(client, f"{config.audit_path}?actor_id=nobody")
+    assert empty.status_code == 200
+    assert "No audit events match the selected filters." in empty.text
+    assert "No audit events." not in empty.text
+
+    bad_date = _get(client, f"{config.audit_path}?since=not-a-date")
+    assert bad_date.status_code == 400
+    inverted = _get(
+        client,
+        f"{config.audit_path}?since=2026-01-03T00:00:00%2B00:00&until=2026-01-01T00:00:00%2B00:00",
+    )
+    assert inverted.status_code == 400
+    oversized = _get(client, f"{config.users_path}?limit=999")
+    assert oversized.status_code == 400
+
+    fragment = _response(
+        client.get(
+            f"{config.audit_path}?actor_id=admin&page=2",
+            headers={"HX-Request": "true"},
+        )
+    )
+    assert fragment.status_code == 200
+    assert 'id="audit-results"' in fragment.text
+    assert "user.updated" in fragment.text
+    assert "Audit log" not in fragment.text or fragment.text.count("<h1") == 0
+
+    unauthorized = _paged_app(deny_admin=True)[0]
+    denied = _get(unauthorized, config.audit_path)
+    assert denied.status_code == 403

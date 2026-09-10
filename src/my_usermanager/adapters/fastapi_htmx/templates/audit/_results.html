@@ -1,0 +1,49 @@
+{% from "app_factory/components/pagination.html" import pagination %}
+<div id="audit-results" data-filter-query="{{ filter_query }}">
+  <form class="um-cluster" method="get" action="{{ results_url }}" hx-get="{{ results_url }}" hx-target="#audit-results" hx-swap="outerHTML">
+    <label>{{ labels.filter_actor }} <input class="input" name="actor_id" value="{{ query_params.get('actor_id', '') }}"></label>
+    <label>{{ labels.filter_action }} <input class="input" name="action" value="{{ query_params.get('action', '') }}"></label>
+    <label>{{ labels.filter_since }} <input class="input" name="since" value="{{ query_params.get('since', '') }}"></label>
+    <label>{{ labels.filter_until }} <input class="input" name="until" value="{{ query_params.get('until', '') }}"></label>
+    {% if query_params.get('limit') %}<input type="hidden" name="limit" value="{{ query_params.limit }}">{% endif %}
+    <button class="btn" data-variant="outline">{{ labels.filter_apply }}</button>
+  </form>
+  <div class="card um-table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Actor</th>
+          <th>Action</th>
+          <th>Target</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+          <tr>
+            <td>{{ event.timestamp }}</td>
+            <td><code>{{ event.actor_id }}</code></td>
+            <td>{{ event.action }}</td>
+            <td>{{ event.target_type }} · <code>{{ event.target_id }}</code></td>
+            <td><span class="badge">{{ event.result }}</span></td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="5">{% if pager.filtered %}{{ labels.empty_filtered_audit }}{% else %}{{ labels.audit_empty }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(
+    current_page=pager.current_page,
+    total_pages=pager.total_pages,
+    base_url=results_url,
+    query_params=query_params,
+    hx_target="#audit-results",
+    hx_swap="outerHTML",
+    previous_label=labels.pager_previous,
+    next_label=labels.pager_next
+  ) }}
+</div>

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add GET filters and prev/next paging to the packaged users and audit
+  panels, wrapping store `UserQuery` / `AuditFilters` and the shared
+  app-factory pager. Legacy two-argument list hooks still work.
 - Add the optional SQLite opaque session store with hashed tokens, TTL,
   owner-scoped revocation, explicit schema initialization, and host-driven
   principal refresh.

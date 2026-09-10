@@ -1,12 +1,16 @@
-# ruff: noqa: BLE001, PLR0913
+# ruff: noqa: BLE001, PLR0913, TC002
 """Shared page-context, CSRF, and mutation helpers for HTMX route groups."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from datetime import datetime
+from inspect import Parameter, signature
 from typing import TYPE_CHECKING, Protocol, cast
 from urllib.parse import urlencode
 
+from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from my_usermanager.adapters.fastapi_htmx.auth import (
@@ -15,18 +19,24 @@ from my_usermanager.adapters.fastapi_htmx.auth import (
     current_user,
 )
 from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
-from my_usermanager.adapters.fastapi_htmx.config import resolve_ui_labels
+from my_usermanager.adapters.fastapi_htmx.config import (
+    AuditPage,
+    UserPage,
+    resolve_ui_labels,
+)
 from my_usermanager.adapters.fastapi_htmx.forms import FormError, read_named_form
 from my_usermanager.adapters.fastapi_htmx.responses import error_response
 from my_usermanager.adapters.fastapi_htmx.rows import safe_row
+from my_usermanager.models import ValidationError
+from my_usermanager.stores import AuditFilters, InvalidPageError, UserQuery
 
 if TYPE_CHECKING:
-    from fastapi import Request
     from fastapi.responses import Response
     from jinja2 import Environment
 
     from my_usermanager.adapters.fastapi_htmx.awaitables import MaybeAwaitable
     from my_usermanager.adapters.fastapi_htmx.config import (
+        AuditRow,
         CsrfContext,
         UserManagerUiConfig,
         UserManagerUiHooks,
@@ -34,11 +44,234 @@ if TYPE_CHECKING:
     )
     from my_usermanager.subjects import AuthenticatedSubject
 
+_MAX_PAGE_LIMIT = 200
+_ACCOUNT_STATUSES = frozenset({"pending", "active", "disabled", "deleted"})
+_USER_FILTER_FIELDS = ("q", "status", "limit")
+_AUDIT_FILTER_FIELDS = ("actor_id", "action", "since", "until", "limit")
+
 
 class _PageContextHook(Protocol):
     def page_context(
         self, request: Request
     ) -> MaybeAwaitable[Mapping[str, object] | None]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class PageQuery:
+    """Parsed GET pagination plus preserved filter query."""
+
+    limit: int | None
+    offset: int
+    page: int
+    query_params: dict[str, str]
+
+
+def is_htmx_request(request: Request) -> bool:
+    """True when the client asked for an HTMX fragment."""
+    return request.headers.get("HX-Request") == "true"
+
+
+def parse_page_query(request: Request) -> PageQuery:
+    """Parse page/limit from GET query; raise InvalidPageError on bad values."""
+    raw_page = _optional_text(request.query_params.get("page"))
+    raw_limit = _optional_text(request.query_params.get("limit"))
+    page = 1 if raw_page is None else _positive_int(raw_page, field_name="page")
+    limit = None if raw_limit is None else _positive_int(raw_limit, field_name="limit")
+    if limit is not None and limit > _MAX_PAGE_LIMIT:
+        field_name = "limit"
+        reason = "must be between 1 and page_size"
+        raise InvalidPageError(field_name, limit, reason)
+    offset = (page - 1) * (1 if limit is None else limit)
+    return PageQuery(
+        limit=limit,
+        offset=offset,
+        page=page,
+        query_params=_query_params(request),
+    )
+
+
+def parse_user_query(request: Request) -> UserQuery:
+    """Map GET filters onto UserQuery fields the store already understands."""
+    text = _optional_text(request.query_params.get("q"))
+    status = _optional_text(request.query_params.get("status"))
+    if status is not None and status not in _ACCOUNT_STATUSES:
+        field_name = "status"
+        reason = "must be a known account status"
+        raise ValidationError(field_name, reason)
+    return UserQuery(text=text, status=status)
+
+
+def parse_audit_filters(request: Request) -> AuditFilters:
+    """Map GET filters onto AuditFilters fields the store already understands."""
+    actor_id = _optional_text(request.query_params.get("actor_id"))
+    action = _optional_text(request.query_params.get("action"))
+    since = _optional_timestamp(request.query_params.get("since"), field_name="since")
+    until = _optional_timestamp(request.query_params.get("until"), field_name="until")
+    return AuditFilters(actor_id=actor_id, action=action, since=since, until=until)
+
+
+async def load_user_page(
+    hooks: UserManagerUiHooks,
+    request: Request,
+    current_user: AuthenticatedSubject,
+    *,
+    page: PageQuery,
+    query: UserQuery,
+) -> UserPage:
+    """Call list_users with optional kwargs; wrap a legacy sequence."""
+    raw = await _call_list_hook(
+        hooks.list_users,
+        request,
+        current_user,
+        limit=page.limit,
+        offset=page.offset,
+        extra={"query": query},
+    )
+    if isinstance(raw, UserPage):
+        return raw
+    items = tuple(safe_row(cast("UserRow", row)) for row in _as_sequence(raw))
+    return UserPage(
+        items=items,
+        limit=len(items) if page.limit is None else page.limit,
+        offset=page.offset,
+        has_previous=page.offset > 0,
+        has_next=False,
+        filtered=query != UserQuery(),
+    )
+
+
+async def load_audit_page(
+    provider: Callable[..., object],
+    request: Request,
+    current_user: AuthenticatedSubject,
+    *,
+    page: PageQuery,
+    filters: AuditFilters,
+) -> AuditPage:
+    """Call list_audit_events with optional kwargs; wrap a legacy sequence."""
+    raw = await _call_list_hook(
+        provider,
+        request,
+        current_user,
+        limit=page.limit,
+        offset=page.offset,
+        extra={"filters": filters},
+    )
+    if isinstance(raw, AuditPage):
+        return raw
+    items = tuple(cast("Sequence[AuditRow]", _as_sequence(raw)))
+    return AuditPage(
+        items=items,
+        limit=len(items) if page.limit is None else page.limit,
+        offset=page.offset,
+        has_previous=page.offset > 0,
+        has_next=False,
+        filtered=filters != AuditFilters(),
+    )
+
+
+def pager_state(page: UserPage | AuditPage, current_page: int) -> dict[str, object]:
+    """Expose prev/next pages for the shared app-factory pagination macro."""
+    total_pages = current_page
+    if page.has_next:
+        total_pages = current_page + 1
+    elif page.has_previous:
+        total_pages = max(current_page, 2)
+    return {
+        "current_page": current_page,
+        "total_pages": total_pages,
+        "has_previous": page.has_previous,
+        "has_next": page.has_next,
+        "filtered": page.filtered,
+    }
+
+
+def invalid_page_response(error: InvalidPageError | ValidationError) -> HTMLResponse:
+    """Return HTTP 400 for malformed filter/page query."""
+    return error_response(400, "Invalid page", str(error))
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _positive_int(value: str, *, field_name: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError:
+        parsed = 0
+    if parsed < 1:
+        raise InvalidPageError(field_name, parsed, "must be a positive integer")
+    return parsed
+
+
+def _optional_timestamp(value: str | None, *, field_name: str) -> datetime | None:
+    text = _optional_text(value)
+    if text is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError as exc:
+        raise ValidationError(field_name, "must be an ISO-8601 timestamp") from exc
+    return parsed
+
+
+def _query_params(request: Request) -> dict[str, str]:
+    params: dict[str, str] = {}
+    for key in (*_USER_FILTER_FIELDS, *_AUDIT_FILTER_FIELDS):
+        value = _optional_text(request.query_params.get(key))
+        if value is not None:
+            params[key] = value
+    return params
+
+
+async def _call_list_hook(
+    callback: Callable[..., object],
+    request: Request,
+    current_user: AuthenticatedSubject,
+    *,
+    limit: int | None,
+    offset: int,
+    extra: Mapping[str, object],
+) -> object:
+    kwargs: dict[str, object] = {}
+    accepted = {
+        Parameter.KEYWORD_ONLY,
+        Parameter.POSITIONAL_OR_KEYWORD,
+        Parameter.VAR_KEYWORD,
+    }
+    try:
+        parameters = dict(signature(callback).parameters)
+    except (TypeError, ValueError):
+        parameters = {}
+    if "limit" in parameters:
+        kwargs["limit"] = limit
+    if "offset" in parameters:
+        kwargs["offset"] = offset
+    kwargs.update(
+        {
+            name: value
+            for name, value in extra.items()
+            if name in parameters
+            and getattr(parameters[name], "kind", None) in accepted
+        }
+    )
+    try:
+        result: object = callback(request, current_user, **kwargs)
+        return await resolve(result)
+    except TypeError:
+        result = callback(request, current_user)
+        return await resolve(result)
+
+
+def _as_sequence(raw: object) -> Sequence[object]:
+    if isinstance(raw, Sequence) and not isinstance(raw, (str, bytes)):
+        return raw
+    message = "list hook must return a sequence or page"
+    raise TypeError(message)
 
 
 def csrf_inputs(

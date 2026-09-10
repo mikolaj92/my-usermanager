@@ -12,6 +12,7 @@ try:
 
     from my_usermanager.adapters.fastapi_htmx.config import (
         DEFAULT_UI_LABELS,
+        AuditPage,
         AuditRow,
         CapabilityOption,
         CsrfContext,
@@ -27,6 +28,7 @@ try:
         UserManagerUiConflict,
         UserManagerUiHooks,
         UserManagerUiRouter,
+        UserPage,
         UserRow,
         resolve_ui_labels,
     )
@@ -45,6 +47,7 @@ except (ModuleNotFoundError, ImportError) as exc:
     raise
 __all__: Final = (
     "DEFAULT_UI_LABELS",
+    "AuditPage",
     "AuditRow",
     "CapabilityOption",
     "CsrfContext",
@@ -62,6 +65,7 @@ __all__: Final = (
     "UserManagerUiConflict",
     "UserManagerUiHooks",
     "UserManagerUiRouter",
+    "UserPage",
     "UserRow",
     "install_usermanager_ui",
     "resolve_ui_labels",
