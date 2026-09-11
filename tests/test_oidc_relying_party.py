@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import json
 from datetime import UTC, datetime
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi import FastAPI, Request
@@ -17,9 +18,13 @@ from my_usermanager.adapters.oidc import (
     MemoryOidcFlowStore,
     OidcRelyingParty,
     complete_authorization_code,
+    create_s256_code_challenge,
     verify_id_token,
 )
-from my_usermanager.adapters.oidc_fastapi import build_oidc_callback_router
+from my_usermanager.adapters.oidc_fastapi import (
+    build_oidc_callback_router,
+    build_oidc_login_router,
+)
 from my_usermanager.models import ExternalIdentity, User
 from my_usermanager.sessions import SessionPrincipal
 from my_usermanager.subjects import oidc_external_identity
@@ -304,3 +309,44 @@ def test_oidc_callback_writes_local_session_principal() -> None:
         follow_redirects=False,
     )
     assert replay.status_code == 401
+
+
+def test_oidc_login_starts_authorization_code_pkce_at_the_issuer() -> None:
+    issuer = "https://auth.example.test"
+    flows = MemoryOidcFlowStore()
+    app = FastAPI()
+    app.include_router(
+        build_oidc_login_router(
+            relying_party=OidcRelyingParty(
+                issuer=issuer,
+                audience="app",
+                key=_rsa_key(),
+                store=_IdentityStore(
+                    User(user_id="local-1", username="alice"),
+                ),
+                project=lambda item: SessionPrincipal(user_id=item.user_id),
+            ),
+            flows=flows,
+            authorization_endpoint=f"{issuer}/oauth/authorize",
+            redirect_uri="https://app.example.test/oidc/callback",
+            now=lambda: 1_000.0,
+        )
+    )
+    client = TestClient(app, base_url="https://app.example.test")
+
+    started = client.get("/oidc/login", follow_redirects=False)
+
+    assert started.status_code == 302
+    location = urlsplit(started.headers["location"])
+    assert location.scheme == "https"
+    assert location.netloc == "auth.example.test"
+    assert location.path == "/oauth/authorize"
+    query = parse_qs(location.query)
+    assert query["response_type"] == ["code"]
+    assert query["client_id"] == ["app"]
+    assert query["redirect_uri"] == ["https://app.example.test/oidc/callback"]
+    assert query["scope"] == ["openid"]
+    assert query["code_challenge_method"] == ["S256"]
+    stored = flows.consume(query["state"][0], now=1_010.0)
+    assert stored.nonce == query["nonce"][0]
+    assert query["code_challenge"] == [create_s256_code_challenge(stored.verifier)]

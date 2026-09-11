@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `/oidc/login` that starts authorization-code + S256 PKCE at the
+  configured issuer. One product "Sign in" control; passkeys stay on `/login`
+  behind authorize.
 - Add an optional same-origin OIDC relying-party callback: one-time
   state/nonce/PKCE, RS256 ID-token verification, and exact `(issuer, sub)`
   mapping onto an existing local user. No auto-link, no token minting, no

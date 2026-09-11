@@ -56,8 +56,9 @@ cannot eliminate a concurrent deactivation after its read.
   `(issuer, sub)` mapping is available via `oidc_external_identity`; controlled
   provider switch and rollback remain open.
 - A real OIDC code-flow relying party outside core (#124 / #149). Same-origin
-  `/oidc/callback` now consumes a one-time PKCE flow and maps a verified ID
-  token onto an existing local user. Token redemption and JWKS fetching stay
+  `/oidc/login` starts code+S256 at the issuer; `/oidc/callback` consumes the
+  one-time PKCE flow and maps a verified ID token onto an existing local user.
+  Token redemption and JWKS fetching stay
   host-owned; Keycloak live proof is still #130 / #149.
 - One host tested against two issuers: my-auth as a minimal OP, then Keycloak
   (#130). Domain routes stay identical; only the issuer URL changes.
