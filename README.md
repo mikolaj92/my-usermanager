@@ -102,7 +102,7 @@ verification precedes completion, login, and non-fatal observer hooks.
 `InvitationService` creates a concrete pending user, snapshots the host-approved
 initial grants, and delegates one-time activation material to an injected
 enrollment capability issuer. The included `build_enrollment_capability_issuer`
-adapter binds this contract to `my-auth` v0.4 enrollment capabilities.
+adapter binds this contract to `my-auth` 0.5 enrollment capabilities.
 Invitation metadata may be stored with `SQLiteInvitationStore`; the raw token is
 returned only in `IssuedInvitation` for host delivery and is never persisted by
 my-usermanager. Optional `deliver_issued_invitation` hands that committed

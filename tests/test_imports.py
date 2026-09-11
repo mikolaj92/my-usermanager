@@ -40,7 +40,9 @@ def test_release_metadata_absorbs_unreleased_work() -> None:
     version = project["project"]["version"]
 
     assert version == "0.6.6"
-    assert changelog.split("## Unreleased", 1)[1].split("## ", 1)[0].strip() == ""
+    unreleased = changelog.split("## Unreleased", 1)[1].split("## ", 1)[0]
+    assert "v0.7.2" in unreleased
+    assert "/oidc/login" not in unreleased
     assert "## 0.6.6" in changelog
     assert "/oidc/login" in changelog.split("## 0.6.6", 1)[1].split("## ", 1)[0]
     assert "dev" not in extras
@@ -48,3 +50,7 @@ def test_release_metadata_absorbs_unreleased_work() -> None:
     assert (REPO_ROOT / "src" / "my_usermanager" / "py.typed").is_file()
     assert "Typing :: Typed" in project["project"]["classifiers"]
     assert project["tool"]["uv"]["sources"]["my-auth"]["tag"] == "v0.5.6"
+    assert project["tool"]["uv"]["sources"]["app-factory"]["tag"] == "v0.7.2"
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert "my-auth v0.4 enrollment" not in readme
+    assert "`my-auth` 0.5 enrollment" in readme

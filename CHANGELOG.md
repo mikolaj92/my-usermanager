@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Align the nested app-factory source with `v0.7.2`. Correct invitation docs
+  to the my-auth 0.5 enrollment contract.
+
 ## 0.6.6
 
 - Add `/oidc/login` that starts authorization-code + S256 PKCE at the
