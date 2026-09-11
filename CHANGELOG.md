@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.6
+
 - Add `/oidc/login` that starts authorization-code + S256 PKCE at the
   configured issuer. One product "Sign in" control; passkeys stay on `/login`
   behind authorize.
@@ -23,6 +25,9 @@
 - Add the optional SQLite opaque session store with hashed tokens, TTL,
   owner-scoped revocation, explicit schema initialization, and host-driven
   principal refresh.
+- Ship `src/my_usermanager/py.typed` so the `Typing :: Typed` classifier is
+  true (#155). Drop the duplicate `dev` extra in favor of `[dependency-groups] dev` (#156).
+- Align nested my-auth development source with `v0.5.6`.
 
 ## 0.6.5
 

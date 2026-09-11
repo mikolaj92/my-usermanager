@@ -28,18 +28,18 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
   `my_usermanager.adapters.oidc_fastapi`
 
 ```sh
-uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
-uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
-uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
-uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
+uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.6"
+uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.6"
+uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.6"
+uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.6"
 ```
 
 For the shared passkey stack, install the `myauth` and UI extras plus the
 public `my-auth` UI extra:
 
 ```sh
-uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"
-uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.4"
+uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.6"
+uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6"
 ```
 
 ## `my-auth` identity and FastAPI integration
@@ -291,7 +291,7 @@ The complete no-build reference is [`examples/fastapi_htmx`](examples/fastapi_ht
 
 ```sh
 uv run --no-sync \
-  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.4" \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6" \
   --with "fastapi>=0.141.1" \
   --with "jinja2>=3.1" \
   --with "uvicorn[standard]>=0.52.4" \
