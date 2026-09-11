@@ -94,6 +94,7 @@ from my_usermanager.sessions import (
     write_session_principal,
     write_token_principal,
 )
+from my_usermanager.step_up import MemoryStepUpStore, require_step_up
 from my_usermanager.stores import (
     AuditFilters,
     AuditStore,
@@ -165,6 +166,7 @@ __all__: Final = (
     "MemoryGrantStore",
     "MemoryInvitationStore",
     "MemoryRoleStore",
+    "MemoryStepUpStore",
     "MemoryUserStore",
     "Permission",
     "PermissionGrantRequest",
@@ -200,6 +202,7 @@ __all__: Final = (
     "read_session_principal",
     "read_token_principal",
     "refresh_session_principal",
+    "require_step_up",
     "role_claim",
     "validate_birth_date",
     "validate_gender",

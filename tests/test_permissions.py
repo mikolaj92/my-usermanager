@@ -20,6 +20,7 @@ REQUIRED_BUILTIN_PERMISSIONS = (
     "users.read",
     "users.update",
     "users.deactivate",
+    "users.invite",
     "roles.list",
     "roles.assign",
     "permissions.grant",
@@ -48,7 +49,8 @@ def test_builtin_permission_names_are_exactly_the_wave_one_catalogue() -> None:
 
     # Then: the catalogue is exact, ordered, and has no extras.
     assert names == REQUIRED_BUILTIN_PERMISSIONS
-    assert len(names) == 12
+    assert len(names) == 13
+    assert "users.invite" in names
     assert len(set(names)) == len(names)
 
 

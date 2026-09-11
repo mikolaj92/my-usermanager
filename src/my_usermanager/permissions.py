@@ -33,6 +33,7 @@ BUILTIN_PERMISSION_NAMES: Final[tuple[str, ...]] = (
     "users.read",
     "users.update",
     "users.deactivate",
+    "users.invite",
     "roles.list",
     "roles.assign",
     "permissions.grant",

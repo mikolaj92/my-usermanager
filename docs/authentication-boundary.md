@@ -58,12 +58,16 @@ cannot eliminate a concurrent deactivation after its read.
 - A real OIDC code-flow relying party outside core (#124 / #149). Same-origin
   `/oidc/login` starts code+S256 at the issuer; `/oidc/callback` consumes the
   one-time PKCE flow and maps a verified ID token onto an existing local user.
-  Token redemption and JWKS fetching stay
-  host-owned; Keycloak live proof is still #130 / #149.
+  Hosts still own the HTTP token POST. Discovery now checks the configured
+  issuer and `OidcJwksCache` refreshes keys with a bounded unknown-`kid` retry.
+  Keycloak live proof is still #130 / #149.
 - One host tested against two issuers: my-auth as a minimal OP, then Keycloak
   (#130). Domain routes stay identical; only the issuer URL changes.
 - Same-route adapter contract coverage and integration of the completion helper
   into those host examples (#127).
+- Optional `require_step_up` binds a host-issued one-time proof to actor,
+  session, operation, and target. It is not WebAuthn ceremony; my-auth remains
+  the reauthentication surface.
 
 This UM boundary does not implement an OpenID Provider, mint tokens, or add
 app-factory domain routes. The OP lives in my-auth. Product hosts must not import

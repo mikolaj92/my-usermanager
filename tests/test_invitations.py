@@ -174,6 +174,26 @@ def test_non_admin_cannot_invite() -> None:
     assert users.get("anna") is None
 
 
+def test_operator_with_builtin_invite_permission_can_invite() -> None:
+    service, users, grants, _, _ = _service()
+    users.create(User("operator", "operator"))
+    grants.add_permission_grant(
+        "operator",
+        Permission("users.invite"),
+        Scope.global_(),
+    )
+
+    issued = service.invite(
+        actor_id="operator",
+        user=User("anna", "anna", status="pending"),
+        grants=(InvitationGrant(permission=Permission("users.list")),),
+        ttl_seconds=300,
+    )
+
+    assert issued.invitation.user_id == "anna"
+    assert users.get("anna") is not None
+
+
 def test_activation_cannot_retarget_or_elevate_grants() -> None:
     service, _, grants, _, _ = _service()
     issued = service.invite(

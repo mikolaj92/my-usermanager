@@ -99,9 +99,13 @@ verification precedes completion, login, and non-fatal observer hooks.
 
 ## Administrator invitations
 
-`InvitationService` creates a concrete pending user, snapshots the host-approved
-initial grants, and delegates one-time activation material to an injected
-enrollment capability issuer. The included `build_enrollment_capability_issuer`
+`InvitationService` requires the built-in `users.invite` permission. The
+catalogue and `BUILTIN_ROLES["admin"]` include it, so a host that grants only
+those names can invite without inventing a custom permission. Role name `admin`
+still acts as a wildcard in `UserManager`; a non-admin actor needs the named
+permission. The service creates a concrete pending user, snapshots the
+host-approved initial grants, and delegates one-time activation material to an
+injected enrollment capability issuer. The included `build_enrollment_capability_issuer`
 adapter binds this contract to `my-auth` 0.5 enrollment capabilities.
 Invitation metadata may be stored with `SQLiteInvitationStore`; the raw token is
 returned only in `IssuedInvitation` for host delivery and is never persisted by

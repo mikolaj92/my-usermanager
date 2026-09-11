@@ -16,9 +16,11 @@ from starlette.middleware.sessions import SessionMiddleware
 from my_usermanager.adapters.fastapi import current_user
 from my_usermanager.adapters.oidc import (
     MemoryOidcFlowStore,
+    OidcJwksCache,
     OidcRelyingParty,
     complete_authorization_code,
     create_s256_code_challenge,
+    load_openid_provider_metadata,
     verify_id_token,
 )
 from my_usermanager.adapters.oidc_fastapi import (
@@ -142,6 +144,157 @@ def test_id_token_verification_requires_iss_aud_exp_and_nonce() -> None:
             audience="app",
             nonce="nonce-123",
             now=now + 400,
+        )
+
+
+def test_jwks_cache_rotates_keys_and_limits_unknown_kid_refreshes() -> None:
+    current = _rsa_key()
+    rotated = _rsa_key()
+    fetches: list[str] = []
+
+    def fetch_jwks() -> dict[str, object]:
+        fetches.append(current.kid or "")
+        return {"keys": [current.as_dict(private=False)]}
+
+    cache = OidcJwksCache(fetch_jwks, ttl_seconds=60, max_unknown_kid_refreshes=1)
+    now = 1_000.0
+    token = _id_token(current)
+    claims = verify_id_token(
+        token,
+        key=cache.key_for(current.kid or "", now=now),
+        issuer="https://auth.example.test",
+        audience="app",
+        nonce="nonce-123",
+        now=int(datetime(2026, 1, 1, tzinfo=UTC).timestamp()),
+    )
+    assert claims["sub"] == "user-1"
+    assert fetches == [current.kid]
+
+    current = rotated
+    rotated_token = _id_token(rotated)
+    rotated_claims = verify_id_token(
+        rotated_token,
+        key=cache.key_for(rotated.kid or "", now=now),
+        issuer="https://auth.example.test",
+        audience="app",
+        nonce="nonce-123",
+        now=int(datetime(2026, 1, 1, tzinfo=UTC).timestamp()),
+    )
+    assert rotated_claims["sub"] == "user-1"
+    assert fetches == [fetches[0], rotated.kid]
+
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        cache.key_for("still-unknown", now=now)
+    assert len(fetches) == 3
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        cache.key_for("still-unknown", now=now)
+    assert len(fetches) == 3
+
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        verify_id_token(
+            _id_token(rotated),
+            key=cache.key_for(rotated.kid or "", now=now),
+            issuer="https://auth.example.test",
+            audience="app",
+            nonce="nonce-123",
+            now=int(datetime(2026, 1, 1, tzinfo=UTC).timestamp()) + 400,
+        )
+
+
+def test_openid_discovery_uses_host_issuer_and_fails_closed() -> None:
+    issuer = "https://auth.example.test"
+    fetched: list[str] = []
+
+    def fetch(url: str) -> dict[str, object]:
+        fetched.append(url)
+        return {
+            "issuer": issuer,
+            "authorization_endpoint": f"{issuer}/oauth/authorize",
+            "token_endpoint": f"{issuer}/oauth/token",
+            "jwks_uri": f"{issuer}/oauth/jwks",
+            "id_token_signing_alg_values_supported": ["RS256"],
+        }
+
+    metadata = load_openid_provider_metadata(issuer, fetch=fetch)
+    assert metadata.issuer == issuer
+    assert metadata.authorization_endpoint == f"{issuer}/oauth/authorize"
+    assert metadata.jwks_uri == f"{issuer}/oauth/jwks"
+    assert fetched == [f"{issuer}/.well-known/openid-configuration"]
+
+    def mismatched(url: str) -> dict[str, object]:
+        del url
+        return {
+            "issuer": "https://other.example.test",
+            "authorization_endpoint": f"{issuer}/oauth/authorize",
+            "jwks_uri": f"{issuer}/oauth/jwks",
+            "token_endpoint": f"{issuer}/oauth/token",
+        }
+
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        load_openid_provider_metadata(issuer, fetch=mismatched)
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        load_openid_provider_metadata("https://attacker.example.test", fetch=fetch)
+    with pytest.raises(ValueError, match="issuer"):
+        load_openid_provider_metadata("http://auth.example.test", fetch=fetch)
+
+    def boom(url: str) -> dict[str, object]:
+        del url
+        raise TimeoutError("discovery timed out")
+
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        load_openid_provider_metadata(issuer, fetch=boom)
+
+
+def test_jwks_cache_fails_closed_when_fetch_raises() -> None:
+    def fetch_jwks() -> dict[str, object]:
+        raise TimeoutError("jwks unavailable")
+
+    cache = OidcJwksCache(fetch_jwks, ttl_seconds=60)
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        cache.key_for("any", now=1_000.0)
+
+
+def test_id_token_azp_must_match_client_when_present_or_when_aud_is_a_list() -> None:
+    key = _rsa_key()
+    now = int(datetime(2026, 1, 1, tzinfo=UTC).timestamp())
+
+    matching = verify_id_token(
+        _id_token(key, extra={"azp": "app"}),
+        key=key,
+        issuer="https://auth.example.test",
+        audience="app",
+        nonce="nonce-123",
+        now=now,
+    )
+    assert matching["azp"] == "app"
+
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        verify_id_token(
+            _id_token(key, extra={"azp": "other-app"}),
+            key=key,
+            issuer="https://auth.example.test",
+            audience="app",
+            nonce="nonce-123",
+            now=now,
+        )
+
+    listed = verify_id_token(
+        _id_token(key, extra={"aud": ["app", "other"], "azp": "app"}),
+        key=key,
+        issuer="https://auth.example.test",
+        audience="app",
+        nonce="nonce-123",
+        now=now,
+    )
+    assert listed["azp"] == "app"
+    with pytest.raises(PermissionError, match="authentication unavailable"):
+        verify_id_token(
+            _id_token(key, extra={"aud": ["app", "other"]}),
+            key=key,
+            issuer="https://auth.example.test",
+            audience="app",
+            nonce="nonce-123",
+            now=now,
         )
 
 

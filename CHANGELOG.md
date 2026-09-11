@@ -4,6 +4,14 @@
 
 - Align the nested app-factory source with `v0.7.2`. Correct invitation docs
   to the my-auth 0.5 enrollment contract.
+- Add `users.invite` to the built-in permission catalogue and admin role (#133).
+- Verify OIDC `azp` when present and require it for multi-audience ID tokens (#151).
+- Add host-owned JWKS cache with TTL, one refresh per unknown `kid`, and
+  fail-closed fetch errors (#153).
+- Load OpenID discovery only for a host-configured HTTPS issuer; mismatched
+  issuer metadata and fetch failures stay fail-closed (#150).
+- Add optional `require_step_up` / `MemoryStepUpStore` for host-gated
+  destructive actions. Missing store leaves behavior unchanged (#144–#148).
 
 ## 0.6.6
 
