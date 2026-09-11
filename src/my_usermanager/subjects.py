@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import TYPE_CHECKING, Final, Protocol, TypeVar, override, runtime_checkable
+from urllib.parse import urlsplit
 
 if TYPE_CHECKING:
     from datetime import date
@@ -29,6 +30,7 @@ __all__: Final[tuple[str, ...]] = (
     "InvalidSubjectError",
     "SubjectAdapter",
     "derive_local_user_id",
+    "oidc_external_identity",
 )
 
 _FALLBACK_USER_ID_PREFIX: Final = "external"
@@ -151,6 +153,18 @@ class ExternalIdentityUserStore(Protocol):
         ...
 
 
+def oidc_external_identity(*, issuer: str, subject: str) -> ExternalIdentity:
+    """Map a verified OpenID subject to a local external identity.
+
+    The identity key is the exact issuer URL plus ``sub``. Two issuers that
+    happen to mint the same ``sub`` are two identities. HTTP issuers are
+    rejected so a later swap stays an HTTPS issuer URL change.
+    """
+    checked_issuer = _require_https_issuer(issuer)
+    checked_subject = _require_external_subject(subject, field_name="subject")
+    return ExternalIdentity(provider=checked_issuer, subject=checked_subject)
+
+
 def derive_local_user_id(*, provider: str, subject: str) -> str:
     """Derive a stable local user id from an external provider and subject."""
     checked_provider = _require_identifier(provider, field_name="provider")
@@ -194,6 +208,34 @@ def _require_optional_profile_text(value: str | None, *, field_name: str) -> Non
     if any(character in value for character in "\r\n\t"):
         reason = "must not contain control whitespace"
         raise InvalidSubjectError(field_name, reason)
+
+
+def _require_https_issuer(value: str) -> str:
+    try:
+        checked = validate_identifier(value, field_name="issuer")
+    except ValidationError as exc:
+        raise InvalidSubjectError(field_name="issuer", reason=exc.reason) from exc
+    parts = urlsplit(checked)
+    if (
+        parts.scheme != "https"
+        or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
+        or parts.query
+        or parts.fragment
+    ):
+        raise InvalidSubjectError(
+            field_name="issuer",
+            reason="must be an absolute HTTPS URL without query or fragment",
+        )
+    try:
+        _ = parts.port
+    except ValueError as exc:
+        raise InvalidSubjectError(
+            field_name="issuer",
+            reason="has an invalid port",
+        ) from exc
+    return checked
 
 
 def _normalize_provider_component(provider: str) -> str:

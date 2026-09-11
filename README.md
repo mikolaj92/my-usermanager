@@ -19,11 +19,13 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
 
 - Distribution: `my-usermanager`; core import: `my_usermanager`
 - Python: `>=3.12`; license: MIT
-- Extras: `myauth`, `fastapi`, and `fastapi-htmx`
+- Extras: `myauth`, `fastapi`, `fastapi-htmx`, and `oidc`
 - Explicit adapters: `my_usermanager.adapters.my_auth`,
   `my_usermanager.adapters.my_auth_fastapi`,
   `my_usermanager.adapters.my_auth_sqlite`,
-  `my_usermanager.adapters.fastapi_htmx`
+  `my_usermanager.adapters.fastapi_htmx`,
+  `my_usermanager.adapters.oidc`,
+  `my_usermanager.adapters.oidc_fastapi`
 
 ```sh
 uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.5"

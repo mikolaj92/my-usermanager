@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add an optional same-origin OIDC relying-party callback: one-time
+  state/nonce/PKCE, RS256 ID-token verification, and exact `(issuer, sub)`
+  mapping onto an existing local user. No auto-link, no token minting, no
+  OpenID Provider in this package.
 - Add optional `deliver_issued_invitation` after durable commit. Hosts own
   transport; missing transport keeps the one-time manual link, while transport
   failure returns explicit `delivery_failed` without rolling back the pending

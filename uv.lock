@@ -347,6 +347,18 @@ wheels = [
 ]
 
 [[package]]
+name = "joserfc"
+version = "1.7.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/94/80fea1514b7c6d7d37804d3fe9ca81455f633347fc98731bd71ffe1faa17/joserfc-1.7.5.tar.gz", hash = "sha256:d5ff536e658e17664f8c1b1ab60dc4aa62aa973fcef1edd33cc44bda45d6f5ea", size = 234990, upload-time = "2026-08-29T13:05:42.057Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/c5/82addfd375e5ee6520644e0553e4aadde92d668c4fc99cc716d337fe7bb3/joserfc-1.7.5-py3-none-any.whl", hash = "sha256:add2c2c84e8373b084d526a8b53daba5d7a513a118cd2dcd9fc9f979d0922159", size = 71269, upload-time = "2026-08-29T13:05:40.718Z" },
+]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -431,6 +443,7 @@ dev = [
     { name = "httpx2" },
     { name = "itsdangerous" },
     { name = "jinja2" },
+    { name = "joserfc" },
     { name = "my-auth" },
     { name = "pytest" },
     { name = "ruff" },
@@ -448,6 +461,9 @@ fastapi-htmx = [
 myauth = [
     { name = "my-auth" },
 ]
+oidc = [
+    { name = "joserfc" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -456,7 +472,8 @@ dev = [
     { name = "httpx2" },
     { name = "itsdangerous" },
     { name = "jinja2" },
-    { name = "my-usermanager", extra = ["fastapi-htmx", "myauth"] },
+    { name = "joserfc" },
+    { name = "my-usermanager", extra = ["fastapi-htmx", "myauth", "oidc"] },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -473,13 +490,15 @@ requires-dist = [
     { name = "itsdangerous", marker = "extra == 'fastapi'", specifier = ">=2.2" },
     { name = "jinja2", marker = "extra == 'dev'", specifier = ">=3.1" },
     { name = "jinja2", marker = "extra == 'fastapi-htmx'", specifier = ">=3.1" },
+    { name = "joserfc", marker = "extra == 'dev'", specifier = ">=1.7.5" },
+    { name = "joserfc", marker = "extra == 'oidc'", specifier = ">=1.7.5" },
     { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?tag=v0.5.4" },
-    { name = "my-usermanager", extras = ["fastapi-htmx", "myauth"], marker = "extra == 'dev'" },
+    { name = "my-usermanager", extras = ["fastapi-htmx", "myauth", "oidc"], marker = "extra == 'dev'" },
     { name = "pydantic", marker = "extra == 'fastapi'", specifier = ">=2.10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
 ]
-provides-extras = ["fastapi", "fastapi-htmx", "myauth", "dev"]
+provides-extras = ["fastapi", "fastapi-htmx", "myauth", "oidc", "dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -488,7 +507,8 @@ dev = [
     { name = "httpx2", specifier = ">=2.12.0" },
     { name = "itsdangerous", specifier = ">=2.2" },
     { name = "jinja2", specifier = ">=3.1" },
-    { name = "my-usermanager", extras = ["fastapi-htmx", "myauth"] },
+    { name = "joserfc", specifier = ">=1.7.5" },
+    { name = "my-usermanager", extras = ["fastapi-htmx", "myauth", "oidc"] },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.8" },
 ]

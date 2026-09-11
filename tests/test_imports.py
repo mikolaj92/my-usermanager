@@ -11,6 +11,8 @@ def test_import_package_without_optional_framework_side_effects() -> None:
         "assert 'my_auth' not in sys.modules\n"
         "assert 'fastapi' not in sys.modules\n"
         "assert 'pydantic' not in sys.modules\n"
+        "assert 'joserfc' not in sys.modules\n"
+        "assert 'authlib' not in sys.modules\n"
     )
 
     # When: the import check is executed in that interpreter.

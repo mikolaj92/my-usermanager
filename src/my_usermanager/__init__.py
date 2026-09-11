@@ -111,6 +111,7 @@ from my_usermanager.stores import (
     UserQuery,
     UserStore,
 )
+from my_usermanager.subjects import oidc_external_identity
 
 __version__: Final = "0.6.5"
 
@@ -193,6 +194,7 @@ __all__: Final = (
     "deliver_issued_invitation",
     "is_valid_permission_name",
     "max_permission_level_claim",
+    "oidc_external_identity",
     "permission_claim",
     "principal_template_context",
     "read_session_principal",

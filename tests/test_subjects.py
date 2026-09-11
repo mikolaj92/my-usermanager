@@ -15,6 +15,7 @@ from my_usermanager.subjects import (
     InvalidSubjectError,
     SubjectAdapter,
     derive_local_user_id,
+    oidc_external_identity,
 )
 
 
@@ -139,6 +140,26 @@ def test_authenticated_subject_rejects_malformed_values(
             user_id=invalid_case.user_id,
             username=invalid_case.username,
             display_name=invalid_case.display_name,
+        )
+
+
+def test_oidc_identity_uses_verified_issuer_and_sub() -> None:
+    first = oidc_external_identity(
+        issuer="https://auth.example.test",
+        subject="user-1",
+    )
+    second = oidc_external_identity(
+        issuer="https://idp.example.test/realms/factory",
+        subject="user-1",
+    )
+
+    assert first.provider == "https://auth.example.test"
+    assert first.subject == "user-1"
+    assert first != second
+    with pytest.raises(InvalidSubjectError, match="issuer"):
+        _ = oidc_external_identity(
+            issuer="http://auth.example.test",
+            subject="user-1",
         )
 
 
