@@ -59,8 +59,7 @@ All feature captions use the existing config/request `labels` mechanism:
 `identity_logout`, `identity_provider_managed`, `identity_local_managed`,
 `identity_provider_sessions`, `identity_application_sessions`.
 
-Remaining #129 acceptance work includes proving actual local logout/session
-behavior with the OIDC integration and real provider-backed flows. The current
-full-page/HTMX tests cover composition, delegated links, omission of unsupported
-features, two linked providers and unlinking. They do not establish Keycloak
-interoperability or actual remote sign-out.
+Remaining #129 work is host logout/session behavior after unlinking a local
+provider, not a third-party IdP runtime. The current full-page/HTMX tests cover
+composition, delegated links, omission of unsupported features, two linked
+providers and unlinking.

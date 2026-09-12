@@ -3,7 +3,9 @@
 Related: #127 and the portability tracker #131. This document describes the
 UM side of a swappable identity stack: the host is a generic relying party,
 my-auth is a minimal OpenID Provider, and local `user_id` / grants stay here.
-It is not a claim that issuer swap or Keycloak migration already works.
+It is not a claim that a live third-party IdP is installed. The cheap later
+swap is already the contract: change the issuer URL and add an explicit
+`(issuer, sub)` link. Keycloak is not a product dependency.
 
 ## Decision
 
@@ -55,19 +57,20 @@ cannot eliminate a concurrent deactivation after its read.
 - Canonical issuer/sub mapping and migration/rollback (#128). Exact HTTPS
   `(issuer, sub)` mapping is available via `oidc_external_identity`; controlled
   provider switch and rollback remain open.
-- A real OIDC code-flow relying party outside core (#124 / #149). Same-origin
-  `/oidc/login` starts code+S256 at the issuer; `/oidc/callback` consumes the
-  one-time PKCE flow and maps a verified ID token onto an existing local user.
-  Hosts still own the HTTP token POST. Discovery now checks the configured
-  issuer and `OidcJwksCache` refreshes keys with a bounded unknown-`kid` retry.
-  Keycloak live proof is still #130 / #149.
-- One host tested against two issuers: my-auth as a minimal OP, then Keycloak
-  (#130). Domain routes stay identical; only the issuer URL changes.
-- Same-route adapter contract coverage and integration of the completion helper
-  into those host examples (#127).
+- A real OIDC code-flow relying party outside core. Same-origin `/oidc/login`
+  starts code+S256 at the issuer; `/oidc/callback` consumes the one-time PKCE
+  flow and maps a verified ID token onto an existing local user. Hosts still
+  own the HTTP token POST. Discovery checks the configured issuer;
+  `OidcJwksCache` refreshes keys with a bounded unknown-`kid` retry.
+- Two issuer URLs in one app keep the same local `user_id`. A second provider
+  is another HTTPS issuer plus an explicit link, not a rewrite of domain
+  routes. There is no Keycloak runtime in this package.
 - Optional `require_step_up` binds a host-issued one-time proof to actor,
   session, operation, and target. It is not WebAuthn ceremony; my-auth remains
   the reauthentication surface.
+- Remaining host work for a later swap: do not import `my_auth` / passkey SDK
+  on product routes; link the new `(issuer, sub)` explicitly; keep flow state
+  in host-protected storage (#152).
 
 This UM boundary does not implement an OpenID Provider, mint tokens, or add
 app-factory domain routes. The OP lives in my-auth. Product hosts must not import

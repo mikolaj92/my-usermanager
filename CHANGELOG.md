@@ -12,6 +12,8 @@
   issuer metadata and fetch failures stay fail-closed (#150).
 - Add optional `require_step_up` / `MemoryStepUpStore` for host-gated
   destructive actions. Missing store leaves behavior unchanged (#144–#148).
+- Prove the cheap later swap in-process: two issuer URLs, one local `user_id`,
+  no `my_auth` on the product route. Keycloak is not required.
 
 ## 0.6.6
 
