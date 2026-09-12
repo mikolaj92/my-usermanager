@@ -54,3 +54,8 @@ def test_release_metadata_absorbs_unreleased_work() -> None:
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     assert "my-auth v0.4 enrollment" not in readme
     assert "`my-auth` 0.5 enrollment" in readme
+    agents = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    assert "v0.7.2" in agents
+    assert "v0.5.6" in agents
+    assert "install_local_identity" in agents
+    assert "v0.6.22" not in agents.split("## Preferred BOM", 1)[1]

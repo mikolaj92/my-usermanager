@@ -23,6 +23,7 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
 - Explicit adapters: `my_usermanager.adapters.my_auth`,
   `my_usermanager.adapters.my_auth_fastapi`,
   `my_usermanager.adapters.my_auth_sqlite`,
+  `my_usermanager.adapters.local_identity`,
   `my_usermanager.adapters.fastapi_htmx`,
   `my_usermanager.adapters.oidc`,
   `my_usermanager.adapters.oidc_fastapi`
@@ -41,6 +42,31 @@ public `my-auth` UI extra:
 uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.6"
 uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6"
 ```
+
+## Local FastAPI plugin
+
+Hosts that want in-process passkeys plus packaged account/admin UI call one
+installer. It owns SQLite, signed session, CSRF, chrome, `/login`, `/account`,
+and `/admin/users`. Product routes keep using `current_user` /
+`SessionPrincipal`. Later issuer swap still goes through `/oidc/login`.
+
+```python
+from fastapi import FastAPI
+from my_usermanager.adapters.local_identity import install_local_identity
+
+app = FastAPI()
+identity = install_local_identity(
+    app,
+    database="app.sqlite3",
+    rp_id="localhost",
+    origin="http://localhost:8000",
+    session_secret="replace-me",
+    app_name="App",
+)
+```
+
+Requires `my-usermanager[fastapi-htmx,myauth]` and `my-auth[fastapi-htmx]`.
+Custom stores, invitations, or OIDC stay on the existing adapters.
 
 ## `my-auth` identity and FastAPI integration
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `install_local_identity`: one FastAPI call mounts passkey login,
+  account, and admin UI on a shared SQLite file, signed session, and CSRF.
+- Point AGENTS.md nested pins at the current BOM row `v0.7.2 / v0.5.6 / v0.6.6`.
 - Align the nested app-factory source with `v0.7.2`. Correct invitation docs
   to the my-auth 0.5 enrollment contract.
 - Add `users.invite` to the built-in permission catalogue and admin role (#133).
