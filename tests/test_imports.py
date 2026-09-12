@@ -11,7 +11,7 @@ def test_import_package_without_optional_framework_side_effects() -> None:
     import_check = (
         "import sys\n"
         "import my_usermanager\n"
-        "assert my_usermanager.__version__ == '0.6.6'\n"
+        "assert my_usermanager.__version__ == '0.6.7'\n"
         "assert 'my_auth' not in sys.modules\n"
         "assert 'fastapi' not in sys.modules\n"
         "assert 'pydantic' not in sys.modules\n"
@@ -39,10 +39,16 @@ def test_release_metadata_absorbs_unreleased_work() -> None:
     extras = project["project"]["optional-dependencies"]
     version = project["project"]["version"]
 
-    assert version == "0.6.6"
+    assert version == "0.6.7"
     unreleased = changelog.split("## Unreleased", 1)[1].split("## ", 1)[0]
-    assert "v0.7.2" in unreleased
-    assert "/oidc/login" not in unreleased
+    released = changelog.split("## 0.6.7", 1)[1].split("## ", 1)[0]
+    assert "install_local_identity" not in unreleased
+    assert "#152" not in unreleased
+    assert "#129" not in unreleased
+    assert "install_local_identity" in released
+    assert "#152" in released
+    assert "#129" in released
+    assert "v0.7.2" in released
     assert "## 0.6.6" in changelog
     assert "/oidc/login" in changelog.split("## 0.6.6", 1)[1].split("## ", 1)[0]
     assert "dev" not in extras
@@ -57,5 +63,6 @@ def test_release_metadata_absorbs_unreleased_work() -> None:
     agents = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
     assert "v0.7.2" in agents
     assert "v0.5.6" in agents
+    assert "v0.6.7" in agents.split("## Preferred BOM", 1)[1]
     assert "install_local_identity" in agents
     assert "v0.6.22" not in agents.split("## Preferred BOM", 1)[1]

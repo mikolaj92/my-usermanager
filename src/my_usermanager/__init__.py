@@ -114,7 +114,7 @@ from my_usermanager.stores import (
 )
 from my_usermanager.subjects import oidc_external_identity
 
-__version__: Final = "0.6.6"
+__version__: Final = "0.6.7"
 
 __all__: Final = (
     "ADMIN_ROLE_NAME",

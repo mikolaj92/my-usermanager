@@ -30,7 +30,7 @@ Passkey ceremony and the minimal OpenID Provider live in `my-auth`. This package
 is the local account/grants side of a swappable RP. Packaged pages extend
 `app_factory/identity_authenticated_shell.html`. Pin one immutable BOM row;
 nested sources in this package are app-factory v0.7.2 / my-auth v0.5.6 /
-my-usermanager v0.6.6. The full matrix lives in app-factory
+my-usermanager v0.6.7. The full matrix lives in app-factory
 [`COMPAT.md`](https://github.com/mikolaj92/app-factory/blob/main/COMPAT.md)
 — do not duplicate it here.
 
@@ -49,7 +49,7 @@ This package's nested pins (do not mix rows):
 
 | app-factory | my-auth | my-usermanager |
 |-------------|---------|----------------|
-| v0.7.2 | v0.5.6 | v0.6.6 |
+| v0.7.2 | v0.5.6 | v0.6.7 |
 
 Hosts override `app-factory[platform]` only when bumping chrome; keep the three
 direct pins on one COMPAT row. Source of truth:
