@@ -52,6 +52,10 @@ from my_usermanager.adapters.my_auth_fastapi import (
     user_to_session_principal,
 )
 from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
+from my_usermanager.identity_capabilities import (
+    AccountCapability,
+    IdentityProviderCapabilities,
+)
 from my_usermanager.manager import UserManager
 from my_usermanager.models import ExternalIdentity, User
 from my_usermanager.permissions import ADMIN_ROLE_NAME
@@ -71,6 +75,14 @@ __all__: Final[tuple[str, ...]] = (
 _ADMIN_REQUIRED: Final = "admin required"
 _SESSION_KEY_REQUIRED: Final = "session_secret is required"
 _MISSING_PASSKEY_USER: Final = "verified registration is missing a passkey user"
+_LOCAL_PROVIDER: Final = "local"
+_LOCAL_PASSKEY_CAPABILITIES: Final = (
+    IdentityProviderCapabilities(
+        provider=MY_AUTH_PROVIDER,
+        label="Local passkeys",
+        credentials=AccountCapability(mode="local", url="/account/passkeys"),
+    ),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,7 +131,7 @@ def install_local_identity(  # noqa: PLR0913
         config=PlatformConfig(
             app_name=app_name,
             enable_account=True,
-            enable_credentials=True,
+            enable_credentials=False,
             enable_admin_users=True,
         ),
         passkey=PasskeyBinding(
@@ -282,14 +294,28 @@ def _write_principal(
     _ = write_current_user(request, principal)
 
 
+def _linked_passkey_identity(stack: _Stack, user_id: str) -> ExternalIdentity | None:
+    user = stack.users.get(user_id)
+    if user is None or not user.is_active:
+        return None
+    return next(
+        (
+            identity
+            for identity in user.external_identities
+            if identity.provider == MY_AUTH_PROVIDER
+        ),
+        None,
+    )
+
+
 def _session_passkey_user(stack: _Stack, request: Request) -> PasskeyUser | None:
     principal = current_user(request)
     if principal is None:
         return None
-    for identity in principal.external_identities:
-        if identity.provider == MY_AUTH_PROVIDER:
-            return stack.credentials.get_user(identity.subject)
-    return stack.credentials.get_user(principal.user_id)
+    identity = _linked_passkey_identity(stack, principal.user_id)
+    if identity is None:
+        return None
+    return stack.credentials.get_user(identity.subject)
 
 
 def _logout(_response: Response, request: Request) -> None:
@@ -301,9 +327,14 @@ def _um_hooks(manager: UserManager) -> StandardUserManagerUiHooks:
         principal = current_user(request)
         if principal is None:
             return None
-        identity = next(iter(principal.external_identities), None)
+        user = manager.users.get(principal.user_id)
+        identities = () if user is None else tuple(user.external_identities)
+        identity = next(
+            (item for item in identities if item.provider == MY_AUTH_PROVIDER),
+            next(iter(identities), None),
+        )
         return AuthenticatedSubject(
-            provider=identity.provider if identity is not None else MY_AUTH_PROVIDER,
+            provider=identity.provider if identity is not None else _LOCAL_PROVIDER,
             subject=identity.subject if identity is not None else principal.user_id,
             user_id=principal.user_id,
             username=principal.username,
@@ -320,6 +351,7 @@ def _um_hooks(manager: UserManager) -> StandardUserManagerUiHooks:
         current_user=subject_from_request,
         require_admin=require_admin,
         role_names=(ADMIN_ROLE_NAME,),
+        identity_providers=_LOCAL_PASSKEY_CAPABILITIES,
     )
 
 

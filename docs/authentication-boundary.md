@@ -53,7 +53,7 @@ cannot eliminate a concurrent deactivation after its read.
 
 ## Still required before portability is complete
 
-- Provider capabilities and account UI: [implemented configuration/rendering](account-capabilities.md), with actual provider/session integration still pending (#129).
+- Provider capabilities and account UI: [implemented configuration/rendering](account-capabilities.md). Unlinking local my-auth hides passkey controls while local logout and grants remain.
 - Canonical issuer/sub mapping and migration/rollback (#128). Exact HTTPS
   `(issuer, sub)` mapping is available via `oidc_external_identity`; controlled
   provider switch and rollback remain open.

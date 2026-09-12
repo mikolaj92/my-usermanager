@@ -5,6 +5,8 @@
 - Persist OIDC state/nonce/PKCE in host SQLite bound to an httponly cookie
   digest. Replay, login CSRF, TTL, and a missing cookie fail closed; secrets
   stay out of the cookie (#152).
+- Hide local passkey/session controls after unlinking `my-auth`; the account
+  page still logs out of the application and keeps grants (#129).
 - Add `install_local_identity`: one FastAPI call mounts passkey login,
   account, and admin UI on a shared SQLite file, signed session, and CSRF.
 - Point AGENTS.md nested pins at the current BOM row `v0.7.2 / v0.5.6 / v0.6.6`.

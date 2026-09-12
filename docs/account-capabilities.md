@@ -59,7 +59,10 @@ All feature captions use the existing config/request `labels` mechanism:
 `identity_logout`, `identity_provider_managed`, `identity_local_managed`,
 `identity_provider_sessions`, `identity_application_sessions`.
 
-Remaining #129 work is host logout/session behavior after unlinking a local
-provider, not a third-party IdP runtime. The current full-page/HTMX tests cover
-composition, delegated links, omission of unsupported features, two linked
-providers and unlinking.
+`install_local_identity` now declares local passkey credentials only while the
+`my-auth` link remains. Unlinking that provider hides the account passkey card
+and `/account/passkeys`; local application logout stays. Chrome does not keep a
+Credentials nav slot after unlink. Remaining host work is optional IdP session
+revocation pages, not a third-party runtime. The current full-page/HTMX tests
+cover composition, delegated links, omission of unsupported features, two
+linked providers and unlinking.
