@@ -72,11 +72,17 @@ class OidcAuthorizationFlow:
 class OidcFlowStore(Protocol):
     """Host-owned storage for authorization state, nonce, and PKCE verifier."""
 
-    def start(self, *, now: float) -> OidcAuthorizationFlow:
-        """Issue a new one-time authorization flow."""
+    def start(self, *, now: float, binding: str = "") -> OidcAuthorizationFlow:
+        """Issue a new one-time authorization flow, optionally browser-bound."""
         ...
 
-    def consume(self, state: str, *, now: float) -> OidcAuthorizationFlow:
+    def consume(
+        self,
+        state: str,
+        *,
+        now: float,
+        binding: str = "",
+    ) -> OidcAuthorizationFlow:
         """Return and delete a still-valid flow, or raise PermissionError."""
         ...
 
@@ -240,33 +246,44 @@ class MemoryOidcFlowStore:
         if ttl_seconds <= 0:
             raise ValueError(_TTL_ERROR)
         self._ttl_seconds = ttl_seconds
-        self._flows: dict[str, tuple[float, OidcAuthorizationFlow]] = {}
+        self._flows: dict[str, tuple[float, OidcAuthorizationFlow, str]] = {}
 
-    def start(self, *, now: float) -> OidcAuthorizationFlow:
-        """Issue a new one-time authorization flow."""
+    def start(self, *, now: float, binding: str = "") -> OidcAuthorizationFlow:
+        """Issue a new one-time authorization flow, optionally browser-bound."""
         self._expire(now)
         flow = OidcAuthorizationFlow(
             state=secrets.token_urlsafe(32),
             nonce=secrets.token_urlsafe(32),
             verifier=secrets.token_urlsafe(48),
         )
-        self._flows[flow.state] = (now + self._ttl_seconds, flow)
+        self._flows[flow.state] = (now + self._ttl_seconds, flow, binding)
         return flow
 
-    def consume(self, state: str, *, now: float) -> OidcAuthorizationFlow:
+    def consume(
+        self,
+        state: str,
+        *,
+        now: float,
+        binding: str = "",
+    ) -> OidcAuthorizationFlow:
         """Return and delete a still-valid flow, or raise PermissionError."""
         self._expire(now)
         record = self._flows.pop(state, None)
         if record is None:
             raise PermissionError(_UNAVAILABLE)
-        expires_at, flow = record
+        expires_at, flow, stored_binding = record
         if now >= expires_at:
+            raise PermissionError(_UNAVAILABLE)
+        if stored_binding and stored_binding != binding:
+            self._flows[state] = record
             raise PermissionError(_UNAVAILABLE)
         return flow
 
     def _expire(self, now: float) -> None:
         expired = [
-            state for state, (expires_at, _) in self._flows.items() if now >= expires_at
+            state
+            for state, (expires_at, _flow, _binding) in self._flows.items()
+            if now >= expires_at
         ]
         for state in expired:
             del self._flows[state]
@@ -326,9 +343,10 @@ def complete_authorization_code(
     redeem_code: OidcCodeRedeemer,
     relying_party: OidcRelyingParty,
     now: float,
+    binding: str = "",
 ) -> SessionPrincipal:
     """Consume a one-time flow, redeem the code, and resolve the local user."""
-    flow = flows.consume(state, now=now)
+    flow = flows.consume(state, now=now, binding=binding)
     try:
         id_token = redeem_code(code, verifier=flow.verifier)
     except Exception as extra:

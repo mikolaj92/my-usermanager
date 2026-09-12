@@ -62,6 +62,8 @@ cannot eliminate a concurrent deactivation after its read.
   flow and maps a verified ID token onto an existing local user. Hosts still
   own the HTTP token POST. Discovery checks the configured issuer;
   `OidcJwksCache` refreshes keys with a bounded unknown-`kid` retry.
+  Production hosts persist flow secrets in `SQLiteOidcFlowStore` bound to an
+  httponly cookie digest; RAM-only `MemoryOidcFlowStore` is for tests.
 - Two issuer URLs in one app keep the same local `user_id`. A second provider
   is another HTTPS issuer plus an explicit link, not a rewrite of domain
   routes. There is no Keycloak runtime in this package.
@@ -70,7 +72,7 @@ cannot eliminate a concurrent deactivation after its read.
   the reauthentication surface.
 - Remaining host work for a later swap: do not import `my_auth` / passkey SDK
   on product routes; link the new `(issuer, sub)` explicitly; keep flow state
-  in host-protected storage (#152).
+  in `SQLiteOidcFlowStore` (or equivalent host-protected storage).
 
 This UM boundary does not implement an OpenID Provider, mint tokens, or add
 app-factory domain routes. The OP lives in my-auth. Product hosts must not import

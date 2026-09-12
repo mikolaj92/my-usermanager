@@ -1,3 +1,4 @@
+# pyright: reportUnusedFunction=false, reportUnusedCallResult=false
 # ruff: noqa: EM102, PLR0913, TRY003
 """Optional FastAPI callback for a generic OpenID Connect relying party.
 
@@ -8,6 +9,7 @@ local user. It does not mint tokens or implement an OpenID Provider.
 
 from __future__ import annotations
 
+import secrets
 from time import time
 from typing import TYPE_CHECKING, Final
 from urllib.parse import urlencode, urlsplit
@@ -31,11 +33,44 @@ if TYPE_CHECKING:
     )
 
 __all__: Final[tuple[str, ...]] = (
+    "OIDC_FLOW_COOKIE",
     "build_oidc_callback_router",
     "build_oidc_login_router",
 )
 
 _UNAVAILABLE: Final = "authentication unavailable"
+OIDC_FLOW_COOKIE: Final = "oidc_flow"
+_COOKIE_MAX_AGE: Final = 300
+
+
+def _https_request(request: Request) -> bool:
+    return request.url.scheme == "https"
+
+
+def _flow_binding(request: Request) -> str:
+    return request.cookies.get(OIDC_FLOW_COOKIE, "")
+
+
+def _set_flow_cookie(response: RedirectResponse, *, binding: str, https: bool) -> None:
+    response.set_cookie(
+        OIDC_FLOW_COOKIE,
+        binding,
+        max_age=_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=https,
+        samesite="lax",
+        path="/",
+    )
+
+
+def _clear_flow_cookie(response: RedirectResponse, *, https: bool) -> None:
+    response.delete_cookie(
+        OIDC_FLOW_COOKIE,
+        path="/",
+        secure=https,
+        httponly=True,
+        samesite="lax",
+    )
 
 
 def build_oidc_callback_router(
@@ -69,6 +104,7 @@ def build_oidc_callback_router(
                 redeem_code=redeem_code,
                 relying_party=relying_party,
                 now=clock(),
+                binding=_flow_binding(request),
             )
         except PermissionError as extra:
             raise HTTPException(
@@ -76,7 +112,9 @@ def build_oidc_callback_router(
                 detail=_UNAVAILABLE,
             ) from extra
         write_current_user(request, principal)
-        return RedirectResponse(success_url, status_code=302)
+        response = RedirectResponse(success_url, status_code=302)
+        _clear_flow_cookie(response, https=_https_request(request))
+        return response
 
     return router
 
@@ -97,8 +135,9 @@ def build_oidc_login_router(
     router = APIRouter()
 
     @router.get("/oidc/login")
-    def oidc_login() -> RedirectResponse:
-        flow = flows.start(now=clock())
+    def oidc_login(request: Request) -> RedirectResponse:
+        binding = secrets.token_urlsafe(32)
+        flow = flows.start(now=clock(), binding=binding)
         query = urlencode(
             {
                 "response_type": "code",
@@ -111,7 +150,12 @@ def build_oidc_login_router(
                 "code_challenge_method": "S256",
             }
         )
-        return RedirectResponse(f"{authorization_endpoint}?{query}", status_code=302)
+        response = RedirectResponse(
+            f"{authorization_endpoint}?{query}",
+            status_code=302,
+        )
+        _set_flow_cookie(response, binding=binding, https=_https_request(request))
+        return response
 
     return router
 

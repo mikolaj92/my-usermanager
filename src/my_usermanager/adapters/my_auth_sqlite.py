@@ -17,6 +17,7 @@ from my_usermanager.adapters.sqlite import (
     migrate_sqlite_schema,
 )
 from my_usermanager.adapters.sqlite_invitations import create_invitation_tables
+from my_usermanager.adapters.sqlite_oidc_flows import create_oidc_flow_tables
 from my_usermanager.adapters.sqlite_sessions import create_session_tables
 from my_usermanager.memory import MemoryRoleStore
 from my_usermanager.stores import DuplicateGrantError, DuplicateUserError
@@ -152,7 +153,7 @@ class SQLiteAuthDatabase:
         return conn
 
     def initialize(self) -> None:
-        """Bootstrap or migrate UM, auth, and invitation schemas together."""
+        """Bootstrap or migrate UM, auth, invitation, session, and OIDC flow schemas."""
         conn = self._connect()
         try:
             if conn.in_transaction:
@@ -197,6 +198,7 @@ class SQLiteAuthDatabase:
                 _ = auth_schema.ensure_sqlite_schema(conn, transaction_mode="external")
                 create_invitation_tables(conn, transaction_mode="external")
                 create_session_tables(conn, transaction_mode="external")
+                create_oidc_flow_tables(conn, transaction_mode="external")
                 conn.commit()
             except BaseException:
                 conn.rollback()

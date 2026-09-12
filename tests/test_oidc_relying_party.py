@@ -500,6 +500,9 @@ def test_oidc_login_starts_authorization_code_pkce_at_the_issuer() -> None:
     assert query["redirect_uri"] == ["https://app.example.test/oidc/callback"]
     assert query["scope"] == ["openid"]
     assert query["code_challenge_method"] == ["S256"]
-    stored = flows.consume(query["state"][0], now=1_010.0)
+    binding = started.cookies.get("oidc_flow")
+    assert binding
+    assert binding not in started.headers["location"]
+    stored = flows.consume(query["state"][0], now=1_010.0, binding=binding)
     assert stored.nonce == query["nonce"][0]
     assert query["code_challenge"] == [create_s256_code_challenge(stored.verifier)]

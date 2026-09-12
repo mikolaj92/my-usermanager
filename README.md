@@ -26,7 +26,8 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
   `my_usermanager.adapters.local_identity`,
   `my_usermanager.adapters.fastapi_htmx`,
   `my_usermanager.adapters.oidc`,
-  `my_usermanager.adapters.oidc_fastapi`
+  `my_usermanager.adapters.oidc_fastapi`,
+  `my_usermanager.adapters.sqlite_oidc_flows`
 
 ```sh
 uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.6"
@@ -287,6 +288,12 @@ explicitly during startup; CRUD never performs DDL. Use its
 use `transaction_mode="external"` when it participates in a host-owned
 transaction. It provides owner-scoped listing and single/all-session
 revocation; the host still generates/rotates the raw token and owns retention.
+
+OIDC login cookies stay opaque too. `/oidc/login` writes an httponly binding
+cookie; `SQLiteOidcFlowStore` keeps state, nonce, and the PKCE verifier in
+SQLite keyed by the cookie's SHA-256 digest. `SQLiteAuthDatabase.initialize()`
+creates `um_oidc_flows`. `MemoryOidcFlowStore` remains for tests. Do not put
+verifiers or ID tokens in the cookie.
 
 ## FastAPI/Jinja/HTMX user-management UI
 
