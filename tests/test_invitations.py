@@ -87,6 +87,7 @@ class Enrollment:
     issued: dict[str, IssuedEnrollment]
     revoked: set[str]
     number: int = 0
+    now: datetime = _NOW
 
     def issue_invitation(
         self, *, subject: str, ttl_seconds: int, issued_by: str
@@ -94,7 +95,7 @@ class Enrollment:
         self.number += 1
         item = IssuedEnrollment(
             f"cap-{self.number}",
-            _NOW + timedelta(seconds=ttl_seconds),
+            self.now + timedelta(seconds=ttl_seconds),
             f"token-{self.number}",
         )
         self.issued[subject] = item
@@ -245,7 +246,77 @@ def test_reissue_revokes_previous_material_and_replay_fails() -> None:
         )
 
 
-def test_revoked_and_expired_invitations_fail_closed() -> None:
+def test_expired_pending_invitation_can_be_reissued() -> None:
+    service, users, _, enrollment, _ = _service()
+    first = service.invite(
+        actor_id="admin",
+        user=User("anna", "anna", status="pending"),
+        grants=(InvitationGrant(role_name="admin"),),
+        ttl_seconds=300,
+    )
+    now = _NOW + timedelta(days=8)
+    service._now = lambda: now
+    enrollment.now = now
+
+    renewed = service.reissue(
+        actor_id="admin", invitation_id=first.invitation.invitation_id, ttl_seconds=600
+    )
+
+    assert renewed.token != first.token
+    assert renewed.invitation.expires_at > now
+    assert first.invitation.capability_id in enrollment.revoked
+    assert users.get("anna").status == "pending"
+    assert (
+        service.activate(
+            InvitationActivation(
+                renewed.invitation.invitation_id,
+                renewed.invitation.capability_id,
+                ExternalIdentity("my-auth", "anna"),
+            )
+        ).status
+        == "active"
+    )
+
+
+def test_expired_pending_invitation_can_be_revoked() -> None:
+    service, _, _, enrollment, _ = _service()
+    issued = service.invite(
+        actor_id="admin",
+        user=User("anna", "anna", status="pending"),
+        grants=(InvitationGrant(role_name="admin"),),
+        ttl_seconds=300,
+    )
+    service._now = lambda: _NOW + timedelta(days=8)
+
+    revoked = service.revoke(
+        actor_id="admin", invitation_id=issued.invitation.invitation_id
+    )
+
+    assert revoked.status == "revoked"
+    assert issued.invitation.capability_id in enrollment.revoked
+
+
+def test_expired_invitation_cannot_be_activated() -> None:
+    service, _, _, _, _ = _service()
+    issued = service.invite(
+        actor_id="admin",
+        user=User("anna", "anna", status="pending"),
+        grants=(InvitationGrant(role_name="admin"),),
+        ttl_seconds=300,
+    )
+    service._now = lambda: _NOW + timedelta(days=8)
+
+    with pytest.raises(InvitationError, match="invitation is unavailable"):
+        service.activate(
+            InvitationActivation(
+                issued.invitation.invitation_id,
+                issued.invitation.capability_id,
+                ExternalIdentity("my-auth", "anna"),
+            )
+        )
+
+
+def test_revoked_invitation_cannot_be_activated() -> None:
     service, _, _, enrollment, _ = _service()
     issued = service.invite(
         actor_id="admin",

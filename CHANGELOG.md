@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Allow administrators to reissue or revoke expired pending invitations; expired
+  capabilities remain unusable for activation.
+
 ## 0.6.7
 
 - Add `install_local_identity`: one FastAPI call mounts passkey login,

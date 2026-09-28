@@ -317,7 +317,7 @@ class InvitationService:
     def reissue(
         self, *, actor_id: str, invitation_id: str, ttl_seconds: int
     ) -> IssuedInvitation:
-        invitation = self._available(invitation_id)
+        invitation = self._pending_for_lifecycle(invitation_id)
         self._manager.require_permission(
             actor_id=actor_id,
             permission=_INVITE_PERMISSION,
@@ -342,7 +342,7 @@ class InvitationService:
         return IssuedInvitation(updated, enrollment.token)
 
     def revoke(self, *, actor_id: str, invitation_id: str) -> Invitation:
-        invitation = self._available(invitation_id)
+        invitation = self._pending_for_lifecycle(invitation_id)
         self._manager.require_permission(
             actor_id=actor_id,
             permission=_INVITE_PERMISSION,
@@ -378,6 +378,16 @@ class InvitationService:
         _ = self._invitations.update(used)
         self._audit_event(active.user_id, "invitation.activate", used)
         return active
+
+    def _pending_for_lifecycle(self, invitation_id: str) -> Invitation:
+        """Load a pending invitation for admin reissue/revoke, expired or not."""
+        invitation = self._invitations.get(invitation_id)
+        if invitation is None or invitation.status != "pending":
+            raise InvitationError
+        user = self._users.get(invitation.user_id)
+        if user is None or user.status != "pending":
+            raise InvitationError
+        return invitation
 
     def _available(self, invitation_id: str) -> Invitation:
         invitation = self._invitations.get(invitation_id)

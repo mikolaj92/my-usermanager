@@ -10,9 +10,19 @@
 }
 
 .um-shell {
-  width: min(100% - var(--um-space-8), 70rem);
+  box-sizing: border-box;
+  width: min(100%, 70rem);
+  max-width: 100%;
   margin-inline: auto;
   padding-block: var(--um-space-6);
+}
+
+.um-shell > *,
+.um-card,
+.um-stack,
+.um-cluster {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .um-card {
@@ -50,7 +60,13 @@
 
 .um-table-scroll {
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+}
+
+.um-card code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .um-alert {

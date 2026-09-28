@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Literal, Protocol
 
 from my_usermanager.invitations import IssuedEnrollment
+
+_EnrollmentPurpose = Literal["invitation", "account_recovery"]
 
 
 class _CapabilityRecord(Protocol):
@@ -23,7 +25,7 @@ class _CapabilityStore(Protocol):
         self,
         *,
         subject: str,
-        purpose: str,
+        purpose: _EnrollmentPurpose,
         ttl_seconds: int,
         issued_by: str | None = None,
     ) -> _IssuedCapability: ...
