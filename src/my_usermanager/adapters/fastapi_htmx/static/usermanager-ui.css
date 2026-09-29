@@ -64,6 +64,39 @@
   overflow-x: auto;
 }
 
+.um-table-scroll > .table {
+  table-layout: fixed;
+}
+
+.um-table-scroll .btn,
+.um-table-scroll .badge {
+  height: auto;
+  white-space: normal;
+  text-align: start;
+  max-width: 100%;
+}
+
+.um-table-scroll .badge {
+  display: inline;
+  height: auto;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+.um-table-scroll td,
+.um-table-scroll .um-muted {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.um-table-scroll .um-col-narrow {
+  width: 9rem;
+}
+
+.um-table-scroll .um-col-action {
+  width: 13rem;
+}
+
 .um-card code {
   overflow-wrap: anywhere;
   word-break: break-word;

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.6.9
+
+- Keep long user ids, emails, permission badges, and action labels inside
+  their admin table columns instead of spilling into the next column.
+
 ## 0.6.8
 
 - Allow administrators to reissue or revoke expired pending invitations; expired

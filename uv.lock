@@ -433,7 +433,7 @@ dependencies = [
 
 [[package]]
 name = "my-usermanager"
-version = "0.6.8"
+version = "0.6.9"
 source = { editable = "." }
 
 [package.optional-dependencies]
