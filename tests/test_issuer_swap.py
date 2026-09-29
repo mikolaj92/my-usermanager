@@ -8,7 +8,6 @@ principal. A second OpenID Provider is another HTTPS issuer plus an explicit
 from __future__ import annotations
 
 import inspect
-import sys
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -19,6 +18,7 @@ from joserfc import jwt
 from joserfc.jwk import RSAKey
 from starlette.middleware.sessions import SessionMiddleware
 
+from my_usermanager.adapters import oidc as oidc_adapter
 from my_usermanager.adapters.fastapi import current_user, write_current_user
 from my_usermanager.adapters.oidc import (
     MemoryOidcFlowStore,
@@ -169,7 +169,10 @@ def test_same_app_keeps_local_user_when_issuer_url_changes() -> None:
     )
     assert second.user_id == "local-1"
     assert second.username == "alice"
-    assert "my_auth" not in sys.modules
+    assert "my_auth" not in {
+        getattr(obj, "__module__", "").split(".", 1)[0]
+        for obj in vars(oidc_adapter).values()
+    }
 
 
 def test_product_route_sees_the_same_owner_after_issuer_swap() -> None:

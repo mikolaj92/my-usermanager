@@ -1,5 +1,5 @@
 # pyright: reportMissingParameterType=false, reportUnknownParameterType=false, reportUnusedParameter=false, reportPrivateUsage=false, reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportAny=false, reportUnusedCallResult=false
-# ruff: noqa: ANN001, ANN002, ANN201, BLE001
+# ruff: noqa: ANN001, ANN002, ANN201, BLE001, E402
 
 from __future__ import annotations
 
@@ -10,7 +10,8 @@ from typing import cast
 
 import httpx2
 import pytest
-import uvicorn
+
+uvicorn = pytest.importorskip("uvicorn")
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
 from app_factory.platform import PlatformPaths
 from fastapi import FastAPI, Request

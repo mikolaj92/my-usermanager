@@ -2,8 +2,11 @@
 
 ## Unreleased
 
+## 0.6.8
+
 - Allow administrators to reissue or revoke expired pending invitations; expired
   capabilities remain unusable for activation.
+- Keep the admin shell inside mobile viewports.
 
 ## 0.6.7
 
