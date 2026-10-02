@@ -20,7 +20,7 @@ def forbidden_response() -> HTMLResponse:
 def error_response(status_code: int, title: str, message: str) -> HTMLResponse:
     """Return a stable HTML error fragment for HTMX targets."""
     markup = (
-        '<section id="usermanager-ui-status" class="um-alert" '
+        '<section id="usermanager-ui-status" class="um-alert l--stack" '
         'role="alert" aria-live="assertive">'
         f"<h2>{escape(title)}</h2><p>{escape(message)}</p></section>"
     )

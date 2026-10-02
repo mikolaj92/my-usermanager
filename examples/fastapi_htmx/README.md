@@ -13,9 +13,11 @@ Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler.
 Both reusable adapters are opt-in extras:
 
 ```sh
-uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6"
+uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.7"
 uv add "my-usermanager[fastapi-htmx,myauth] @ git+https://github.com/mikolaj92/my-usermanager.git"
 ```
+
+The adapter layouts require app-factory `v0.7.9` or newer (bundled Lism).
 
 ## Run locally
 
@@ -24,7 +26,7 @@ dependencies. This keeps `my-usermanager` core dependencies unchanged.
 
 ```sh
 uv run --no-sync \
-  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6" \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.7" \
   --with "fastapi>=0.141.1" \
   --with "jinja2>=3.1" \
   --with "uvicorn[standard]>=0.52.4" \
@@ -37,7 +39,7 @@ Focused test command:
 
 ```sh
 uv run --no-sync \
-  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6" \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.7" \
   --with "fastapi>=0.141.1" \
   --with "jinja2>=3.1" \
   --with "httpx2>=2.12.0" \

@@ -151,6 +151,42 @@ def live_users_page():
         thread.join(timeout=3)
 
 
+def test_invite_fields_follow_container_width_without_changing_viewport(
+    live_users_page: str,
+) -> None:
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1000})
+        page.goto(live_users_page, wait_until="networkidle")
+
+        def measure(width) -> dict[str, object]:
+            return page.locator(".um-fields").evaluate(
+                """(form, width) => {
+              form.style.width = `${width}px`;
+              const style = getComputedStyle(form);
+              const labels = [...form.querySelectorAll('label')]
+                .map(el => el.getBoundingClientRect());
+              return {columns: style.gridTemplateColumns.split(' ').length,
+                overflow: form.scrollWidth > form.clientWidth,
+                gap: style.gap, viewport: innerWidth,
+                sameRow: Math.abs(labels[0].top - labels[1].top) < 1};
+            }""",
+                width,
+            )
+
+        wide = measure(850)
+        narrow = measure(300)
+        browser.close()
+    assert wide["columns"] == 3
+    assert narrow["columns"] == 1
+    assert wide["sameRow"] is True
+    assert narrow["sameRow"] is False
+    assert wide["viewport"] == narrow["viewport"] == 1440
+    assert wide["gap"] == narrow["gap"] == "16px"
+    assert not wide["overflow"]
+    assert not narrow["overflow"]
+
+
 def test_revealed_activation_link_stays_inside_mobile_viewport(
     live_users_page: str,
 ) -> None:

@@ -89,10 +89,18 @@ def add_invitation_routes(
             csrf=csrf,
         )
 
-    router.add_api_route(config.invite_path, invite, methods=["POST"])
     router.add_api_route(
-        config.reissue_invitation_path, reissue_invitation, methods=["POST"]
+        config.invite_path, invite, methods=["POST"], response_model=None
     )
     router.add_api_route(
-        config.revoke_invitation_path, revoke_invitation, methods=["POST"]
+        config.reissue_invitation_path,
+        reissue_invitation,
+        methods=["POST"],
+        response_model=None,
+    )
+    router.add_api_route(
+        config.revoke_invitation_path,
+        revoke_invitation,
+        methods=["POST"],
+        response_model=None,
     )

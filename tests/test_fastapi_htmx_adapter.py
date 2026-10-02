@@ -43,6 +43,45 @@ def fresh(script: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_html_routes_do_not_become_unresolved_openapi_response_models() -> None:
+    import my_usermanager.adapters.fastapi_htmx as adapter
+
+    app = FastAPI()
+    platform = install_app_factory_ui(app, environments=[])
+    _ = adapter.install_usermanager_ui(
+        app,
+        platform=platform,
+        hooks=_hooks(),
+        config=adapter.UserManagerUiConfig(csrf_protection=_csrf()),
+    )
+    schema = app.openapi()
+    assert "/account" in schema["paths"]
+    assert "/admin/users" in schema["paths"]
+
+
+def test_packaged_layouts_use_platform_primitives() -> None:
+    from importlib.resources import files
+
+    package = files("my_usermanager.adapters.fastapi_htmx")
+    css = package.joinpath("static/usermanager-ui.css").read_text()
+    assert "display: grid" not in css
+    assert "display: flex" not in css
+    for name in (
+        "account/index.html",
+        "users/list.html",
+        "users/_row.html",
+        "sessions/list.html",
+        "audit/list.html",
+    ):
+        html = package.joinpath("templates", name).read_text()
+        assert "l--stack" in html
+        assert "um-stack" not in html
+    account = package.joinpath("templates/account/index.html").read_text()
+    assert "l--autoColumns" in account
+    users = package.joinpath("templates/users/list.html").read_text()
+    assert "l--autoColumns" in users
+
+
 def test_root_imports_do_not_load_ui_dependencies() -> None:
     script = """
 import sys
@@ -698,6 +737,7 @@ def test_profile_update_rejects_future_birth_date_with_400() -> None:
     )
     assert response.status_code == 400
     assert "Profile update failed" in response.text
+    assert 'class="um-alert l--stack"' in response.text
     assert calls == []
 
     cleared = _post(

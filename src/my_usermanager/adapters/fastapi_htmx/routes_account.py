@@ -48,11 +48,13 @@ def add_account_routes(
         config.account_path,
         _account_endpoint(templates, config, hooks),
         methods=["GET"],
+        response_model=None,
     )
     router.add_api_route(
         config.profile_path,
         _profile_endpoint(config, hooks),
         methods=["POST"],
+        response_model=None,
     )
 
 

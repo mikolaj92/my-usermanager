@@ -115,7 +115,7 @@ def add_admin_users_page(
         )
         return HTMLResponse(templates.get_template(template_name).render(**context))
 
-    router.add_api_route(config.users_path, users, methods=["GET"])
+    router.add_api_route(config.users_path, users, methods=["GET"], response_model=None)
 
 
 def add_admin_mutation_routes(
@@ -137,6 +137,7 @@ def add_admin_mutation_routes(
             path,
             _mutation_endpoint(templates, config, hooks, kind),
             methods=["POST"],
+            response_model=None,
         )
 
 

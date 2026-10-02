@@ -46,5 +46,9 @@ def add_deletion_routes(
             redirect_url=config.users_path,
         )
 
-    router.add_api_route(config.soft_delete_user_path, soft_delete, methods=["POST"])
-    router.add_api_route(config.hard_delete_user_path, hard_delete, methods=["POST"])
+    router.add_api_route(
+        config.soft_delete_user_path, soft_delete, methods=["POST"], response_model=None
+    )
+    router.add_api_route(
+        config.hard_delete_user_path, hard_delete, methods=["POST"], response_model=None
+    )

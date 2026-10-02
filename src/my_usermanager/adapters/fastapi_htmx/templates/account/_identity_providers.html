@@ -2,11 +2,11 @@
 {% for provider in identity_providers %}
 <article class="card" data-identity-provider="{{ provider.provider }}">
   <header><h2>{{ provider.label }}</h2></header>
-  <section>
+  <section class="l--stack um-tight">
     {% for feature in ('credentials', 'recovery', 'profile', 'reauthentication', 'sessions', 'revoke_sessions', 'logout') %}
       {% set capability = provider|attr(feature) %}
       {% if capability.mode != 'unavailable' %}
-      <p data-identity-feature="{{ feature }}">
+      <p class="l--cluster" data-identity-feature="{{ feature }}">
         <a class="btn" data-variant="outline" href="{{ capability.url }}" data-no-htmx="true" rel="noreferrer">
           {{ labels['identity_' ~ feature] }}
         </a>

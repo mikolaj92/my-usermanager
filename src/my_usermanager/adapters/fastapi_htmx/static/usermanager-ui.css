@@ -19,8 +19,8 @@
 
 .um-shell > *,
 .um-card,
-.um-stack,
-.um-cluster {
+.um-shell .l--stack,
+.um-shell .l--cluster {
   min-width: 0;
   max-width: 100%;
 }
@@ -29,25 +29,34 @@
   padding: var(--um-space-5);
 }
 
-.um-stack {
-  display: grid;
-  gap: var(--um-space-4);
+/* Layout mechanics come from app-factory's published Lism primitives. */
+.um-shell,
+.um-card {
+  --layout-gap: var(--um-space-4);
 }
 
-.um-stack-tight {
-  display: grid;
-  gap: var(--um-space-2);
+.um-tight {
+  --layout-gap: var(--um-space-2);
 }
 
 .um-gap-xs {
-  gap: var(--um-space-1);
+  --layout-gap: var(--um-space-1);
 }
 
-.um-cluster {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--um-space-3);
+.um-shell .l--cluster {
+  --layout-gap: var(--um-space-3);
+}
+
+.um-fields {
+  --cols: 16rem;
+  --autoMode: auto-fit;
+  --layout-gap: var(--um-space-4);
+  align-items: end;
+}
+
+.um-fields > .um-submit {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 
 .um-between {
@@ -103,8 +112,7 @@
 }
 
 .um-alert {
-  display: grid;
-  gap: var(--um-space-2);
+  --layout-gap: var(--um-space-2);
   padding: var(--um-space-4);
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);

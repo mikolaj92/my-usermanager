@@ -87,5 +87,12 @@ def add_session_routes(
             redirect_url=config.sessions_path,
         )
 
-    router.add_api_route(config.sessions_path, sessions, methods=["GET"])
-    router.add_api_route(config.revoke_session_path, revoke_session, methods=["POST"])
+    router.add_api_route(
+        config.sessions_path, sessions, methods=["GET"], response_model=None
+    )
+    router.add_api_route(
+        config.revoke_session_path,
+        revoke_session,
+        methods=["POST"],
+        response_model=None,
+    )
