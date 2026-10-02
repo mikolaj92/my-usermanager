@@ -30,18 +30,18 @@ Pydantic, `my-auth`, or adapter resources as an import side effect.
   `my_usermanager.adapters.sqlite_oidc_flows`
 
 ```sh
-uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.9"
-uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.9"
-uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.9"
-uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.9"
+uv add "my-usermanager @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.10"
+uv add "my-usermanager[myauth] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.10"
+uv add "my-usermanager[fastapi] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.10"
+uv add "my-usermanager[fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.10"
 ```
 
 For the shared passkey stack, install the `myauth` and UI extras plus the
 public `my-auth` UI extra:
 
 ```sh
-uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.9"
-uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6"
+uv add "my-usermanager[myauth,fastapi-htmx] @ git+https://github.com/mikolaj92/my-usermanager.git@v0.6.10"
+uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.7"
 ```
 
 ## Local FastAPI plugin
@@ -299,6 +299,12 @@ verifiers or ID tokens in the cookie.
 
 The optional adapter installs into the host's canonical app-factory shell and shared platform asset mount. It remains usable without `my-auth`; passkey UI is an optional typed panel hook.
 
+Packaged pages use app-factory's pinned, same-origin Lism layout primitives.
+Stacks/clusters and adaptive profile/invitation field columns come from that
+stylesheet, not handwritten flex/grid rules in this package. Basecoat still
+owns components; adapter CSS supplies spacing/sizing and table overflow policy.
+No Lism reset, palette, runtime JavaScript, or duplicated asset is shipped.
+
 ```python
 from app_factory.adapters import UserManagerBinding, install_identity_adapters
 
@@ -328,7 +334,7 @@ The complete no-build reference is [`examples/fastapi_htmx`](examples/fastapi_ht
 
 ```sh
 uv run --no-sync \
-  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.6" \
+  --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.7" \
   --with "fastapi>=0.141.1" \
   --with "jinja2>=3.1" \
   --with "uvicorn[standard]>=0.52.4" \

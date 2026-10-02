@@ -85,4 +85,4 @@ def add_audit_route(
         )
         return HTMLResponse(templates.get_template(template_name).render(**context))
 
-    router.add_api_route(config.audit_path, audit, methods=["GET"])
+    router.add_api_route(config.audit_path, audit, methods=["GET"], response_model=None)

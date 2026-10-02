@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.6.10
+
+- Use app-factory's bundled Lism stack/cluster/auto-columns primitives for
+  account, admin, sessions, audit and error fragments; delete manual layout rules.
+- Profile and invitation fields adapt to their container width, not viewport
+  breakpoints. Preserve Basecoat components and mobile table sizing.
+- Require/pin app-factory `v0.7.9` and my-auth `v0.5.7` for the shared layout asset.
+- Keep HTML routes out of inferred response models so OpenAPI resolves without
+  runtime imports of type-only Response annotations.
+
 ## 0.6.9
 
 - Keep long user ids, emails, permission badges, and action labels inside

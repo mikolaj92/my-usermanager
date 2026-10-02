@@ -1,6 +1,6 @@
 {% from "app_factory/components/pagination.html" import pagination %}
 <div id="users-results" data-filter-query="{{ filter_query }}">
-  <form class="um-cluster" method="get" action="{{ results_url }}" hx-get="{{ results_url }}" hx-target="#users-results" hx-swap="outerHTML">
+  <form class="l--cluster" method="get" action="{{ results_url }}" hx-get="{{ results_url }}" hx-target="#users-results" hx-swap="outerHTML">
     <label>{{ labels.filter_search }} <input class="input" name="q" value="{{ query_params.get('q', '') }}"></label>
     <label>{{ labels.filter_status }}
       <select class="select" name="status">

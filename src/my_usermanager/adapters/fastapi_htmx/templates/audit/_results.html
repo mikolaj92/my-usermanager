@@ -1,6 +1,6 @@
 {% from "app_factory/components/pagination.html" import pagination %}
 <div id="audit-results" data-filter-query="{{ filter_query }}">
-  <form class="um-cluster" method="get" action="{{ results_url }}" hx-get="{{ results_url }}" hx-target="#audit-results" hx-swap="outerHTML">
+  <form class="l--cluster" method="get" action="{{ results_url }}" hx-get="{{ results_url }}" hx-target="#audit-results" hx-swap="outerHTML">
     <label>{{ labels.filter_actor }} <input class="input" name="actor_id" value="{{ query_params.get('actor_id', '') }}"></label>
     <label>{{ labels.filter_action }} <input class="input" name="action" value="{{ query_params.get('action', '') }}"></label>
     <label>{{ labels.filter_since }} <input class="input" name="since" value="{{ query_params.get('since', '') }}"></label>

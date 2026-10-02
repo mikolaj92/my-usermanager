@@ -11,7 +11,7 @@ def test_import_package_without_optional_framework_side_effects() -> None:
     import_check = (
         "import sys\n"
         "import my_usermanager\n"
-        "assert my_usermanager.__version__ == '0.6.9'\n"
+        "assert my_usermanager.__version__ == '0.6.10'\n"
         "assert 'my_auth' not in sys.modules\n"
         "assert 'fastapi' not in sys.modules\n"
         "assert 'pydantic' not in sys.modules\n"
@@ -39,7 +39,7 @@ def test_release_metadata_absorbs_unreleased_work() -> None:
     extras = project["project"]["optional-dependencies"]
     version = project["project"]["version"]
 
-    assert version == "0.6.9"
+    assert version == "0.6.10"
     unreleased = changelog.split("## Unreleased", 1)[1].split("## ", 1)[0]
     released = changelog.split("## 0.6.7", 1)[1].split("## ", 1)[0]
     assert "install_local_identity" not in unreleased
@@ -55,14 +55,15 @@ def test_release_metadata_absorbs_unreleased_work() -> None:
     assert "oidc" in extras
     assert (REPO_ROOT / "src" / "my_usermanager" / "py.typed").is_file()
     assert "Typing :: Typed" in project["project"]["classifiers"]
-    assert project["tool"]["uv"]["sources"]["my-auth"]["tag"] == "v0.5.6"
-    assert project["tool"]["uv"]["sources"]["app-factory"]["tag"] == "v0.7.2"
+    assert project["tool"]["uv"]["sources"]["my-auth"]["tag"] == "v0.5.7"
+    assert project["tool"]["uv"]["sources"]["app-factory"]["tag"] == "v0.7.9"
+    assert "app-factory[fastapi]>=0.7.9" in extras["fastapi-htmx"]
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     assert "my-auth v0.4 enrollment" not in readme
     assert "`my-auth` 0.5 enrollment" in readme
     agents = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    assert "v0.7.2" in agents
-    assert "v0.5.6" in agents
-    assert "v0.6.7" in agents.split("## Preferred BOM", 1)[1]
+    assert "v0.7.9" in agents
+    assert "v0.5.7" in agents
+    assert "v0.6.10" in agents.split("## Preferred BOM", 1)[1]
     assert "install_local_identity" in agents
     assert "v0.6.22" not in agents.split("## Preferred BOM", 1)[1]

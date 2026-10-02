@@ -26,15 +26,15 @@
   </td>
   <td>{{ user.email or "—" }}</td>
   <td>
-    <div class="um-stack um-gap-xs">
-      <div class="um-cluster">
+    <div class="l--stack um-gap-xs">
+      <div class="l--cluster">
         <span class="badge">{% if user.is_admin %}{{ labels.badge_admin }}{% else %}{{ labels.badge_user }}{% endif %}</span>
         {% for role in user.roles %}
           <span class="badge">{{ role }}</span>
         {% endfor %}
       </div>
       {% if user.permissions %}
-        <div class="um-stack um-gap-xs">
+        <div class="l--stack um-gap-xs">
           {% for permission in user.permissions %}
             <span class="badge">
               {{ permission.label }}
@@ -49,7 +49,7 @@
   </td>
   <td>
     {% if user.external_identities %}
-      <div class="um-stack um-gap-xs">
+      <div class="l--stack um-gap-xs">
         {% for identity in user.external_identities %}
           <code>{{ identity.provider }}:{{ identity.subject }}</code>
         {% endfor %}
@@ -59,7 +59,7 @@
     {% endif %}
   </td>
   <td>
-    <div class="um-stack um-gap-xs">
+    <div class="l--stack um-gap-xs">
       <span class="badge">{{ account_status_label }}</span>
       {% if invitation %}
         {% if invitation.status == "pending" %}
@@ -81,7 +81,7 @@
     </div>
   </td>
   <td>
-    <div class="um-stack">
+    <div class="l--stack">
       {% if account_status == "deleted" %}
         <span class="um-muted">{{ labels.status_deleted }}</span>
       {% elif account_status == "disabled" %}

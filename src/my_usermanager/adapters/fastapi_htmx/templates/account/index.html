@@ -3,22 +3,22 @@
 {% block title %}{{ labels.account_document_title }}{% endblock %}
 
 {% block content %}
-  <section class="um-shell um-stack" aria-labelledby="account-title">
-    <div class="um-stack-tight">
+  <section class="um-shell l--stack" aria-labelledby="account-title">
+    <div class="l--stack um-tight">
       <p class="badge">{{ labels.account_badge }}</p>
       <h1 id="account-title">{{ labels.account_title }}</h1>
       <p class="um-muted">{{ labels.account_description }}</p>
     </div>
 
-    <article class="card um-card um-stack">
-      <div class="um-cluster um-between">
+    <article class="card um-card l--stack">
+      <div class="l--cluster um-between">
         <div>
           <h2>{{ current_user.display_name or current_user.username or current_user.user_id }}</h2>
           {% if current_user.email %}<p class="um-muted">{{ current_user.email }}</p>{% endif %}
         </div>
         <span class="badge">{{ current_user.provider }}</span>
       </div>
-      <dl class="um-stack-tight">
+      <dl class="l--stack um-tight">
         <div>
           <dt class="um-muted">{{ labels.local_user_id }}</dt>
           <dd><code>{{ current_user.user_id }}</code></dd>
@@ -31,8 +31,8 @@
     </article>
 
     {% if profile_editable %}
-    <article class="card um-card um-stack" aria-labelledby="profile-title">
-      <div class="um-stack-tight">
+    <article class="card um-card l--stack" aria-labelledby="profile-title">
+      <div class="l--stack um-tight">
         <h2 id="profile-title">{{ labels.profile_title }}</h2>
         <p class="um-muted">{{ labels.profile_description }}</p>
         {% if profile_message %}
@@ -42,35 +42,35 @@
         <p class="um-muted" role="alert">{{ profile_error }}</p>
         {% endif %}
       </div>
-      <form class="um-stack" method="post" action="{{ config.profile_path }}" data-no-htmx="true">
+      <form class="l--autoColumns um-fields" method="post" action="{{ config.profile_path }}" data-no-htmx="true">
         {% for name, value in csrf_inputs %}
         <input type="hidden" name="{{ name }}" value="{{ value }}">
         {% endfor %}
-        <label class="um-stack-tight">
+        <label class="l--stack um-tight">
           <span>{{ labels.profile_username }} *</span>
           <input class="input" name="username" required value="{{ current_user.username or '' }}" autocomplete="username">
         </label>
-        <label class="um-stack-tight">
+        <label class="l--stack um-tight">
           <span>{{ labels.profile_first_name }}</span>
           <input class="input" name="first_name" value="{{ current_user.first_name or '' }}" autocomplete="given-name">
         </label>
-        <label class="um-stack-tight">
+        <label class="l--stack um-tight">
           <span>{{ labels.profile_last_name }}</span>
           <input class="input" name="last_name" value="{{ current_user.last_name or '' }}" autocomplete="family-name">
         </label>
-        <label class="um-stack-tight">
+        <label class="l--stack um-tight">
           <span>{{ labels.profile_display_name }}</span>
           <input class="input" name="display_name" value="{{ current_user.display_name or '' }}" autocomplete="nickname">
         </label>
-        <label class="um-stack-tight">
+        <label class="l--stack um-tight">
           <span>{{ labels.profile_email }}</span>
           <input class="input" type="email" name="email" value="{{ current_user.email or '' }}" autocomplete="email">
         </label>
-        <label class="um-stack-tight">
+        <label class="l--stack um-tight">
           <span>{{ labels.profile_birth_date }}</span>
           <input class="input" type="date" name="birth_date" value="{{ current_user.birth_date.isoformat() if current_user.birth_date else '' }}">
         </label>
-        <label class="um-stack-tight">
+        <label class="l--stack um-tight">
           <span>{{ labels.profile_gender }}</span>
           <select class="select" name="gender">
             <option value="" {% if not current_user.gender %}selected{% endif %}>{{ labels.profile_gender_unspecified }}</option>
@@ -79,7 +79,7 @@
             <option value="other" {% if current_user.gender == 'other' %}selected{% endif %}>{{ labels.profile_gender_other }}</option>
           </select>
         </label>
-        <button type="submit" class="btn" data-variant="primary">{{ labels.profile_save }}</button>
+        <button type="submit" class="btn um-submit" data-variant="primary">{{ labels.profile_save }}</button>
       </form>
     </article>
     {% endif %}
