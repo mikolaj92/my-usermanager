@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from tests.test_invitations import _service
+
 from my_usermanager import (
     InvitationRecipient,
     InvitationTransport,
@@ -18,7 +20,6 @@ from my_usermanager.invitations import (
     IssuedInvitation,
 )
 from my_usermanager.stores import AuditFilters
-from test_invitations import _service
 
 
 @dataclass

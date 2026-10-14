@@ -222,9 +222,8 @@ schemas, creates empty schemas, stamps canonical-unversioned layouts, stamps
 invitation metadata (`um_invitations`), and runs explicit one-shot UM
 migration for supported upgrade sources (including migratable legacy
 grant/audit layouts). Inspection is fail-closed: legacy layouts are not
-treated as ready dual-read paths. Supported my-auth legacy schemas migrate
-through my-auth's explicit migration API inside the shared transaction.
-Unsupported schemas and orphan grants are refused.
+treated as ready dual-read paths. Supported my-auth legacy schemas migrate through
+my-auth's explicit migration API. Unsupported schemas and orphan grants are refused.
 Initialization/migration requires no pending transaction. Inspection is
 read-only; do not treat inspection as initialization.
 

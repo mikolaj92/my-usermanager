@@ -10,19 +10,22 @@ if TYPE_CHECKING:
     from fastapi import Request
 
     from my_usermanager.adapters.fastapi_htmx import (
+        AuditPage,
         CapabilityOption,
         CsrfContext,
         CsrfProtection,
         PasskeyPanel,
         PermissionGrantRow,
+        UserManagerUiConfig,
         UserManagerUiHooks,
+        UserPage,
         UserRow,
     )
 
 import pytest
-from app_factory import PlatformPaths
 from app_factory.csrf import SessionCsrfProtection as FactorySessionCsrfProtection
 from app_factory.fastapi import AppFactoryUi, install_app_factory_ui
+from app_factory.platform import PlatformPaths
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jinja2 import DictLoader, Environment
@@ -226,7 +229,7 @@ class FakeUiHooks:
 
     def list_users(
         self, _request: Request, _current_user: AuthenticatedSubject
-    ) -> tuple[UserRow, ...]:
+    ) -> tuple[UserRow, ...] | UserPage:
         return (self.row, self.pending_row)
 
     def role_options(
@@ -396,7 +399,7 @@ class FakeUiHooks:
 
     def list_audit_events(
         self, _request: Request, _current_user: AuthenticatedSubject
-    ) -> tuple[object, ...]:
+    ) -> tuple[object, ...] | AuditPage:
         import my_usermanager.adapters.fastapi_htmx as adapter
 
         return (
@@ -465,7 +468,7 @@ class ResponseLike(Protocol):
 
 
 class ClientLike(Protocol):
-    def get(self, url: str) -> object: ...
+    def get(self, url: str, *, headers: dict[str, str] | None = None) -> object: ...
 
     def post(
         self,
@@ -629,7 +632,7 @@ def test_route_toggles_and_csrf_guard() -> None:  # noqa: PLR0915
         follow_redirects=False,
     )
     assert delivered_redirect.status_code == 303
-    location = getattr(delivered_redirect, "headers", {}).get("location", "")
+    location = _response(delivered_redirect).headers.get("location", "")
     assert "invitation_delivery=delivered" in location
     assert "invitation_url=" not in location
     assert "capability=" not in location
@@ -1061,10 +1064,13 @@ def _paged_app(
     users: tuple[UserRow, ...] | None = None,
     events: tuple[object, ...] | None = None,
     deny_admin: bool = False,
-) -> tuple[ClientLike, object]:
+) -> tuple[ClientLike, UserManagerUiConfig]:
     import my_usermanager.adapters.fastapi_htmx as adapter
 
     class PagedHooks(FakeUiHooks):
+        _users: tuple[UserRow, ...]
+        _events: tuple[object, ...]
+
         def __init__(self) -> None:
             super().__init__()
             if users is not None:
@@ -1131,7 +1137,7 @@ def _paged_app(
             limit: int | None = None,
             offset: int = 0,
             query: object | None = None,
-        ) -> object:
+        ) -> UserPage:
             from my_usermanager.stores import UserQuery
 
             selected_limit = 1 if limit is None else limit
@@ -1165,7 +1171,7 @@ def _paged_app(
             limit: int | None = None,
             offset: int = 0,
             filters: object | None = None,
-        ) -> object:
+        ) -> AuditPage:
             from datetime import datetime
 
             from my_usermanager.stores import AuditFilters
