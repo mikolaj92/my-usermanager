@@ -186,7 +186,6 @@ Identity-linking checklist for host apps:
 
 Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
 
-
 ## Neutral self-registration
 
 `SQLiteSelfRegistrationService.register(..., initial_role=...)` requires the host
@@ -217,15 +216,13 @@ back all of them. Failed options and failed WebAuthn verification never reach
 it. Host domain rows and policy state remain host-owned and are supplied after
 policy verification.
 
-The owner must call `initialize()` explicitly at startup. It inspects both
-schemas, creates empty schemas, stamps canonical-unversioned layouts, stamps
-invitation metadata (`um_invitations`), and runs explicit one-shot UM
-migration for supported upgrade sources (including migratable legacy
-grant/audit layouts). Inspection is fail-closed: legacy layouts are not
-treated as ready dual-read paths. Supported my-auth legacy schemas migrate through
-my-auth's explicit migration API. Unsupported schemas and orphan grants are refused.
-Initialization/migration requires no pending transaction. Inspection is
-read-only; do not treat inspection as initialization.
+Call `initialize()` explicitly without a pending transaction: it inspects, initializes and migrates supported UM/my-auth schemas; unsupported schemas and orphan grants fail closed. Inspection alone is read-only.
+
+**Proposed ADR — optional Postgres/SQLAlchemy, deferred pending a consumer and approval.** No requiring host is identified in this issue; no backend is implemented here. Inventory at main `1844d41` and my-auth v0.5.7: synchronous User/Grant/Audit and Invitation stores have Memory/SQLite implementations; roles use `MemoryRoleStore`, including SQLite composition. Historical my-auth#1 is closed and concerns credentials, not UM stores; closure does not establish Postgres compatibility.
+Use separate optional users, roles, grants, audit, invitations, database and schema modules behind existing contracts. SQLite stays default; SQLAlchemy and its driver must not enter core imports. Resolve username normalization and invitation transaction parity before implementation.
+Propose sync Engine/Connection APIs; async requires a separate decision. Hosts may lend an engine/connection or request an adapter-owned engine. Dispose only owned engines; close only owned connections. Stores never commit borrowed transactions; the coordinator commits owned transactions on success and rolls back on failure.
+UM owns UM migrations; my-auth owns credential migrations; hosts serialize explicit execution. No implicit DDL. Passkey + UM atomicity remains unresolved until a compatible my-auth credential backend shares the connection and outer transaction.
+Stage implementation after ADR approval: database/transactions → five store modules → shared Memory/SQLite/Postgres contract checks. Extend existing checks to Invitation. Real Postgres checks must cover unique identity/username, CAS, rollback (including credentials), and concurrent last-admin mutations with independent connections and a shared guard. SQLite cannot substitute for these checks.
 
 `SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
 commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use

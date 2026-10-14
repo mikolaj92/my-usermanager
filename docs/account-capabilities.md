@@ -1,7 +1,6 @@
 # Provider-aware account UI
 
 Implementation slice of #127/#129, not a completed OIDC integration.
-
 `my_usermanager.identity_capabilities` is dependency-free. Its frozen
 `IdentityProviderCapabilities` describes credentials, recovery, provider profile,
 reauthentication, sessions, revocation and sign-out entry pages. Each feature is
