@@ -6,15 +6,14 @@ host requires Postgres and the acceptance gates below are met.
 
 ## Evidence and revision boundary
 
-Audit date: 2026-10-14. The starting checkout, local `origin/main`, and remote
-`refs/heads/main` all resolve to
-`1844d41e0caad5a458a16bc16d3dcc54444b35fc`. Remote confirmation used
-`git ls-remote origin refs/heads/main`; the checkout had no diff against main.
-All repository paths below refer to that revision unless noted otherwise.
-
-Contrary to the supplied plan's checkout description, this ADR did not exist
-in either the working tree or main. This creates the single decision document
-at the requested path, rather than a second ADR.
+Audit date: 2026-10-14. This follow-up starts at
+`961b7e372f21272a8ff97c9ad9de2bf6d7215034` on `lokay/125`, with a clean tree.
+`git ls-remote origin refs/heads/main` confirms that remote main still matches
+local `origin/main`: `1844d41e0caad5a458a16bc16d3dcc54444b35fc`.
+The starting branch adds this ADR, README corrections, production typing and
+formatting fixes across eleven files. These changes remain in place.
+The ADR exists in the checkout, but not in main; this updates that same document.
+Inventory paths were rechecked against the starting branch revision.
 
 The issue's my-usermanager v0.6.5 / my-auth v0.5.4 research is historical,
 not the current baseline. Current metadata is my-usermanager 0.6.10; nested
@@ -23,7 +22,9 @@ sources pin app-factory v0.7.9 and my-auth v0.5.7. `uv.lock` resolves my-auth to
 that same commit. The installed sources inspected below match that lock.
 
 [my-auth#1](https://github.com/mikolaj92/my-auth/issues/1) was observed closed
-on 2026-07-02. Its body reports app-local SQLite stores and a pyemitype
+on 2026-07-02 in the prior audit. The issue body has no pinned consumer
+revision; its claims remain unverified historical evidence. Its body reports
+app-local SQLite stores and a pyemitype
 SQLAlchemy ORM credential store. These are historical issue claims, not an
 audit of those consumers or proof of a library Postgres backend. Closure does
 not establish completion of every suggested adapter. In my-auth v0.5.7,
@@ -61,7 +62,9 @@ these are equivalent for Unicode. Postgres must pin and test normalization
 semantics before claiming parity, rather than inherit server collation.
 
 Invitation parity is also incomplete: SQLite uniquely constrains capability
-IDs, one pending invitation per user and the user FK. Memory checks duplicate
+IDs, one pending invitation per user and the user FK. SQLite create maps
+integrity failures to `InvitationError`; update does not map integrity failures.
+The contract does not itself specify these extra constraints. Memory checks duplicate
 invitation IDs and existing pending users on create, but not all these rules
 on update. SQLiteInvitationStore mutations commit directly; its schema
 initializer's external mode does **not** make the store transaction-bound.
@@ -76,7 +79,9 @@ Additional verified adapter boundaries:
 - `adapters/my_auth_sqlite.py:SQLiteAuthDatabase` coordinates initialization
   and `BEGIN IMMEDIATE` transactions. `SQLiteAuthTransaction` exposes users,
   grants, the static role catalogue and an external credential-store factory;
-  it does not expose all five stores automatically.
+  it does not expose all five stores automatically. In path-mode `stores()`,
+  this follow-up closes the first owned connection if opening the second fails;
+  borrowed connections remain caller-owned.
 - The shared owner can migrate supported legacy my-auth schemas through
   my-auth's migration API. README's statement that all auth legacy schemas
   are refused is inaccurate and is corrected in this PR.
@@ -264,14 +269,18 @@ empty list; branch protection inspection returned HTTP 401. No open PR was
 found for `mikolaj92:lokay/125`. Therefore required external checks cannot be
 fully established without authorized repository evidence. No token was read
 or written. Local results cannot certify required CI on the final PR SHA.
+The follow-up's unauthenticated requests for check runs at starting SHA
+`961b7e3` and open PRs both returned HTTP 403 (public API rate limit).
+The earlier observations above are not renewed evidence for this head.
 Recheck the actual PR head, required protections and external checks after
 publication; final-SHA CI confirmation remains an explicit delivery gate.
 
-Local validation of this change: 333 tests passed; Ruff lint and formatting
-passed. The formatter exposed five pre-existing file inconsistencies, corrected
-without changing tests. Basedpyright initially reported 59 errors; nine
-production errors were fixed with attribute annotations and precise typing at
-the existing OIDC validation boundary. The full type gate still reports
+Follow-up validation: 333 tests passed; Ruff lint and formatting passed
+(110 files). A manual fault-injection check confirmed owned-connection cleanup
+when the second connection fails, and preservation of a borrowed connection
+on store close. No test files or functions changed.
+The prior commit corrected five formatting inconsistencies and nine production
+typing errors; those fixes remain in place. The full type gate still reports
 **50 errors and 21 warnings**, all in existing test files:
 `test_fastapi_htmx_adapter.py`, `test_imports.py`,
 `test_invitation_delivery.py`, `test_issuer_swap.py`, and
