@@ -11,14 +11,12 @@ The example remains an optional consumer. Importing or installing core
 Basecoat, React, Tailwind, an SPA shell, `npm` tooling, or a bundler.
 
 Both reusable adapters are opt-in extras:
-
 ```sh
 uv add "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.7"
 uv add "my-usermanager[fastapi-htmx,myauth] @ git+https://github.com/mikolaj92/my-usermanager.git"
 ```
 
 The adapter layouts require app-factory `v0.7.9` or newer (bundled Lism).
-
 ## Run locally
 
 Use the published `my-auth` extra and temporary example-only runtime
@@ -34,9 +32,7 @@ uv run --no-sync \
 ```
 
 Then open <http://127.0.0.1:8000/auth/login>.
-
 Focused test command:
-
 ```sh
 uv run --no-sync \
   --with "my-auth[fastapi-htmx] @ git+https://github.com/mikolaj92/my-auth.git@v0.5.7" \
@@ -47,9 +43,12 @@ uv run --no-sync \
 ```
 
 The identity stack uses the app-factory composer:
-
 ```python
-from app_factory.adapters import PasskeyBinding, UserManagerBinding, install_identity_adapters
+from app_factory.adapters import (
+    PasskeyBinding,
+    UserManagerBinding,
+    install_identity_adapters,
+)
 
 install_identity_adapters(
     app,
@@ -72,9 +71,12 @@ call legacy `create_*` router factories or manually mount adapter static files.
 
 The account/admin UI remains owned by `my_usermanager`; the binding only passes
 host hooks and CSRF policy. Hosts do not call either adapter installer directly.
-
 ```python
-from my_usermanager.adapters.fastapi_htmx import CsrfContext, UserRow, row_key_from_user_id
+from my_usermanager.adapters.fastapi_htmx import (
+    CsrfContext,
+    UserRow,
+    row_key_from_user_id,
+)
 
 row = UserRow(
     user_id="unsafe/id space",
@@ -149,10 +151,6 @@ The host application owns sessions, app cookies, current-user lookup, CSRF
 validation, persistence, registration policy, local user provisioning, admin
 checks, role/grant changes, audit logging, redirects, and logout effects. In
 this example those boundaries are deliberately demo-only:
-
-Security ownership checklist: sessions; app cookies; CSRF validation;
-persistence; registration policy; local user provisioning; admin checks;
-role/grant changes; audit logging; redirects; logout effects.
 
 - in-memory users only
 - no-op demo CSRF hidden input and `X-Demo-CSRF` metadata only

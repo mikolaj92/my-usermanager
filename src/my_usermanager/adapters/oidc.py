@@ -14,7 +14,7 @@ import secrets
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import TYPE_CHECKING, Final, Protocol
+from typing import TYPE_CHECKING, Final, Protocol, cast
 from urllib.parse import urlsplit
 
 from joserfc import jwt
@@ -26,7 +26,7 @@ from my_usermanager.authentication import resolve_authenticated_principal
 from my_usermanager.subjects import AuthenticatedSubject, oidc_external_identity
 
 if TYPE_CHECKING:
-    from joserfc.jwk import KeyFlexible
+    from joserfc.jwk import KeyFlexible, KeySetSerialization
 
     from my_usermanager.models import ExternalIdentity, User
     from my_usermanager.sessions import SessionPrincipal
@@ -180,6 +180,11 @@ class OidcRelyingParty:
 class OidcJwksCache:
     """Refreshable JWKS cache that fails closed on fetch or unknown kid."""
 
+    _fetch_jwks: Callable[[], Mapping[str, object]]
+    _ttl_seconds: float
+    _max_unknown_kid_refreshes: int
+    _expires_at: float
+
     def __init__(
         self,
         fetch_jwks: Callable[[], Mapping[str, object]],
@@ -203,7 +208,7 @@ class OidcJwksCache:
         keys = self._keys_at(now)
         found = self._find(keys, kid)
         if found is not None:
-            self._unknown_kid_refreshes.pop(kid, None)
+            _ = self._unknown_kid_refreshes.pop(kid, None)
             return found
         attempts = self._unknown_kid_refreshes.get(kid, 0)
         if attempts >= self._max_unknown_kid_refreshes:
@@ -213,7 +218,7 @@ class OidcJwksCache:
         found = self._find(keys, kid)
         if found is None:
             raise PermissionError(_UNAVAILABLE)
-        self._unknown_kid_refreshes.pop(kid, None)
+        _ = self._unknown_kid_refreshes.pop(kid, None)
         return found
 
     def _keys_at(self, now: float) -> KeySet:
@@ -224,7 +229,7 @@ class OidcJwksCache:
     def _refresh(self, now: float) -> KeySet:
         try:
             payload = self._fetch_jwks()
-            keys = KeySet.import_key_set(payload)
+            keys = KeySet.import_key_set(cast("KeySetSerialization", payload))
         except Exception as extra:
             raise PermissionError(_UNAVAILABLE) from extra
         self._keys = keys
@@ -241,6 +246,8 @@ class OidcJwksCache:
 
 class MemoryOidcFlowStore:
     """Process-local authorization-flow store for tests and development."""
+
+    _ttl_seconds: float
 
     def __init__(self, *, ttl_seconds: float = _DEFAULT_TTL_SECONDS) -> None:
         if ttl_seconds <= 0:
@@ -326,7 +333,7 @@ def verify_id_token(
 def _require_authorized_party(claims: Mapping[str, object], *, audience: str) -> None:
     authorized_party = claims.get("azp")
     audiences = claims.get("aud")
-    listed = isinstance(audiences, list) and len(audiences) > 1
+    listed = isinstance(audiences, list) and len(cast("list[object]", audiences)) > 1
     if authorized_party is None:
         if listed:
             raise PermissionError(_UNAVAILABLE)
@@ -351,7 +358,7 @@ def complete_authorization_code(
         id_token = redeem_code(code, verifier=flow.verifier)
     except Exception as extra:
         raise PermissionError(_UNAVAILABLE) from extra
-    if not isinstance(id_token, str) or not id_token:
+    if not isinstance(cast("object", id_token), str) or not id_token:
         raise PermissionError(_UNAVAILABLE)
     claims = verify_id_token(
         id_token,

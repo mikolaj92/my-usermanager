@@ -4,7 +4,11 @@ from __future__ import annotations
 import base64
 import json
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 import pytest
 from fastapi import FastAPI, Request
@@ -43,7 +47,7 @@ def test_oidc_flow_store_issues_one_time_state_with_nonce_and_pkce() -> None:
     assert len(consumed.nonce) >= 32
     assert len(consumed.verifier) >= 43
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        store.consume(started.state, now=1_011.0)
+        _ = store.consume(started.state, now=1_011.0)
 
 
 def test_expired_oidc_flow_cannot_be_consumed() -> None:
@@ -51,7 +55,7 @@ def test_expired_oidc_flow_cannot_be_consumed() -> None:
     started = store.start(now=1_000.0)
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        store.consume(started.state, now=1_031.0)
+        _ = store.consume(started.state, now=1_031.0)
 
 
 def _rsa_key() -> RSAKey:
@@ -63,7 +67,7 @@ def _rsa_key() -> RSAKey:
     )
 
 
-def _b64url(value: dict[str, object]) -> str:
+def _b64url(value: Mapping[str, object]) -> str:
     raw = json.dumps(value, separators=(",", ":")).encode()
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
@@ -110,7 +114,7 @@ def test_id_token_verification_requires_iss_aud_exp_and_nonce() -> None:
     assert claims["sub"] == "user-1"
     assert claims["iss"] == "https://auth.example.test"
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             token,
             key=key,
             issuer="https://other.example.test",
@@ -119,7 +123,7 @@ def test_id_token_verification_requires_iss_aud_exp_and_nonce() -> None:
             now=now,
         )
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             token,
             key=key,
             issuer="https://auth.example.test",
@@ -128,7 +132,7 @@ def test_id_token_verification_requires_iss_aud_exp_and_nonce() -> None:
             now=now,
         )
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             token,
             key=key,
             issuer="https://auth.example.test",
@@ -137,7 +141,7 @@ def test_id_token_verification_requires_iss_aud_exp_and_nonce() -> None:
             now=now,
         )
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             token,
             key=key,
             issuer="https://auth.example.test",
@@ -184,14 +188,14 @@ def test_jwks_cache_rotates_keys_and_limits_unknown_kid_refreshes() -> None:
     assert fetches == [fetches[0], rotated.kid]
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        cache.key_for("still-unknown", now=now)
+        _ = cache.key_for("still-unknown", now=now)
     assert len(fetches) == 3
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        cache.key_for("still-unknown", now=now)
+        _ = cache.key_for("still-unknown", now=now)
     assert len(fetches) == 3
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             _id_token(rotated),
             key=cache.key_for(rotated.kid or "", now=now),
             issuer="https://auth.example.test",
@@ -231,18 +235,18 @@ def test_openid_discovery_uses_host_issuer_and_fails_closed() -> None:
         }
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        load_openid_provider_metadata(issuer, fetch=mismatched)
+        _ = load_openid_provider_metadata(issuer, fetch=mismatched)
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        load_openid_provider_metadata("https://attacker.example.test", fetch=fetch)
+        _ = load_openid_provider_metadata("https://attacker.example.test", fetch=fetch)
     with pytest.raises(ValueError, match="issuer"):
-        load_openid_provider_metadata("http://auth.example.test", fetch=fetch)
+        _ = load_openid_provider_metadata("http://auth.example.test", fetch=fetch)
 
     def boom(url: str) -> dict[str, object]:
         del url
         raise TimeoutError("discovery timed out")
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        load_openid_provider_metadata(issuer, fetch=boom)
+        _ = load_openid_provider_metadata(issuer, fetch=boom)
 
 
 def test_jwks_cache_fails_closed_when_fetch_raises() -> None:
@@ -251,7 +255,7 @@ def test_jwks_cache_fails_closed_when_fetch_raises() -> None:
 
     cache = OidcJwksCache(fetch_jwks, ttl_seconds=60)
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        cache.key_for("any", now=1_000.0)
+        _ = cache.key_for("any", now=1_000.0)
 
 
 def test_id_token_azp_must_match_client_when_present_or_when_aud_is_a_list() -> None:
@@ -269,7 +273,7 @@ def test_id_token_azp_must_match_client_when_present_or_when_aud_is_a_list() -> 
     assert matching["azp"] == "app"
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             _id_token(key, extra={"azp": "other-app"}),
             key=key,
             issuer="https://auth.example.test",
@@ -288,7 +292,7 @@ def test_id_token_azp_must_match_client_when_present_or_when_aud_is_a_list() -> 
     )
     assert listed["azp"] == "app"
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             _id_token(key, extra={"aud": ["app", "other"]}),
             key=key,
             issuer="https://auth.example.test",
@@ -318,7 +322,7 @@ def test_id_token_signed_with_alg_none_is_rejected() -> None:
     )
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        verify_id_token(
+        _ = verify_id_token(
             token,
             key=key,
             issuer="https://auth.example.test",
@@ -330,7 +334,7 @@ def test_id_token_signed_with_alg_none_is_rejected() -> None:
 
 class _IdentityStore:
     def __init__(self, user: User) -> None:
-        self._user = user
+        self._user: User = user
 
     def resolve_external_identity(self, identity: ExternalIdentity) -> User | None:
         if identity in self._user.external_identities:
@@ -389,7 +393,7 @@ def test_authorization_code_completion_maps_issuer_sub_to_local_principal() -> N
     assert principal.user_id == "local-1"
     assert principal.username == "alice"
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        complete_authorization_code(
+        _ = complete_authorization_code(
             code="auth-code",
             state=flow.state,
             flows=flows,
@@ -445,6 +449,7 @@ def test_oidc_callback_writes_local_session_principal() -> None:
         principal = current_user(request)
         return {"user_id": None if principal is None else principal.user_id}
 
+    assert callable(me)
     client = TestClient(app, base_url="https://app.example.test")
     response = client.get(
         "/oidc/callback",

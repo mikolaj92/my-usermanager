@@ -36,6 +36,7 @@ _FAVICON_SVG: Final = (
     "</svg>"
 )
 
+
 def create_app() -> FastAPI:
     """Create the optional no-build adapter composition example."""
     demo_app = FastAPI(title="my-usermanager FastAPI HTMX adapter composition example")

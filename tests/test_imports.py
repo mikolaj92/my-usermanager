@@ -2,6 +2,7 @@ import subprocess
 import sys
 import tomllib
 from pathlib import Path
+from typing import cast
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -36,8 +37,8 @@ def test_import_package_without_optional_framework_side_effects() -> None:
 def test_release_metadata_absorbs_unreleased_work() -> None:
     project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    extras = project["project"]["optional-dependencies"]
-    version = project["project"]["version"]
+    extras = cast("dict[str, list[str]]", project["project"]["optional-dependencies"])
+    version = cast("str", project["project"]["version"])
 
     assert version == "0.6.10"
     unreleased = changelog.split("## Unreleased", 1)[1].split("## ", 1)[0]

@@ -10,6 +10,10 @@ from __future__ import annotations
 import inspect
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 import pytest
 from fastapi import FastAPI, Request
@@ -43,6 +47,9 @@ def notes_owner(request: Request) -> dict[str, str | None]:
 
 
 class _LinkedStore:
+    _users: dict[str, User]
+    _links: dict[ExternalIdentity, str]
+
     def __init__(self, user: User) -> None:
         self._users = {user.user_id: user}
         self._links = dict.fromkeys(user.external_identities, user.user_id)
@@ -115,7 +122,7 @@ def _complete(
         code="auth-code",
         state=flow.state,
         flows=flows,
-        redeem_code=lambda _code, *, verifier: token,
+        redeem_code=lambda code="", *, verifier="": token,
         relying_party=OidcRelyingParty(
             issuer=issuer,
             audience="app",
@@ -154,7 +161,7 @@ def test_same_app_keeps_local_user_when_issuer_url_changes() -> None:
     assert first.user_id == "local-1"
 
     with pytest.raises(PermissionError, match="authentication unavailable"):
-        _complete(issuer=REMOTE_ISSUER, key=remote_key, store=store, now=now + 1)
+        _ = _complete(issuer=REMOTE_ISSUER, key=remote_key, store=store, now=now + 1)
 
     linked = store.link_external_identity(
         user_id="local-1",
@@ -171,7 +178,7 @@ def test_same_app_keeps_local_user_when_issuer_url_changes() -> None:
     assert second.username == "alice"
     assert "my_auth" not in {
         getattr(obj, "__module__", "").split(".", 1)[0]
-        for obj in vars(oidc_adapter).values()
+        for obj in cast("Mapping[str, object]", vars(oidc_adapter)).values()
     }
 
 
@@ -191,7 +198,7 @@ def test_product_route_sees_the_same_owner_after_issuer_swap() -> None:
     )
     app = FastAPI()
     app.add_middleware(SessionMiddleware, secret_key="test-secret")  # noqa: S106
-    app.get("/notes")(notes_owner)
+    _ = app.get("/notes")(notes_owner)
     client = TestClient(app, base_url="https://app.example.test")
 
     @app.post("/login-as")
@@ -202,9 +209,10 @@ def test_product_route_sees_the_same_owner_after_issuer_swap() -> None:
             store=store,
             now=now,
         )
-        write_current_user(request, principal)
+        _ = write_current_user(request, principal)
         return {"user_id": principal.user_id}
 
+    assert callable(login_as)
     assert client.post("/login-as", params={"issuer": LOCAL_ISSUER}).json() == {
         "user_id": "local-1"
     }

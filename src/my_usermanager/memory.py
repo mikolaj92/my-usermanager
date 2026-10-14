@@ -95,7 +95,6 @@ class MemoryUserStore:
         return tuple(ordered_users[offset : offset + limit])
 
     def count_active(self) -> int:
-        """Return the number of non-disabled users."""
         return sum(1 for user in self._users.values() if user.is_active)
 
 

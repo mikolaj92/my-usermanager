@@ -50,6 +50,8 @@ class StepUpStore(Protocol):
 class MemoryStepUpStore:
     """Process-local step-up proofs for tests and single-process hosts."""
 
+    _ttl_seconds: float
+
     def __init__(self, *, ttl_seconds: float = 60.0) -> None:
         if ttl_seconds <= 0:
             raise ValueError(_TTL_ERROR)
