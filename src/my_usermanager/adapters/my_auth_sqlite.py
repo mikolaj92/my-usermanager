@@ -214,11 +214,7 @@ class SQLiteAuthDatabase:
                 raise RuntimeError(_SCHEMA_PENDING_ERROR)
             return SQLiteAuthTransaction(self._connect(), transaction_mode="operation")
         conn = self._connect()
-        try:
-            grants_conn = self._connect()
-        except BaseException:
-            conn.close()
-            raise
+        grants_conn = self._connect()
         return SQLiteAuthTransaction(
             conn,
             transaction_mode="operation",

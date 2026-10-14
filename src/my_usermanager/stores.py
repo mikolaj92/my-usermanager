@@ -192,9 +192,7 @@ class UserStore(Protocol):
         """Return a deterministic page of users matching query filters."""
         ...
 
-    def count_active(self) -> int:
-        """Return the number of active users, excluding pending and deleted users."""
-        ...
+    def count_active(self) -> int: ...
 
 
 @runtime_checkable

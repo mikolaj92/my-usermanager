@@ -15,13 +15,7 @@ domain routes. The core does not implement an OpenID Provider or mint tokens.
 The core package is dependency-free and does not import FastAPI, Jinja,
 Pydantic, `my-auth`, or adapter resources as an import side effect.
 
-## Proposed Postgres backend
-
-SQLite remains the default durable adapter. An optional synchronous
-Postgres/SQLAlchemy Core backend is **proposed**, not implemented or installable.
-There is no confirmed Postgres consumer or verified Postgres passkey transaction
-integration. See [ADR 0001](docs/adr/0001-postgres-sqlalchemy-backend.md) for the
-contract inventory, resource ownership, acceptance gates, and staged plan.
+An optional Postgres/SQLAlchemy adapter is [proposed](docs/adr/0001-postgres-sqlalchemy-backend.md), not implemented; SQLite remains the default.
 
 ## Scope, install, and import paths
 
@@ -211,9 +205,9 @@ initialization, operation stores, and transaction boundaries:
 from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
 
 auth_db = SQLiteAuthDatabase("app.sqlite3")
-auth_db.initialize()  # explicit inspect + initialize/migrate
-stores = auth_db.stores()  # operation-mode stores
-with auth_db.transaction() as tx:  # one atomic transaction
+auth_db.initialize()
+stores = auth_db.stores()
+with auth_db.transaction() as tx:
     user = tx.users.create(user)
     tx.external_store(my_auth_credential_store_factory).save_registration(verified)
 ```
