@@ -15,8 +15,6 @@ domain routes. The core does not implement an OpenID Provider or mint tokens.
 The core package is dependency-free and does not import FastAPI, Jinja,
 Pydantic, `my-auth`, or adapter resources as an import side effect.
 
-An optional Postgres/SQLAlchemy adapter is [proposed](docs/adr/0001-postgres-sqlalchemy-backend.md), not implemented; SQLite remains the default.
-
 ## Scope, install, and import paths
 
 - Distribution: `my-usermanager`; core import: `my_usermanager`
