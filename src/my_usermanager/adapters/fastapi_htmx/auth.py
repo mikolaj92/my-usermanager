@@ -15,7 +15,6 @@ from my_usermanager.adapters.fastapi_htmx.responses import (
 )
 
 if TYPE_CHECKING:
-
     from my_usermanager.adapters.fastapi_htmx.config import (
         UserManagerUiConfig,
         UserManagerUiHooks,

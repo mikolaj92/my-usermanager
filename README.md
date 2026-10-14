@@ -15,6 +15,14 @@ domain routes. The core does not implement an OpenID Provider or mint tokens.
 The core package is dependency-free and does not import FastAPI, Jinja,
 Pydantic, `my-auth`, or adapter resources as an import side effect.
 
+## Proposed Postgres backend
+
+SQLite remains the default durable adapter. An optional synchronous
+Postgres/SQLAlchemy Core backend is **proposed**, not implemented or installable.
+There is no confirmed Postgres consumer or verified Postgres passkey transaction
+integration. See [ADR 0001](docs/adr/0001-postgres-sqlalchemy-backend.md) for the
+contract inventory, resource ownership, acceptance gates, and staged plan.
+
 ## Scope, install, and import paths
 
 - Distribution: `my-usermanager`; core import: `my_usermanager`
@@ -101,8 +109,11 @@ from my_usermanager.adapters.my_auth_fastapi import (
 prepare = build_prepare_registration(profile_for_policy)
 complete = build_complete_registration(
     lambda request, verified: auth_db.complete_registration(
-        request, verified, user=provision_user(verified),
-        identity=identity_for(verified), grants=grants_for(verified),
+        request,
+        verified,
+        user=provision_user(verified),
+        identity=identity_for(verified),
+        grants=grants_for(verified),
     )
 )
 PasskeyRouteHooks = require_passkey_route_hooks()
@@ -200,9 +211,9 @@ initialization, operation stores, and transaction boundaries:
 from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
 
 auth_db = SQLiteAuthDatabase("app.sqlite3")
-auth_db.initialize()                 # explicit inspect + initialize/migrate
-stores = auth_db.stores()            # operation-mode stores
-with auth_db.transaction() as tx:    # one atomic transaction
+auth_db.initialize()  # explicit inspect + initialize/migrate
+stores = auth_db.stores()  # operation-mode stores
+with auth_db.transaction() as tx:  # one atomic transaction
     user = tx.users.create(user)
     tx.external_store(my_auth_credential_store_factory).save_registration(verified)
 ```
@@ -219,8 +230,9 @@ schemas, creates empty schemas, stamps canonical-unversioned layouts, stamps
 invitation metadata (`um_invitations`), and runs explicit one-shot UM
 migration for supported upgrade sources (including migratable legacy
 grant/audit layouts). Inspection is fail-closed: legacy layouts are not
-treated as ready dual-read paths. my-auth legacy schemas are refused
-(modern my-auth only). Unsupported schemas and orphan grants are refused.
+treated as ready dual-read paths. Supported my-auth legacy schemas migrate
+through my-auth's explicit migration API inside the shared transaction.
+Unsupported schemas and orphan grants are refused.
 Initialization/migration requires no pending transaction. Inspection is
 read-only; do not treat inspection as initialization.
 

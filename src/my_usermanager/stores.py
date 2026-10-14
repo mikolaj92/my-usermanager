@@ -193,7 +193,7 @@ class UserStore(Protocol):
         ...
 
     def count_active(self) -> int:
-        """Return the number of non-disabled users for later safety checks."""
+        """Return the number of active users, excluding pending and deleted users."""
         ...
 
 

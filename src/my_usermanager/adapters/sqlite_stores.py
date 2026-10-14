@@ -675,7 +675,7 @@ class SQLiteUserStore:
         )
 
     def count_active(self) -> int:
-        """Return the number of non-disabled users."""
+        """Return the number of users whose account status is active."""
         row = _fetchone_row(
             self._conn.execute("SELECT COUNT(*) FROM um_users WHERE status = 'active'")
         )

@@ -16,7 +16,8 @@ unlinking hides the corresponding UI without modifying accounts or grants.
 
 ```python
 from my_usermanager.identity_capabilities import (
-    AccountCapability, IdentityProviderCapabilities,
+    AccountCapability,
+    IdentityProviderCapabilities,
 )
 
 company = IdentityProviderCapabilities(

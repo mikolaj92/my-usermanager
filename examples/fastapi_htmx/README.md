@@ -49,7 +49,11 @@ uv run --no-sync \
 The identity stack uses the app-factory composer:
 
 ```python
-from app_factory.adapters import PasskeyBinding, UserManagerBinding, install_identity_adapters
+from app_factory.adapters import (
+    PasskeyBinding,
+    UserManagerBinding,
+    install_identity_adapters,
+)
 
 install_identity_adapters(
     app,
@@ -74,7 +78,11 @@ The account/admin UI remains owned by `my_usermanager`; the binding only passes
 host hooks and CSRF policy. Hosts do not call either adapter installer directly.
 
 ```python
-from my_usermanager.adapters.fastapi_htmx import CsrfContext, UserRow, row_key_from_user_id
+from my_usermanager.adapters.fastapi_htmx import (
+    CsrfContext,
+    UserRow,
+    row_key_from_user_id,
+)
 
 row = UserRow(
     user_id="unsafe/id space",
