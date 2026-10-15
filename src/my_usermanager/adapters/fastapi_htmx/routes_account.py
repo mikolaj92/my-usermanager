@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from my_usermanager.adapters._callbacks import dispatch
 from my_usermanager.adapters.fastapi_htmx.account_capabilities import account_providers
 from my_usermanager.adapters.fastapi_htmx.auth import Denied, current_user
-from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.forms import FormError, read_profile_form
 from my_usermanager.adapters.fastapi_htmx.page import (
     csrf_inputs,
@@ -80,7 +80,7 @@ def _account_endpoint(
             p.credentials.mode == "local" for p in providers
         )
         panel = (
-            await resolve(hooks.render_passkey_panel(request, auth.current_user))
+            await dispatch(hooks.render_passkey_panel, request, auth.current_user)
             if local_credentials
             else None
         )
@@ -88,7 +88,7 @@ def _account_endpoint(
         profile_editable = callable(getattr(hooks, "update_own_profile", None))
         csrf_fields: tuple[tuple[str, str], ...] = ()
         if profile_editable and config.csrf_protection is not None:
-            csrf = await resolve(hooks.csrf_context(request))
+            csrf = await dispatch(hooks.csrf_context, request)
             csrf_fields = csrf_inputs(config, request, csrf)
         html = templates.get_template("account/index.html").render(
             **{
@@ -145,7 +145,7 @@ def _profile_endpoint(
                 birth_date=form.birth_date,
                 gender=form.gender,
             )
-            _ = await resolve(updater(request, auth.current_user, update))
+            _ = await dispatch(updater, request, auth.current_user, update)
         except Exception as exc:
             return error_response(400, "Profile update failed", str(exc))
         return RedirectResponse(

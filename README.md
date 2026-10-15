@@ -200,12 +200,31 @@ A sync backend must open its connection, build stores, finish its transaction,
 materialize results, and close owned resources within that one call. Exceptions
 must roll back through the transaction owner. Never pass a thread-bound host
 connection to a worker; use an async backend that delegates to its owner instead.
-The local installer retains its existing connection on its current execution path.
 Cancellation does not stop a running worker, guarantee rollback, or retry writes;
 the backend must finish its transaction and cleanup even if its caller leaves.
 AnyIO shields its normal worker wait; direct asyncio task cancellation can end
-that wait before the worker finishes. Packaged HTMX hooks retain their current
-execution path; this completion boundary does not offload them.
+that wait before the worker finishes.
+
+Packaged HTMX routes dispatch every host hook, including authentication, admin
+policy, CSRF validation/context, page context, provider/panel rendering, lists,
+mutations, and side effects: sync callables use Starlette's threadpool; async
+callables are awaited. Standard hooks call user/grant stores through `UserManager`
+for lists, profile/account changes, grants, and identity-provider lookup. These
+calls previously ran directly on the event loop; FastAPI did not offload them.
+FastAPI already offloads sync dependencies registered with `Depends`, but not
+ordinary calls from async routes. Session-only dependencies do no store I/O.
+
+Each sync hook is one worker call, not one worker per query. It must materialize
+rows and complete its transaction before returning. Different hooks can use
+different workers. `StandardUserManagerUiHooks` does not transfer ownership of its
+manager or connections: use it only with stores safe for that execution model.
+For thread-bound or shared transactional connections, provide async hooks that
+send the whole operation to the connection's serialized owner. Disabling SQLite's
+thread check alone does not serialize transactions. Request/session callbacks
+must not retain request state or access it concurrently after returning.
+The same cancellation and cleanup rules apply to HTMX hooks. Local registration
+opens a worker-owned database for path inputs; host connections require
+`registration_executor` to dispatch the complete transaction to their owner.
 
 ## Canonical shared SQLite owner
 

@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, cast
 
 from fastapi import Request
 
+from my_usermanager.adapters._callbacks import dispatch
 from my_usermanager.adapters.fastapi_htmx.auth import Denied, admin_user
-from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.forms import FormError, read_named_form
 from my_usermanager.adapters.fastapi_htmx.page import (
     named_action,
@@ -76,9 +76,9 @@ def add_invitation_routes(
             return csrf_error
         changed = cast(
             "UserRow",
-            await resolve(callback(request, auth.current_user, form["invitation_id"])),
+            await dispatch(callback, request, auth.current_user, form["invitation_id"]),
         )
-        csrf = await resolve(hooks.csrf_context(request))
+        csrf = await dispatch(hooks.csrf_context, request)
         return await row_response(
             templates,
             request,

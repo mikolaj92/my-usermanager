@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Protocol, cast
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+from my_usermanager.adapters._callbacks import dispatch
 from my_usermanager.adapters.fastapi_htmx.auth import Denied, current_user
-from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.page import (
     csrf_inputs,
     merge_labels,
@@ -57,17 +57,17 @@ def add_session_routes(
             )
         host_context = await page_context(hooks, request)
         labels = merge_labels(config, host_context)
-        csrf = await resolve(hooks.csrf_context(request))
+        csrf = await dispatch(hooks.csrf_context, request)
         html = templates.get_template("sessions/list.html").render(
             **host_context,
             request=request,
             config=config,
             current_user=auth.current_user,
             sessions=tuple(
-                await resolve(
-                    cast("_ListSessionsHook", cast("object", hooks)).list_sessions(
-                        request, auth.current_user
-                    )
+                await dispatch(
+                    cast("_ListSessionsHook", cast("object", hooks)).list_sessions,
+                    request,
+                    auth.current_user,
                 )
             ),
             csrf_inputs=csrf_inputs(config, request, csrf),
