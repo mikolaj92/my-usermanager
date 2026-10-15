@@ -35,6 +35,7 @@ from my_auth.fastapi import (  # pyright: ignore[reportMissingTypeStubs]
 from my_auth.passkeys import (  # pyright: ignore[reportMissingTypeStubs]
     SQLiteCredentialStore,
 )
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
 from my_usermanager.adapters.fastapi import (
@@ -63,6 +64,7 @@ from my_usermanager.permissions import ADMIN_ROLE_NAME
 from my_usermanager.subjects import AuthenticatedSubject
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from pathlib import Path
 
     from my_usermanager.adapters.sqlite import SQLiteUserStore
@@ -77,6 +79,10 @@ _ADMIN_REQUIRED: Final = "admin required"
 _SESSION_KEY_REQUIRED: Final = "session_secret is required"
 _MISSING_PASSKEY_USER: Final = "verified registration is missing a passkey user"
 _LOCAL_PROVIDER: Final = "local"
+_CONNECTION_EXECUTOR_REQUIRED: Final = (
+    "registration_executor is required for a host SQLite connection; "
+    "it must execute the complete operation on the connection owner's thread"
+)
 _LOCAL_PASSKEY_CAPABILITIES: Final = (
     IdentityProviderCapabilities(
         provider=MY_AUTH_PROVIDER,
@@ -102,6 +108,8 @@ class _Stack:
     users: SQLiteUserStore
     credentials: SQLiteCredentialStore
     service: PasskeyService
+    registration_db: SQLiteAuthDatabase
+    registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
 
 
 def install_local_identity(  # noqa: PLR0913
@@ -112,6 +120,8 @@ def install_local_identity(  # noqa: PLR0913
     origin: str,
     session_secret: str,
     app_name: str = "App",
+    registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
+    | None = None,
 ) -> LocalIdentity:
     """Mount passkey login, account, and admin UI on one FastAPI app.
 
@@ -124,7 +134,13 @@ def install_local_identity(  # noqa: PLR0913
     if not session_secret:
         raise ValueError(_SESSION_KEY_REQUIRED)
 
-    stack = _open_stack(database, rp_id=rp_id, origin=origin, app_name=app_name)
+    stack = _open_stack(
+        database,
+        rp_id=rp_id,
+        origin=origin,
+        app_name=app_name,
+        registration_executor=registration_executor,
+    )
     csrf = SessionCsrfProtection()
     _ = install_identity_adapters(
         app,
@@ -166,6 +182,8 @@ def _open_stack(
     rp_id: str,
     origin: str,
     app_name: str,
+    registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
+    | None,
 ) -> _Stack:
     conn = _sqlite_connection(database)
     auth_db = SQLiteAuthDatabase(conn)
@@ -174,6 +192,17 @@ def _open_stack(
     credentials = SQLiteCredentialStore(conn)
     return _Stack(
         auth_db=auth_db,
+        registration_db=(
+            auth_db
+            if isinstance(database, sqlite3.Connection)
+            else SQLiteAuthDatabase(database)
+        ),
+        registration_executor=registration_executor
+        or (
+            _require_registration_executor
+            if isinstance(database, sqlite3.Connection)
+            else run_in_threadpool
+        ),
         manager=UserManager(
             users=stores.users,
             roles=stores.roles,
@@ -247,15 +276,31 @@ def _get_auth_user(stack: _Stack, user_id: str) -> PasskeyUser | None:
     return stack.credentials.get_user(user_id)
 
 
+async def _require_registration_executor(
+    _operation: Callable[[], PasskeyUser],
+) -> PasskeyUser:
+    raise ValueError(_CONNECTION_EXECUTOR_REQUIRED)
+
+
 async def _complete_registration(
     stack: _Stack,
+    request: Request,
+    result: object,
+) -> PasskeyUser:
+    return await stack.registration_executor(
+        partial(_persist_registration, stack.registration_db, request, result)
+    )
+
+
+def _persist_registration(
+    database: SQLiteAuthDatabase,
     request: Request,
     result: object,
 ) -> PasskeyUser:
     passkey_user = getattr(result, "user", None)
     if not isinstance(passkey_user, PasskeyUser):
         raise TypeError(_MISSING_PASSKEY_USER)
-    _ = stack.auth_db.complete_registration(
+    _ = database.complete_registration(
         request,
         result,
         user=User(
