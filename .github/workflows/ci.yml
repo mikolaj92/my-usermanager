@@ -12,9 +12,9 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: '3.14'
-      - run: uv sync --frozen --all-extras
+      - run: uv sync --frozen --group dev --all-extras
       - run: uv run playwright install --with-deps chromium
       - run: uv run pytest
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run basedpyright src tests
+      - run: uv run --no-sync basedpyright --pythonpath .venv/bin/python src tests
