@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
-from my_usermanager.adapters._callbacks import dispatch
+from my_usermanager.adapters._callbacks import dispatch, dispatch_tuple
 from my_usermanager.adapters.fastapi_htmx.auth import Denied, admin_user
 from my_usermanager.adapters.fastapi_htmx.config import PermissionGrantRow
 from my_usermanager.adapters.fastapi_htmx.forms import (
@@ -83,11 +83,11 @@ def add_admin_users_page(
             "config": config,
             "current_user": auth.current_user,
             "users": tuple(safe_row(row) for row in users_page.items),
-            "role_options": tuple(
-                await dispatch(hooks.role_options, request, auth.current_user)
+            "role_options": await dispatch_tuple(
+                hooks.role_options, request, auth.current_user
             ),
-            "capability_options": tuple(
-                await dispatch(hooks.capability_options, request, auth.current_user)
+            "capability_options": await dispatch_tuple(
+                hooks.capability_options, request, auth.current_user
             ),
             "csrf": csrf,
             "csrf_inputs": csrf_inputs(config, request, csrf),

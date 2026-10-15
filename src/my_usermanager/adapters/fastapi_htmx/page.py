@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from my_usermanager.adapters._callbacks import dispatch
+from my_usermanager.adapters._callbacks import dispatch, dispatch_tuple
 from my_usermanager.adapters.fastapi_htmx.auth import (
     Denied,
     admin_user,
@@ -418,11 +418,11 @@ async def row_response(
             "request": request,
             "config": config,
             "user": safe_row(row),
-            "role_options": tuple(
-                await dispatch(hooks.role_options, request, current_user)
+            "role_options": await dispatch_tuple(
+                hooks.role_options, request, current_user
             ),
-            "capability_options": tuple(
-                await dispatch(hooks.capability_options, request, current_user)
+            "capability_options": await dispatch_tuple(
+                hooks.capability_options, request, current_user
             ),
             "csrf": csrf,
             "csrf_inputs": csrf_inputs(config, request, csrf),
