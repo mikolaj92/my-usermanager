@@ -10,6 +10,7 @@ from __future__ import annotations
 import secrets
 import sqlite3
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Final
 from urllib.parse import urlsplit
 
@@ -207,7 +208,7 @@ def _passkey_hooks(stack: _Stack) -> PasskeyRouteHooks:
         get_session_user=lambda request: _session_passkey_user(stack, request),
         prepare_registration=_prepare_registration,
         complete_registration=build_complete_registration(
-            lambda request, result: _complete_registration(stack, request, result)
+            partial(_complete_registration, stack)
         ),
         get_auth_user=lambda user_id: _get_auth_user(stack, user_id),
         login=build_login_session_principal_writer(
@@ -246,7 +247,7 @@ def _get_auth_user(stack: _Stack, user_id: str) -> PasskeyUser | None:
     return stack.credentials.get_user(user_id)
 
 
-def _complete_registration(
+async def _complete_registration(
     stack: _Stack,
     request: Request,
     result: object,

@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import TYPE_CHECKING, Final, Protocol, TypeGuard, cast, override
+from typing import TYPE_CHECKING, Final, Protocol, TypeGuard, override
 
+from my_usermanager.adapters._callbacks import dispatch
 from my_usermanager.adapters.my_auth import (
     MY_AUTH_PROVIDER,
     PasskeyUserLike,
@@ -221,10 +222,7 @@ def build_complete_registration[RequestT, ResultT, UserT](
     """Build a sync/async-compatible completion hook around host backend."""
 
     async def complete_registration(request: RequestT, result: ResultT) -> UserT | None:
-        value = completion_backend(request, result)
-        if isinstance(value, Awaitable):
-            return await cast("Awaitable[UserT | None]", value)
-        return value
+        return await dispatch(completion_backend, request, result)
 
     return complete_registration
 

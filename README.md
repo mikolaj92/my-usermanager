@@ -192,6 +192,21 @@ Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_f
 to select the initial role for every new user. Registration order never confers
 administrative access. Bootstrap and provisioning policy remain host-owned.
 
+### Completion backend execution
+
+`build_complete_registration` awaits async backends, including async callable
+objects. Sync backends run once in a worker; returned awaitables are awaited.
+A sync backend must open its connection, build stores, finish its transaction,
+materialize results, and close owned resources within that one call. Exceptions
+must roll back through the transaction owner. Never pass a thread-bound host
+connection to a worker; use an async backend that delegates to its owner instead.
+The local installer retains its existing connection on its current execution path.
+Cancellation does not stop a running worker, guarantee rollback, or retry writes;
+the backend must finish its transaction and cleanup even if its caller leaves.
+AnyIO shields its normal worker wait; direct asyncio task cancellation can end
+that wait before the worker finishes. Packaged HTMX hooks retain their current
+execution path; this completion boundary does not offload them.
+
 ## Canonical shared SQLite owner
 
 Use one `SQLiteAuthDatabase` for a product that stores both passkeys and
