@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from inspect import Parameter, signature
@@ -13,7 +13,11 @@ from urllib.parse import urlencode
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from my_usermanager.adapters._callbacks import dispatch, dispatch_tuple
+from my_usermanager.adapters._callbacks import (
+    dispatch,
+    dispatch_materialized,
+    dispatch_tuple,
+)
 from my_usermanager.adapters.fastapi_htmx.auth import (
     Denied,
     admin_user,
@@ -259,7 +263,19 @@ async def _call_list_hook(
             and getattr(parameters[name], "kind", None) in accepted
         }
     )
-    return await dispatch(callback, request, current_user, **kwargs)
+    return await dispatch_materialized(
+        callback, _materialize_page, request, current_user, **kwargs
+    )
+
+
+def _materialize_page(raw: object) -> object:
+    if isinstance(raw, (UserPage, AuditPage)):
+        return raw
+    if isinstance(raw, (str, bytes, Mapping)):
+        return cast("object", raw)
+    if isinstance(raw, Iterable):
+        return tuple(raw)
+    return raw
 
 
 def _as_sequence(raw: object) -> Sequence[object]:
