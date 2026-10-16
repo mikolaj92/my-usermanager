@@ -13,8 +13,8 @@ jobs:
         with:
           python-version: '3.14'
       - run: uv sync --frozen --group dev --all-extras
-      - run: uv run playwright install --with-deps chromium
-      - run: uv run pytest
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
+      - run: uv run --no-sync playwright install --with-deps chromium
+      - run: uv run --no-sync pytest
+      - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync ruff format --check .
       - run: uv run --no-sync basedpyright --pythonpath .venv/bin/python src tests
