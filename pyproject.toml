@@ -76,7 +76,8 @@ exclude = [
 
 [tool.uv.sources]
 app-factory = { git = "https://github.com/mikolaj92/app-factory", tag = "v0.7.9" }
-my-auth = { git = "https://github.com/mikolaj92/my-auth", tag = "v0.5.7" }
+# Exact 0.5.7-compatible account-shell repair (my-auth PR #126).
+my-auth = { git = "https://github.com/mikolaj92/my-auth", rev = "e492b572d0bb72b045c35251b27f62d3b109a47e" }
 
 [tool.basedpyright]
 typeCheckingMode = "all"

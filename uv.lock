@@ -501,7 +501,7 @@ wheels = [
 [[package]]
 name = "my-auth"
 version = "0.5.7"
-source = { git = "https://github.com/mikolaj92/my-auth?tag=v0.5.7#bd0775f1993299b27d2bbd785dd252821dbff06e" }
+source = { git = "https://github.com/mikolaj92/my-auth?rev=e492b572d0bb72b045c35251b27f62d3b109a47e#e492b572d0bb72b045c35251b27f62d3b109a47e" }
 dependencies = [
     { name = "typing-extensions" },
     { name = "webauthn" },
@@ -555,7 +555,7 @@ requires-dist = [
     { name = "itsdangerous", marker = "extra == 'fastapi'", specifier = ">=2.2" },
     { name = "jinja2", marker = "extra == 'fastapi-htmx'", specifier = ">=3.1" },
     { name = "joserfc", marker = "extra == 'oidc'", specifier = ">=1.7.5" },
-    { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?tag=v0.5.7" },
+    { name = "my-auth", marker = "extra == 'myauth'", git = "https://github.com/mikolaj92/my-auth?rev=e492b572d0bb72b045c35251b27f62d3b109a47e" },
     { name = "playwright", marker = "extra == 'browser'", specifier = ">=1.62" },
     { name = "pydantic", marker = "extra == 'fastapi'", specifier = ">=2.10" },
     { name = "uvicorn", marker = "extra == 'browser'", specifier = ">=0.52.4" },
