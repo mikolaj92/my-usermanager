@@ -147,10 +147,8 @@ same call. Host template loaders take precedence; no shell copying is required.
 
 ## Host-owned security boundaries
 
-The host application owns sessions, app cookies, current-user lookup, CSRF
-validation, persistence, registration policy, local user provisioning, admin
-checks, role/grant changes, audit logging, redirects, and logout effects. In
-this example those boundaries are deliberately demo-only:
+See the [execution and ownership contract](../../README.md#completion-backend-execution)
+for synchronous hooks, connection owners, and cancellation. This example uses:
 
 - in-memory users only
 - no-op demo CSRF hidden input and `X-Demo-CSRF` metadata only
@@ -160,9 +158,7 @@ this example those boundaries are deliberately demo-only:
 - demo-only in-memory role/capability grant callbacks and no production audit logging
 - passkey service and passkey hooks backed by in-memory scaffolding only
 
-The adapter composition does not provide production sessions, does not provide production CSRF validation,
-does not provide persistence, does not provide audit logging, does not provide production role/grant policy,
-and does not provide a production admin policy. The only adapter-owned cookies are the documented
+This demo does not implement production security or persistence. The adapter-owned cookies are the documented
 my-auth WebAuthn challenge cookies (`passkey_authentication_challenge` and
 `passkey_registration_challenge`) used by `my_auth.fastapi.PasskeyAuthRouter`;
 adapters must not claim production app session/cookie ownership.
@@ -177,7 +173,3 @@ The UI is server-rendered Jinja and HTMX with Basecoat-oriented markup from the
 adapters. It swaps HTML fragments; `/api/auth/*` remains JSON for WebAuthn. This
 example does not include React, shadcn, Tailwind, `npm`, a bundler, SPA state, or
 client-side JSON templates.
-
-The old duplicate example templates and `static/passkey.js` were removed because
-the adapters now own the reusable UI resources. Add explicit override templates
-only when demonstrating adapter override behavior.
