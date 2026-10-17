@@ -196,38 +196,16 @@ administrative access. Bootstrap and provisioning policy remain host-owned.
 
 ### Completion backend execution
 
-`build_complete_registration` awaits async backends, including async callable
-objects. Sync backends run once in a worker; returned awaitables are awaited.
-A sync backend must open its connection, build stores, finish its transaction,
-materialize results, and close owned resources within that one call. Exceptions
-must roll back through the transaction owner. Never pass a thread-bound host
-connection to a worker; use an async backend that delegates to its owner instead.
-Cancellation does not stop a running worker, guarantee rollback, or retry writes;
-the backend must finish its transaction and cleanup even if its caller leaves.
-AnyIO shields its normal worker wait; direct asyncio task cancellation can end
-that wait before the worker finishes.
+`build_complete_registration` awaits async backends, including callable objects, and runs sync backends once in a worker; returned awaitables are awaited.
+Sync backends must open connections, build stores, finish transactions, materialize results, and close owned resources in that call; exceptions require owner-managed rollback.
+Cancellation neither stops workers nor guarantees rollback or retries. Backends must finish transactions and cleanup. AnyIO shields normal worker waits; direct asyncio cancellation can end waiting early.
 
-Packaged HTMX routes dispatch every host hook, including authentication, admin
-policy, CSRF validation/context, page context, provider/panel rendering, lists,
-mutations, and side effects: sync callables use Starlette's threadpool; async
-callables are awaited. Standard hooks call user/grant stores through `UserManager`
-for lists, profile/account changes, grants, and identity-provider lookup. These
-calls run inside the dispatched hook.
-FastAPI offloads sync dependencies registered with `Depends`, but not
-ordinary calls from async routes. Session-only dependencies do no store I/O.
+Packaged HTMX routes dispatch all host hooks: sync callables use Starlette's threadpool; async callables are awaited. Standard hooks access user/grant stores through `UserManager` inside that dispatch.
+FastAPI offloads sync `Depends` dependencies, not ordinary async-route calls. Session-only dependencies perform no store I/O. Each sync hook runs as one worker call, completing transactions and materializing rows before returning; separate hooks may use different workers.
 
-Each sync hook is one worker call, not one worker per query. It must materialize
-rows and complete its transaction before returning. Different hooks can use
-different workers. `StandardUserManagerUiHooks` does not transfer ownership of its
-manager or connections. Its optional `callback_executor` receives a zero-argument
-operation and must await execution on the serialized owner, including cleanup.
-It applies to all synchronous standard hooks, including host policy callbacks.
-For other thread-bound hooks, provide async callbacks that delegate to their owner. Disabling SQLite's
-thread check alone does not serialize transactions. Request/session callbacks
-must not retain request state or access it concurrently after returning.
-The same cancellation and cleanup rules apply to HTMX hooks. Local registration
-opens a worker-owned database for path inputs; host connections require
-`registration_executor` to dispatch the complete transaction to their owner.
+`StandardUserManagerUiHooks` retains manager/connection ownership. Its optional `callback_executor` must await a zero-argument operation on the serialized owner, including cleanup, for every sync standard hook, including host policy.
+Other thread-bound hooks need async callbacks delegating to their owner, never arbitrary workers. Disabling SQLite's thread check does not serialize transactions. Request/session callbacks must not retain request state or access it concurrently after returning.
+The same cancellation rules apply to HTMX hooks. Local registration opens worker-owned databases for paths; host connections require `registration_executor` to dispatch the whole transaction to their owner.
 
 ## Canonical shared SQLite owner
 
