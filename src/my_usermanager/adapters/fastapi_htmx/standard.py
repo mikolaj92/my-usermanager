@@ -6,7 +6,7 @@ CSRF configuration, invitations, auditing, and product side effects.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -52,6 +52,7 @@ class StandardUserManagerUiHooks:
     """
 
     manager: UserManager
+    callback_executor: Callable[[Callable[[], object]], Awaitable[object]] | None
     current_user: CurrentUser
     require_admin_policy: RequireAdmin
     role_names: tuple[str, ...] = ()
@@ -73,12 +74,15 @@ class StandardUserManagerUiHooks:
         after_disabled: AfterDisabled | None = None,
         passkey_panel: PasskeyPanelProvider | None = None,
         identity_providers: tuple[IdentityProviderCapabilities, ...] | None = None,
+        callback_executor: Callable[[Callable[[], object]], Awaitable[object]]
+        | None = None,
     ) -> None:
         """Bind standard stores to the small set of host-owned policies."""
         if page_size < 1:
             msg = "page_size must be positive"
             raise ValueError(msg)
         self.manager = manager
+        self.callback_executor = callback_executor
         self.current_user = current_user
         self.require_admin_policy = require_admin
         self.role_names = role_names

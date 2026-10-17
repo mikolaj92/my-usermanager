@@ -122,9 +122,11 @@ hooks = PasskeyRouteHooks(
 ```
 
 `build_prepare_registration` performs no writes. `build_complete_registration`
-normalizes a synchronous or asynchronous host backend to an async callback.
-The underlying `my-auth` router accepts sync or async callbacks for every hook;
-registration policy runs before options and again before verify, then WebAuthn
+dispatches a synchronous or asynchronous host backend through the execution contract below.
+The pinned `my-auth` router accepts sync or async callbacks but invokes sync
+callbacks on the event loop; it does not offload them. Supply async wrappers
+for blocking hooks other than completion. Registration policy runs before
+options and again before verify, then WebAuthn
 verification precedes completion, login, and non-fatal observer hooks.
 
 ## Administrator invitations
@@ -192,6 +194,41 @@ Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_f
 to select the initial role for every new user. Registration order never confers
 administrative access. Bootstrap and provisioning policy remain host-owned.
 
+### Completion backend execution
+
+`build_complete_registration` awaits async backends, including async callable
+objects. Sync backends run once in a worker; returned awaitables are awaited.
+A sync backend must open its connection, build stores, finish its transaction,
+materialize results, and close owned resources within that one call. Exceptions
+must roll back through the transaction owner. Never pass a thread-bound host
+connection to a worker; use an async backend that delegates to its owner instead.
+Cancellation does not stop a running worker, guarantee rollback, or retry writes;
+the backend must finish its transaction and cleanup even if its caller leaves.
+AnyIO shields its normal worker wait; direct asyncio task cancellation can end
+that wait before the worker finishes.
+
+Packaged HTMX routes dispatch every host hook, including authentication, admin
+policy, CSRF validation/context, page context, provider/panel rendering, lists,
+mutations, and side effects: sync callables use Starlette's threadpool; async
+callables are awaited. Standard hooks call user/grant stores through `UserManager`
+for lists, profile/account changes, grants, and identity-provider lookup. These
+calls run inside the dispatched hook.
+FastAPI offloads sync dependencies registered with `Depends`, but not
+ordinary calls from async routes. Session-only dependencies do no store I/O.
+
+Each sync hook is one worker call, not one worker per query. It must materialize
+rows and complete its transaction before returning. Different hooks can use
+different workers. `StandardUserManagerUiHooks` does not transfer ownership of its
+manager or connections. Its optional `callback_executor` receives a zero-argument
+operation and must await execution on the serialized owner, including cleanup.
+It applies to all synchronous standard hooks, including host policy callbacks.
+For other thread-bound hooks, provide async callbacks that delegate to their owner. Disabling SQLite's
+thread check alone does not serialize transactions. Request/session callbacks
+must not retain request state or access it concurrently after returning.
+The same cancellation and cleanup rules apply to HTMX hooks. Local registration
+opens a worker-owned database for path inputs; host connections require
+`registration_executor` to dispatch the complete transaction to their owner.
+
 ## Canonical shared SQLite owner
 
 Use one `SQLiteAuthDatabase` for a product that stores both passkeys and
@@ -217,12 +254,6 @@ it. Host domain rows and policy state remain host-owned and are supplied after
 policy verification.
 
 Call `initialize()` explicitly without a pending transaction: it inspects, initializes and migrates supported UM/my-auth schemas; unsupported schemas and orphan grants fail closed. Inspection alone is read-only.
-
-**Proposed ADR — optional Postgres/SQLAlchemy, deferred pending a consumer and approval.** No requiring consumer is confirmed by the available evidence; no backend is implemented here. Inventory at main `1844d41` and my-auth v0.5.7: the five synchronous contracts are `UserStore`, `RoleStore`, `GrantStore`, `AuditStore` and `InvitationStore`. All except roles have Memory/SQLite implementations; roles use `MemoryRoleStore`, including SQLite composition. Historical my-auth#1 is closed and concerns credentials, not UM stores; closure does not establish Postgres compatibility.
-Use separate optional users, roles, grants, audit, invitations, database and schema modules behind existing contracts. SQLite stays default; SQLAlchemy and its driver must not enter core imports. Resolve username normalization and invitation transaction parity before implementation.
-Propose sync Engine/Connection APIs; async requires a separate decision. Hosts may lend an engine/connection or request an adapter-owned engine. Dispose only owned engines; close only owned connections. Stores never commit or roll back borrowed outer transactions; their owner decides the outcome. The coordinator commits owned transactions on success and rolls back on failure.
-UM owns UM migrations; my-auth owns credential migrations; hosts serialize explicit execution. No implicit DDL. Passkey + UM atomicity remains unresolved until a compatible my-auth credential backend shares the connection and outer transaction.
-Stage implementation after ADR approval: database/transactions → five store modules → shared Memory/SQLite/Postgres contract checks. Extend existing checks to Invitation. Real Postgres checks must cover unique identity/username, CAS, rollback (including credentials), and concurrent last-admin mutations with independent connections and a shared guard. SQLite cannot substitute for these checks.
 
 `SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
 commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use
@@ -345,15 +376,6 @@ Open `http://127.0.0.1:8000/auth/login`. The host demo uses in-memory users,
 explicit demo-only CSRF metadata, and host callbacks; it is not a production
 session, persistence, admin, or audit implementation. WebAuthn requires HTTPS
 or a local secure context such as localhost, and `/api/auth/*` remains JSON.
-
-## Development
-
-```sh
-uv sync
-uv run pytest
-uv run ruff check .
-uv run basedpyright src tests
-```
 
 ### FastAPI/HTMX session CSRF
 

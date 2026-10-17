@@ -113,6 +113,7 @@ fixable = ["ALL"]
 unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
+"src/my_usermanager/adapters/_callbacks.py" = ["PLC0415"]
 "src/my_usermanager/stores.py" = ["D102"]
 "src/my_usermanager/memory.py" = ["D102"]
 "src/my_usermanager/adapters/sqlite_stores.py" = ["D102"]

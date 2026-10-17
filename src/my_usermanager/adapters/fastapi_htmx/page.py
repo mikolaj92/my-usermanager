@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from inspect import Parameter, signature
@@ -13,12 +13,16 @@ from urllib.parse import urlencode
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from my_usermanager.adapters._callbacks import (
+    dispatch,
+    dispatch_materialized,
+    dispatch_tuple,
+)
 from my_usermanager.adapters.fastapi_htmx.auth import (
     Denied,
     admin_user,
     current_user,
 )
-from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.config import (
     AuditPage,
     UserPage,
@@ -259,12 +263,19 @@ async def _call_list_hook(
             and getattr(parameters[name], "kind", None) in accepted
         }
     )
-    try:
-        result: object = callback(request, current_user, **kwargs)
-        return await resolve(result)
-    except TypeError:
-        result = callback(request, current_user)
-        return await resolve(result)
+    return await dispatch_materialized(
+        callback, _materialize_page, request, current_user, **kwargs
+    )
+
+
+def _materialize_page(raw: object) -> object:
+    if isinstance(raw, (UserPage, AuditPage)):
+        return raw
+    if isinstance(raw, (str, bytes, Mapping)):
+        return cast("object", raw)
+    if isinstance(raw, Iterable):
+        return tuple(raw)
+    return raw
 
 
 def _as_sequence(raw: object) -> Sequence[object]:
@@ -295,7 +306,7 @@ async def page_context(
     if provider is None:
         return {}
     hook = cast("_PageContextHook", cast("object", hooks))
-    raw = await resolve(hook.page_context(request))
+    raw = await dispatch(hook.page_context, request)
     if raw is None:
         return {}
     return dict(raw)
@@ -358,7 +369,7 @@ async def named_action(  # noqa: PLR0911
         if hook_name == "hard_delete_user"
         else tuple(form[name] for name in required)
     )
-    result = await resolve(callback(request, auth.current_user, *callback_values))
+    result = await dispatch(callback, request, auth.current_user, *callback_values)
     if hook_name in {"invite_user", "reissue_invitation"}:
         return _invitation_redirect(result, redirect_url)
     return RedirectResponse(url=redirect_url, status_code=303)
@@ -396,7 +407,7 @@ async def validate_csrf(
             403, "CSRF validation failed", "A valid CSRF token is required."
         )
     try:
-        _ = await resolve(protection.validate(request, submitted_token))
+        _ = await dispatch(protection.validate, request, submitted_token)
     except Exception:
         return error_response(
             403, "CSRF validation failed", "A valid CSRF token is required."
@@ -423,11 +434,11 @@ async def row_response(
             "request": request,
             "config": config,
             "user": safe_row(row),
-            "role_options": tuple(
-                await resolve(hooks.role_options(request, current_user))
+            "role_options": await dispatch_tuple(
+                hooks.role_options, request, current_user
             ),
-            "capability_options": tuple(
-                await resolve(hooks.capability_options(request, current_user))
+            "capability_options": await dispatch_tuple(
+                hooks.capability_options, request, current_user
             ),
             "csrf": csrf,
             "csrf_inputs": csrf_inputs(config, request, csrf),

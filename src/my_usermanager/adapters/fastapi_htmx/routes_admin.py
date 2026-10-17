@@ -9,8 +9,8 @@ from urllib.parse import urlencode
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+from my_usermanager.adapters._callbacks import dispatch, dispatch_tuple
 from my_usermanager.adapters.fastapi_htmx.auth import Denied, admin_user
-from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.config import PermissionGrantRow
 from my_usermanager.adapters.fastapi_htmx.forms import (
     FormError,
@@ -76,18 +76,18 @@ def add_admin_users_page(
             return invalid_page_response(error)
         host_context = await page_context(hooks, request)
         labels = merge_labels(config, host_context)
-        csrf = await resolve(hooks.csrf_context(request))
+        csrf = await dispatch(hooks.csrf_context, request)
         context = {
             **host_context,
             "request": request,
             "config": config,
             "current_user": auth.current_user,
             "users": tuple(safe_row(row) for row in users_page.items),
-            "role_options": tuple(
-                await resolve(hooks.role_options(request, auth.current_user))
+            "role_options": await dispatch_tuple(
+                hooks.role_options, request, auth.current_user
             ),
-            "capability_options": tuple(
-                await resolve(hooks.capability_options(request, auth.current_user))
+            "capability_options": await dispatch_tuple(
+                hooks.capability_options, request, auth.current_user
             ),
             "csrf": csrf,
             "csrf_inputs": csrf_inputs(config, request, csrf),
@@ -166,18 +166,20 @@ def _mutation_endpoint(
         if csrf_error is not None:
             return csrf_error
         if isinstance(form, MutationForm):
-            changed = await resolve(
-                hooks.set_user_disabled(
-                    request, auth.current_user, form.user_id, kind == "disable"
-                )
+            changed = await dispatch(
+                hooks.set_user_disabled,
+                request,
+                auth.current_user,
+                form.user_id,
+                kind == "disable",
             )
-            await resolve(
-                hooks.after_user_disabled_changed(request, auth.current_user, changed)
+            await dispatch(
+                hooks.after_user_disabled_changed, request, auth.current_user, changed
             )
         elif kind in {"grant-role", "revoke-role"}:
             callback = hooks.grant_role if kind == "grant-role" else hooks.revoke_role
-            changed = await resolve(
-                callback(request, auth.current_user, form.user_id, form.value)
+            changed = await dispatch(
+                callback, request, auth.current_user, form.user_id, form.value
             )
         else:
             permission = PermissionGrantRow(
@@ -188,10 +190,10 @@ def _mutation_endpoint(
                 if kind == "grant-permission"
                 else hooks.revoke_permission
             )
-            changed = await resolve(
-                callback(request, auth.current_user, form.user_id, permission)
+            changed = await dispatch(
+                callback, request, auth.current_user, form.user_id, permission
             )
-        csrf = await resolve(hooks.csrf_context(request))
+        csrf = await dispatch(hooks.csrf_context, request)
         return await row_response(
             templates,
             request,
