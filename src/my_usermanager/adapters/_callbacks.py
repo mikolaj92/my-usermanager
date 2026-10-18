@@ -27,7 +27,6 @@ async def _execute[T](callback: Callable[..., object], operation: Callable[[], T
 
 
 async def wait_for_owner[T](work: Awaitable[T]) -> T:
-    """Finish started owner work before propagating cancellation; never retry it."""
     from anyio import CancelScope
 
     with CancelScope(shield=True):

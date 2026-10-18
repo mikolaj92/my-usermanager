@@ -50,7 +50,6 @@ async def main():
         task = asyncio.create_task(complete(None, False))
         try:
             assert await asyncio.to_thread(entered.wait, 5)
-            # Reaching here while the store waits proves event-loop progress.
             task.cancel()
             assert not task.done()
         finally:
@@ -74,8 +73,6 @@ async def main():
         assert any(sql == 'ROLLBACK' for _, _, sql in trace)
         assert any(sql == 'COMMIT' for _, _, sql in trace)
 
-        # Existing, thread-affine host stores: construction, hooks and completion
-        # all run on the same explicitly supplied owner, never a random worker.
         with ThreadPoolExecutor(max_workers=1) as owner:
             async def execute(operation):
                 return await asyncio.get_running_loop().run_in_executor(owner, operation)
