@@ -123,8 +123,9 @@ hooks = PasskeyRouteHooks(
 )
 ```
 
-`build_prepare_registration` performs no writes. Completion invokes the callback
-once. Async callbacks and returned awaitables are awaited. Synchronous callbacks
+Completion invokes the callback once. Async callbacks and returned awaitables,
+including those returned after cancellation of synchronous work, are awaited.
+Synchronous callbacks
 run through `asyncio.to_thread`, or the explicit `executor(operation)` awaitable.
 The executor owns the whole operation, not individual SQL calls. Cancellation,
 including repeated cancellation, waits for synchronous cleanup. Success then
@@ -220,7 +221,6 @@ and closes on one worker thread with SQLite's default thread check.
 Borrowed connections remain open; pending host transactions are rejected untouched.
 For borrowed connections, pass an owner-thread `executor` to completion and
 `registration_executor` to `install_local_identity`; omission rejects registration.
-Other local-identity hooks still use the shared operation connection.
 
 `SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
 commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use
@@ -348,7 +348,7 @@ or a local secure context such as localhost, and `/api/auth/*` remains JSON.
 
 ```sh
 uv sync
-uv run pytest
+uv run pytest tests/test_local_identity_plugin.py::test_install_local_identity_uses_one_sqlite_database -q
 uv run ruff check .
 uv run basedpyright src tests
 ```

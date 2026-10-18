@@ -18,6 +18,7 @@ def _run(code: str, *, cwd: Path) -> None:
         capture_output=True,
         text=True,
         cwd=cwd,
+        timeout=30,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert (completed.stdout, completed.stderr) == ("", "")
@@ -40,14 +41,9 @@ def test_install_local_identity_exposes_login_account_and_admin(
             from my_usermanager.sessions import SessionPrincipal
 
             app = FastAPI()
-            identity = install_local_identity(
-                app,
-                database=Path("auth.db"),
-                rp_id="localhost",
-                origin="http://localhost",
-                session_secret="test-secret",
-                app_name="Plugin demo",
-            )
+            identity = install_local_identity(app, database=Path("auth.db"),
+                rp_id="localhost", origin="http://localhost",
+                session_secret="test-secret", app_name="Plugin demo")
 
             client = TestClient(app)
             login = client.get("/login")
@@ -59,19 +55,14 @@ def test_install_local_identity_exposes_login_account_and_admin(
             assert account.status_code != 500
 
             _ = identity.manager.users.create(User("admin", "admin"))
-            _ = identity.manager.grants.add_role_grant(
-                "admin", "admin", Scope.global_()
-            )
+            grants = identity.manager.grants
+            _ = grants.add_role_grant("admin", "admin", Scope.global_())
 
             def seed_admin_session(request: Request) -> dict[str, bool]:
                 _ = write_current_user(
                     request,
-                    SessionPrincipal(
-                        user_id="admin",
-                        username="admin",
-                        roles=frozenset({"admin"}),
-                        claims={"is_admin": True},
-                    ),
+                    SessionPrincipal(user_id="admin", username="admin",
+                        roles=frozenset({"admin"}), claims={"is_admin": True}),
                 )
                 return {"ok": True}
 
@@ -99,24 +90,59 @@ def test_install_local_identity_uses_one_sqlite_database(tmp_path: Path) -> None
             from my_usermanager.adapters.local_identity import install_local_identity
 
             conn = sqlite3.connect(Path("auth.db"), check_same_thread=False)
-            app = FastAPI()
-            identity = install_local_identity(
-                app,
-                database=conn,
-                rp_id="127.0.0.1",
-                origin="http://127.0.0.1:8000",
-                session_secret="test-secret",
-            )
-            rows = cast(
-                "list[tuple[str]]",
-                conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'"
-                ).fetchall(),
-            )
+            identity = install_local_identity(FastAPI(), database=conn,
+                rp_id="127.0.0.1", origin="http://127.0.0.1:8000",
+                session_secret="test-secret")
+            sql = "SELECT name FROM sqlite_master WHERE type='table'"
+            rows = cast("list[tuple[str]]", conn.execute(sql).fetchall())
             tables = {row[0] for row in rows}
             assert "um_users" in tables
             assert "passkey_credentials" in tables or "passkey_users" in tables
             assert identity.manager is not None
+
+            import asyncio, threading
+            from my_usermanager.adapters.my_auth_fastapi import (
+                build_complete_registration,
+            )
+
+            async def registration_execution_replay():
+                for fail in (False, True):
+                    started, release = threading.Event(), threading.Event()
+                    observed = []
+                    async def finish():
+                        observed.append("awaited")
+                        if fail:
+                            raise ValueError("completion failed")
+                        return None
+                    def complete(*args):
+                        observed.append(threading.get_ident()); started.set()
+                        assert release.wait(5)
+                        return finish()
+                    hook = build_complete_registration(complete)
+                    task = asyncio.create_task(hook(None, None))
+                    try:
+                        assert await asyncio.to_thread(started.wait, 5)
+                        assert len(observed) == 1
+                        assert observed[0] != threading.get_ident()
+                        task.cancel()
+                        await asyncio.sleep(0)
+                        task.cancel()
+                        await asyncio.sleep(0)
+                        assert not task.done()
+                        release.set()
+                        try:
+                            await task
+                        except ValueError as exc:
+                            assert fail
+                            assert isinstance(exc.__cause__, asyncio.CancelledError)
+                        except asyncio.CancelledError:
+                            assert not fail
+                        else:
+                            raise AssertionError("cancellation lost")
+                        assert observed[1:] == ["awaited"]
+                    finally:
+                        release.set()
+            asyncio.run(registration_execution_replay())
             """
         ),
         cwd=tmp_path,
@@ -144,55 +170,35 @@ def test_install_local_identity_hides_passkeys_after_unlink(
 
             conn = sqlite3.connect(Path("auth.db"), check_same_thread=False)
             app = FastAPI()
-            identity = install_local_identity(
-                app,
-                database=conn,
-                rp_id="localhost",
-                origin="http://localhost",
-                session_secret="test-secret",
-            )
+            identity = install_local_identity(app, database=conn,
+                rp_id="localhost", origin="http://localhost",
+                session_secret="test-secret")
             issuer = "https://idp.example.test"
             user = identity.manager.users.create(
-                User(
-                    "alice",
-                    "alice",
-                    display_name="Alice",
-                    external_identities=frozenset(
-                        {
-                            ExternalIdentity(MY_AUTH_PROVIDER, "alice"),
-                            ExternalIdentity(issuer, "person-1"),
-                        }
-                    ),
+                User("alice", "alice", display_name="Alice",
+                    external_identities=frozenset({
+                        ExternalIdentity(MY_AUTH_PROVIDER, "alice"),
+                        ExternalIdentity(issuer, "person-1")}),
                 )
             )
-            _ = identity.manager.grants.add_role_grant(
-                "alice", "admin", Scope.global_()
-            )
-            _ = conn.execute(
-                "INSERT INTO passkey_users"
-                "(user_id, user_handle, name, display_name) "
-                "VALUES (?, ?, ?, ?)",
-                ("alice", "YWxpY2U", "alice", "Alice"),
-            )
+            grants_store = identity.manager.grants
+            _ = grants_store.add_role_grant("alice", "admin", Scope.global_())
+            _ = conn.execute("INSERT INTO passkey_users"
+                "(user_id, user_handle, name, display_name) VALUES (?, ?, ?, ?)",
+                ("alice", "YWxpY2U", "alice", "Alice"))
             conn.commit()
 
             def seed_session(request: Request) -> dict[str, bool]:
                 _ = write_current_user(
                     request,
-                    SessionPrincipal(
-                        user_id="alice",
-                        username="alice",
-                        display_name="Alice",
-                        roles=frozenset({"admin"}),
+                    SessionPrincipal(user_id="alice", username="alice",
+                        display_name="Alice", roles=frozenset({"admin"}),
                         claims={"is_admin": True},
-                        external_identities=user.external_identities,
-                    ),
+                        external_identities=user.external_identities),
                 )
                 return {"ok": True}
 
-            _ = app.add_api_route(
-                "/__login", seed_session, methods=["POST"]
-            )
+            _ = app.add_api_route("/__login", seed_session, methods=["POST"])
             client = TestClient(app)
             assert client.post("/__login").json() == {"ok": True}
 
@@ -204,17 +210,10 @@ def test_install_local_identity_hides_passkeys_after_unlink(
             passkeys = client.get("/account/passkeys")
             assert passkeys.status_code == 200
 
+            remaining = frozenset({ExternalIdentity(issuer, "person-1")})
             unlinked = identity.manager.users.update(
-                replace(
-                    user,
-                    external_identities=frozenset(
-                        {ExternalIdentity(issuer, "person-1")}
-                    ),
-                )
-            )
-            assert unlinked.external_identities == frozenset(
-                {ExternalIdentity(issuer, "person-1")}
-            )
+                replace(user, external_identities=remaining))
+            assert unlinked.external_identities == remaining
             still = identity.manager.users.get("alice")
             assert still is not None
             assert still.user_id == "alice"

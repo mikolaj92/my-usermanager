@@ -173,10 +173,11 @@ class _RegistrationTransaction:
             self._close()
 
     def _close(self) -> None:
-        if self.connection is not None and not isinstance(
+        conn, self.connection = self.connection, None
+        if conn is not None and not isinstance(
             self.database.database, sqlite3.Connection
         ):
-            self.connection.close()
+            conn.close()
 
 
 class SQLiteAuthDatabase:

@@ -236,8 +236,6 @@ async def _drain_registration[T](work: asyncio.Future[T]) -> T:
             raise exc from cancelled
         raise
     if cancelled is not None:
-        if inspect.iscoroutine(value):
-            value.close()
         raise cancelled
     return value
 
@@ -249,16 +247,21 @@ def build_complete_registration[RequestT, ResultT, UserT](  # noqa: D103
     *,
     executor: RegistrationExecutor = asyncio.to_thread,
 ) -> Callable[[RequestT, ResultT], Awaitable[UserT | None]]:
+    async def execute(request: RequestT, result: ResultT) -> UserT | None:
+        value = await executor(partial(completion_backend, request, result))
+        if isinstance(value, Awaitable):
+            return await cast("Awaitable[UserT | None]", value)
+        return value
+
     async def complete_registration(request: RequestT, result: ResultT) -> UserT | None:
         if inspect.iscoroutinefunction(
             completion_backend
         ) or inspect.iscoroutinefunction(completion_backend.__call__):
             value = completion_backend(request, result)
         else:
-            work = asyncio.ensure_future(
-                executor(partial(completion_backend, request, result))
+            return await _drain_registration(
+                asyncio.ensure_future(execute(request, result))
             )
-            value = await _drain_registration(work)
         if isinstance(value, Awaitable):
             return await cast("Awaitable[UserT | None]", value)
         return value

@@ -196,10 +196,14 @@ def _sqlite_connection(
     if isinstance(database, sqlite3.Connection):
         return database
     conn = sqlite3.connect(database, timeout=30, check_same_thread=False)
-    _ = conn.execute("PRAGMA busy_timeout=30000")
-    _ = conn.execute("PRAGMA foreign_keys=ON")
-    _ = conn.execute("PRAGMA journal_mode=WAL")
-    _ = conn.execute("PRAGMA synchronous=NORMAL")
+    try:
+        _ = conn.execute("PRAGMA busy_timeout=30000")
+        _ = conn.execute("PRAGMA foreign_keys=ON")
+        _ = conn.execute("PRAGMA journal_mode=WAL")
+        _ = conn.execute("PRAGMA synchronous=NORMAL")
+    except BaseException:
+        conn.close()
+        raise
     return conn
 
 
