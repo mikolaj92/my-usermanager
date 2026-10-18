@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
+from functools import partial
 from importlib import import_module
 from typing import TYPE_CHECKING, Final, Protocol, TypeGuard, cast, override
 
@@ -36,6 +39,7 @@ __all__: Final[tuple[str, ...]] = (
     "PasskeyRegistrationLink",
     "PasskeyRouteHooksLike",
     "PasskeyUserProfile",
+    "RegistrationExecutor",
     "build_after_login_identity_linker",
     "build_after_register_identity_linker",
     "build_complete_registration",
@@ -57,6 +61,18 @@ type SessionPrincipalWriter[ResponseT, RequestT] = Callable[
     [ResponseT, RequestT, SessionPrincipal],
     MaybeAwaitable[None],
 ]
+
+
+class RegistrationExecutor(Protocol):
+    """Run a whole synchronous operation on its resource-owning thread.
+
+    Submission must happen when awaited. Return only after operation cleanup;
+    do not abandon the operation or cancel its worker on caller cancellation.
+    """
+
+    def __call__[T](self, operation: Callable[[], T], /) -> Awaitable[T]:
+        """Submit one complete operation to its owner."""
+        ...
 
 
 class PasskeyRouteHooksLike(Protocol):
@@ -213,15 +229,45 @@ def build_prepare_registration[RequestT](
     return prepare_registration
 
 
+async def _drain_registration[T](work: asyncio.Future[T]) -> T:
+    cancelled: asyncio.CancelledError | None = None
+    while not work.done():
+        try:
+            _ = await asyncio.wait((work,))
+        except asyncio.CancelledError as exc:
+            cancelled = exc
+    try:
+        value = work.result()
+    except BaseException as exc:
+        if cancelled is not None:
+            raise exc from cancelled
+        raise
+    if cancelled is not None:
+        if inspect.iscoroutine(value):
+            value.close()
+        raise cancelled
+    return value
+
+
 def build_complete_registration[RequestT, ResultT, UserT](
     completion_backend: Callable[
         [RequestT, ResultT], UserT | Awaitable[UserT | None] | None
     ],
+    *,
+    executor: RegistrationExecutor = asyncio.to_thread,
 ) -> Callable[[RequestT, ResultT], Awaitable[UserT | None]]:
-    """Build a sync/async-compatible completion hook around host backend."""
+    """Invoke once; drain synchronous work before propagating cancellation."""
 
     async def complete_registration(request: RequestT, result: ResultT) -> UserT | None:
-        value = completion_backend(request, result)
+        if inspect.iscoroutinefunction(
+            completion_backend
+        ) or inspect.iscoroutinefunction(completion_backend.__call__):
+            value = completion_backend(request, result)
+        else:
+            work = asyncio.ensure_future(
+                executor(partial(completion_backend, request, result))
+            )
+            value = await _drain_registration(work)
         if isinstance(value, Awaitable):
             return await cast("Awaitable[UserT | None]", value)
         return value

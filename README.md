@@ -97,8 +97,10 @@ from my_usermanager.adapters.my_auth_fastapi import (
     build_prepare_registration,
     require_passkey_route_hooks,
 )
+from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
 
 prepare = build_prepare_registration(profile_for_policy)
+auth_db = SQLiteAuthDatabase("app.sqlite3")
 complete = build_complete_registration(
     lambda request, verified: auth_db.complete_registration(
         request,
@@ -121,11 +123,13 @@ hooks = PasskeyRouteHooks(
 )
 ```
 
-`build_prepare_registration` performs no writes. `build_complete_registration`
-normalizes a synchronous or asynchronous host backend to an async callback.
-The underlying `my-auth` router accepts sync or async callbacks for every hook;
-registration policy runs before options and again before verify, then WebAuthn
-verification precedes completion, login, and non-fatal observer hooks.
+`build_prepare_registration` performs no writes. Completion invokes the callback
+once. Async callbacks and returned awaitables are awaited. Synchronous callbacks
+run through `asyncio.to_thread`, or the explicit `executor(operation)` awaitable.
+The executor owns the whole operation, not individual SQL calls. Cancellation,
+including repeated cancellation, waits for synchronous cleanup. Success then
+propagates cancellation; failure takes precedence with cancellation as its cause.
+A committed registration is not undone. Failure or cancellation prevents login.
 
 ## Administrator invitations
 
@@ -177,13 +181,6 @@ hooks = StandardUserManagerUiHooks(
 Use focused host hooks or a small subclass for optional surfaces; this adapter
 does not infer registration or authorization policy.
 
-Identity-linking checklist for host apps:
-
-- Provision or choose the local `User` in host code before returning `PasskeyRegistrationLink`.
-- Link `ExternalIdentity(provider="my-auth", subject=PasskeyUser.user_id)` explicitly; never infer grants from passkey registration or login.
-- Wire `after_register` and `after_login` through the identity-linker helpers so refreshes are idempotent and credential/user mismatches fail closed.
-- Build sessions only from an already-linked local user, then project roles, permissions, and claims from the app's grant stores.
-
 Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
 
 ## Neutral self-registration
@@ -218,11 +215,12 @@ policy verification.
 
 Call `initialize()` explicitly without a pending transaction: it inspects, initializes and migrates supported UM/my-auth schemas; unsupported schemas and orphan grants fail closed. Inspection alone is read-only.
 
-**Proposed ADR — optional Postgres/SQLAlchemy, deferred pending a consumer and approval.** No requiring consumer is confirmed by the available evidence; no backend is implemented here. Inventory at main `1844d41` and my-auth v0.5.7: the five synchronous contracts are `UserStore`, `RoleStore`, `GrantStore`, `AuditStore` and `InvitationStore`. All except roles have Memory/SQLite implementations; roles use `MemoryRoleStore`, including SQLite composition. Historical my-auth#1 is closed and concerns credentials, not UM stores; closure does not establish Postgres compatibility.
-Use separate optional users, roles, grants, audit, invitations, database and schema modules behind existing contracts. SQLite stays default; SQLAlchemy and its driver must not enter core imports. Resolve username normalization and invitation transaction parity before implementation.
-Propose sync Engine/Connection APIs; async requires a separate decision. Hosts may lend an engine/connection or request an adapter-owned engine. Dispose only owned engines; close only owned connections. Stores never commit or roll back borrowed outer transactions; their owner decides the outcome. The coordinator commits owned transactions on success and rolls back on failure.
-UM owns UM migrations; my-auth owns credential migrations; hosts serialize explicit execution. No implicit DDL. Passkey + UM atomicity remains unresolved until a compatible my-auth credential backend shares the connection and outer transaction.
-Stage implementation after ADR approval: database/transactions → five store modules → shared Memory/SQLite/Postgres contract checks. Extend existing checks to Invitation. Real Postgres checks must cover unique identity/username, CAS, rollback (including credentials), and concurrent last-admin mutations with independent connections and a shared guard. SQLite cannot substitute for these checks.
+Path registration opens, constructs stores, transacts, materializes the user,
+and closes on one worker thread with SQLite's default thread check.
+Borrowed connections remain open; pending host transactions are rejected untouched.
+For borrowed connections, pass an owner-thread `executor` to completion and
+`registration_executor` to `install_local_identity`; omission rejects registration.
+Other local-identity hooks still use the shared operation connection.
 
 `SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
 commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use
@@ -351,6 +349,7 @@ or a local secure context such as localhost, and `/api/auth/*` remains JSON.
 ```sh
 uv sync
 uv run pytest
+uv run python tests/fixtures/registration_execution_replay.py
 uv run ruff check .
 uv run basedpyright src tests
 ```

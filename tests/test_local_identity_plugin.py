@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _run(code: str, *, cwd: Path) -> None:
@@ -20,13 +17,15 @@ def _run(code: str, *, cwd: Path) -> None:
         cwd=cwd,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert completed.stdout == ""
-    assert completed.stderr == ""
+    assert (completed.stdout, completed.stderr) == ("", "")
 
 
 def test_install_local_identity_exposes_login_account_and_admin(
     tmp_path: Path,
 ) -> None:
+    replay = Path(__file__).parent / "fixtures/registration_execution_replay.py"
+    code = f"import runpy; runpy.run_path({str(replay)!r}, run_name='__main__')"
+    _run(code, cwd=tmp_path)
     _run(
         dedent(
             """

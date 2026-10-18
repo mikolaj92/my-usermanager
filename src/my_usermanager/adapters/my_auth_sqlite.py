@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import importlib
 import sqlite3
-from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final, Literal, Protocol, cast
@@ -23,7 +22,7 @@ from my_usermanager.memory import MemoryRoleStore
 from my_usermanager.stores import DuplicateGrantError, DuplicateUserError
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from types import TracebackType
 
     from my_usermanager.models import ExternalIdentity, Grant, Permission, User
 
@@ -127,6 +126,59 @@ class SQLiteAuthTransaction:
         return factory(self._conn, transaction_mode="external")
 
 
+class _RegistrationTransaction:
+    def __init__(self, database: SQLiteAuthDatabase) -> None:
+        self.database: SQLiteAuthDatabase = database
+        self.connection: sqlite3.Connection | None = None
+
+    def __enter__(self) -> SQLiteAuthTransaction:
+        conn = self.database._connect(thread_affine=True)  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+        self.connection = conn
+        try:
+            if conn.in_transaction:
+                raise RuntimeError(_SCHEMA_PENDING_ERROR)  # noqa: TRY301
+            _ = conn.execute("BEGIN IMMEDIATE")
+        except BaseException:
+            self._close()
+            raise
+        try:
+            return SQLiteAuthTransaction(conn)
+        except BaseException:
+            try:
+                conn.rollback()
+            finally:
+                self._close()
+            raise
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        conn = self.connection
+        if conn is None:
+            message = "transaction has not started"
+            raise RuntimeError(message)
+        try:
+            if exc_type is not None:
+                conn.rollback()
+            else:
+                try:
+                    conn.commit()
+                except BaseException:
+                    conn.rollback()
+                    raise
+        finally:
+            self._close()
+
+    def _close(self) -> None:
+        if self.connection is not None and not isinstance(
+            self.database.database, sqlite3.Connection
+        ):
+            self.connection.close()
+
+
 class SQLiteAuthDatabase:
     """Own canonical passkey/UM SQLite configuration and transaction boundaries."""
 
@@ -142,14 +194,22 @@ class SQLiteAuthDatabase:
             if str(self.database) == ":memory:":
                 raise ValueError(_MEMORY_PATH_ERROR)
 
-    def _connect(self) -> sqlite3.Connection:
+    def _connect(self, *, thread_affine: bool = False) -> sqlite3.Connection:
         if isinstance(self.database, sqlite3.Connection):
             return self.database
-        conn = sqlite3.connect(self.database, timeout=30, check_same_thread=False)
-        _ = conn.execute("PRAGMA busy_timeout=30000")
-        _ = conn.execute("PRAGMA foreign_keys=ON")
-        _ = conn.execute("PRAGMA journal_mode=WAL")
-        _ = conn.execute("PRAGMA synchronous=NORMAL")
+        conn = (
+            sqlite3.connect(self.database, timeout=30)
+            if thread_affine
+            else sqlite3.connect(self.database, timeout=30, check_same_thread=False)
+        )
+        try:
+            _ = conn.execute("PRAGMA busy_timeout=30000")
+            _ = conn.execute("PRAGMA foreign_keys=ON")
+            _ = conn.execute("PRAGMA journal_mode=WAL")
+            _ = conn.execute("PRAGMA synchronous=NORMAL")
+        except BaseException:
+            conn.close()
+            raise
         return conn
 
     def initialize(self) -> None:
@@ -222,23 +282,9 @@ class SQLiteAuthDatabase:
             grants_conn=grants_conn,
         )
 
-    @contextmanager
-    def transaction(self) -> Generator[SQLiteAuthTransaction, None, None]:
-        """Yield transaction-bound stores and atomically commit or roll back."""
-        conn = self._connect()
-        if conn.in_transaction:
-            raise RuntimeError(_SCHEMA_PENDING_ERROR)
-        try:
-            _ = conn.execute("BEGIN IMMEDIATE")
-            tx = SQLiteAuthTransaction(conn)
-            yield tx
-            conn.commit()
-        except BaseException:
-            conn.rollback()
-            raise
-        finally:
-            if not isinstance(self.database, sqlite3.Connection):
-                conn.close()
+    def transaction(self) -> _RegistrationTransaction:
+        """Bind one thread-affine connection to an atomic transaction."""
+        return _RegistrationTransaction(self)
 
     def complete_registration(
         self,
