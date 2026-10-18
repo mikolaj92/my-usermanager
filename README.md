@@ -349,7 +349,6 @@ or a local secure context such as localhost, and `/api/auth/*` remains JSON.
 ```sh
 uv sync
 uv run pytest
-uv run python tests/fixtures/registration_execution_replay.py
 uv run ruff check .
 uv run basedpyright src tests
 ```
