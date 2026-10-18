@@ -45,6 +45,7 @@ from my_usermanager.adapters.fastapi_htmx import StandardUserManagerUiHooks
 from my_usermanager.adapters.my_auth import MY_AUTH_PROVIDER
 from my_usermanager.adapters.my_auth_fastapi import (
     PasskeyUserProfile,
+    RegistrationExecutor,
     build_after_login_identity_linker,
     build_after_register_identity_linker,
     build_complete_registration,
@@ -111,6 +112,7 @@ def install_local_identity(  # noqa: PLR0913
     origin: str,
     session_secret: str,
     app_name: str = "App",
+    registration_executor: RegistrationExecutor | None = None,
 ) -> LocalIdentity:
     """Mount passkey login, account, and admin UI on one FastAPI app.
 
@@ -136,7 +138,7 @@ def install_local_identity(  # noqa: PLR0913
         ),
         passkey=PasskeyBinding(
             service=stack.service,
-            hooks=_passkey_hooks(stack),
+            hooks=_passkey_hooks(stack, registration_executor),
             cookies=PasskeyCookies(secure=urlsplit(origin).scheme == "https"),
             csrf_token=csrf.token,
             login_success_url="/",
@@ -167,9 +169,9 @@ def _open_stack(
     app_name: str,
 ) -> _Stack:
     conn = _sqlite_connection(database)
-    auth_db = SQLiteAuthDatabase(conn)
+    auth_db = SQLiteAuthDatabase(database)
     auth_db.initialize()
-    stores = auth_db.stores()
+    stores = SQLiteAuthDatabase(conn).stores()
     credentials = SQLiteCredentialStore(conn)
     return _Stack(
         auth_db=auth_db,
@@ -194,21 +196,37 @@ def _sqlite_connection(
     if isinstance(database, sqlite3.Connection):
         return database
     conn = sqlite3.connect(database, timeout=30, check_same_thread=False)
-    _ = conn.execute("PRAGMA busy_timeout=30000")
-    _ = conn.execute("PRAGMA foreign_keys=ON")
-    _ = conn.execute("PRAGMA journal_mode=WAL")
-    _ = conn.execute("PRAGMA synchronous=NORMAL")
+    try:
+        _ = conn.execute("PRAGMA busy_timeout=30000")
+        _ = conn.execute("PRAGMA foreign_keys=ON")
+        _ = conn.execute("PRAGMA journal_mode=WAL")
+        _ = conn.execute("PRAGMA synchronous=NORMAL")
+    except BaseException:
+        conn.close()
+        raise
     return conn
 
 
-def _passkey_hooks(stack: _Stack) -> PasskeyRouteHooks:
+def _passkey_hooks(
+    stack: _Stack, executor: RegistrationExecutor | None
+) -> PasskeyRouteHooks:
     users = stack.users
+
+    def complete(request: Request, result: object) -> PasskeyUser:
+        if isinstance(stack.auth_db.database, sqlite3.Connection) and executor is None:
+            message = "borrowed SQLite registration requires registration_executor"
+            raise RuntimeError(message)
+        return _complete_registration(stack, request, result)
+
+    completion = (
+        build_complete_registration(complete)
+        if executor is None
+        else build_complete_registration(complete, executor=executor)
+    )
     return PasskeyRouteHooks(
         get_session_user=lambda request: _session_passkey_user(stack, request),
         prepare_registration=_prepare_registration,
-        complete_registration=build_complete_registration(
-            lambda request, result: _complete_registration(stack, request, result)
-        ),
+        complete_registration=completion,
         get_auth_user=lambda user_id: _get_auth_user(stack, user_id),
         login=build_login_session_principal_writer(
             users,
