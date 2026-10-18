@@ -198,14 +198,14 @@ administrative access. Bootstrap and provisioning policy remain host-owned.
 
 `build_complete_registration` awaits async backends, including callable objects, and runs sync backends once in a worker; returned awaitables are awaited.
 Sync backends must open connections, build stores, finish transactions, materialize results, and close owned resources in that call; exceptions require owner-managed rollback.
-Cancellation neither stops workers nor guarantees rollback or retries. Backends must finish transactions and cleanup. AnyIO shields normal worker waits; direct asyncio cancellation can end waiting early.
+Started synchronous work finishes before cancellation propagates, including direct asyncio cancellation. Owner errors propagate after cleanup; committed operations are never retried or promised rollback.
 
 Packaged HTMX routes dispatch all host hooks: sync callables use Starlette's threadpool; async callables are awaited. Standard hooks access user/grant stores through `UserManager` inside that dispatch.
 FastAPI offloads sync `Depends` dependencies, not ordinary async-route calls. Session-only dependencies perform no store I/O. Each sync hook runs as one worker call, completing transactions and materializing rows before returning; separate hooks may use different workers.
 
 `StandardUserManagerUiHooks` retains manager/connection ownership. Its optional `callback_executor` must await a zero-argument operation on the serialized owner, including cleanup, for every sync standard hook, including host policy.
-Other thread-bound hooks need async callbacks delegating to their owner, never arbitrary workers. Disabling SQLite's thread check does not serialize transactions. Request/session callbacks must not retain request state or access it concurrently after returning.
-The same cancellation rules apply to HTMX hooks. Local registration opens worker-owned databases for paths; host connections require `registration_executor` to dispatch the whole transaction to their owner.
+Other thread-bound hooks use async delegation or the `callback_executor` context variable; the dispatcher never inspects stores. Request/session callbacks must not retain request state after returning.
+Local path registration opens and closes its connection inside the worker. Local HTMX hooks serialize access to installer-owned stores. Host connections require `callback_executor` for HTMX and `registration_executor` for registration, both executing on their owner.
 
 ## Canonical shared SQLite owner
 
@@ -233,8 +233,8 @@ policy verification.
 
 Call `initialize()` explicitly without a pending transaction: it inspects, initializes and migrates supported UM/my-auth schemas; unsupported schemas and orphan grants fail closed. Inspection alone is read-only.
 
-`SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
-commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use
+`SQLiteAuthDatabase.stores()` opens persistent operation-mode connections immediately;
+call `close()` on its result. Mutations commit independently. Transaction stores use
 `transaction_mode="external"` (savepoints); the outer context commits or rolls
 back. Do not instantiate independent auth and UM databases for one product.
 
@@ -245,11 +245,9 @@ path; supported legacy layouts require explicit `migrate_sqlite_schema`, which
 validates orphan grants and rebuilds them atomically. Direct store constructors
 receive an open `sqlite3.Connection`; the caller owns its lifecycle and
 transaction policy.
-Path-owned shared stores use per-operation connections with
-`check_same_thread=False`, busy timeout, WAL, and foreign keys. A caller-owned
-connection remains thread-affine by default: use one connection per thread or
-explicitly coordinate access. Never mix multiple connection owners for one
-logical database.
+Path-owned stores retain connections with `check_same_thread=False`, busy timeout,
+WAL, and foreign keys; hosts must serialize access. Caller-owned connections
+retain their thread affinity. Transactions must stay with one owner.
 
 ## Ownership matrix
 

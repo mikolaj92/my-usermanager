@@ -14,6 +14,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Final
 from urllib.parse import urlsplit
 
+from anyio import Lock
 from app_factory.adapters import (
     PasskeyBinding,
     UserManagerBinding,
@@ -38,6 +39,7 @@ from my_auth.passkeys import (  # pyright: ignore[reportMissingTypeStubs]
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
+from my_usermanager.adapters._callbacks import wait_for_owner
 from my_usermanager.adapters.fastapi import (
     clear_current_user,
     current_user,
@@ -110,6 +112,7 @@ class _Stack:
     service: PasskeyService
     registration_db: SQLiteAuthDatabase
     registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
+    callback_executor: Callable[[Callable[[], object]], Awaitable[object]]
 
 
 def install_local_identity(  # noqa: PLR0913
@@ -121,6 +124,8 @@ def install_local_identity(  # noqa: PLR0913
     session_secret: str,
     app_name: str = "App",
     registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
+    | None = None,
+    callback_executor: Callable[[Callable[[], object]], Awaitable[object]]
     | None = None,
 ) -> LocalIdentity:
     """Mount passkey login, account, and admin UI on one FastAPI app.
@@ -140,6 +145,7 @@ def install_local_identity(  # noqa: PLR0913
         origin=origin,
         app_name=app_name,
         registration_executor=registration_executor,
+        callback_executor=callback_executor,
     )
     csrf = SessionCsrfProtection()
     _ = install_identity_adapters(
@@ -160,7 +166,7 @@ def install_local_identity(  # noqa: PLR0913
             register_success_url="/account",
         ),
         usermanager=UserManagerBinding(
-            hooks=_um_hooks(stack.manager),
+            hooks=_um_hooks(stack.manager, stack.callback_executor),
             csrf_protection=csrf,
         ),
         current_user=_platform_user,
@@ -176,7 +182,7 @@ def install_local_identity(  # noqa: PLR0913
     return installed
 
 
-def _open_stack(
+def _open_stack(  # noqa: PLR0913
     database: str | Path | sqlite3.Connection,
     *,
     rp_id: str,
@@ -184,7 +190,18 @@ def _open_stack(
     app_name: str,
     registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
     | None,
+    callback_executor: Callable[[Callable[[], object]], Awaitable[object]] | None,
 ) -> _Stack:
+    lock = Lock()
+
+    async def require_owner(_operation: Callable[[], object]) -> object:
+        message = "callback_executor is required for a host SQLite connection"
+        raise ValueError(message)
+
+    async def serialized(operation: Callable[[], object]) -> object:
+        async with lock:
+            return await wait_for_owner(run_in_threadpool(operation))
+
     conn = _sqlite_connection(database)
     auth_db = SQLiteAuthDatabase(conn)
     auth_db.initialize()
@@ -192,6 +209,8 @@ def _open_stack(
     credentials = SQLiteCredentialStore(conn)
     return _Stack(
         auth_db=auth_db,
+        callback_executor=callback_executor
+        or (require_owner if isinstance(database, sqlite3.Connection) else serialized),
         registration_db=(
             auth_db
             if isinstance(database, sqlite3.Connection)
@@ -287,8 +306,10 @@ async def _complete_registration(
     request: Request,
     result: object,
 ) -> PasskeyUser:
-    return await stack.registration_executor(
-        partial(_persist_registration, stack.registration_db, request, result)
+    return await wait_for_owner(
+        stack.registration_executor(
+            partial(_persist_registration, stack.registration_db, request, result)
+        )
     )
 
 
@@ -368,7 +389,10 @@ def _logout(_response: Response, request: Request) -> None:
     clear_current_user(request)
 
 
-def _um_hooks(manager: UserManager) -> StandardUserManagerUiHooks:
+def _um_hooks(
+    manager: UserManager,
+    callback_executor: Callable[[Callable[[], object]], Awaitable[object]],
+) -> StandardUserManagerUiHooks:
     def subject_from_request(request: Request) -> AuthenticatedSubject | None:
         principal = current_user(request)
         if principal is None:
@@ -394,6 +418,7 @@ def _um_hooks(manager: UserManager) -> StandardUserManagerUiHooks:
 
     return StandardUserManagerUiHooks(
         manager=manager,
+        callback_executor=callback_executor,
         current_user=subject_from_request,
         require_admin=require_admin,
         role_names=(ADMIN_ROLE_NAME,),

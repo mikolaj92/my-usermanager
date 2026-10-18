@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-import sqlite3
+import asyncio
 from collections.abc import Awaitable, Callable, Iterable
 from contextvars import ContextVar
 from inspect import iscoroutinefunction
-from threading import RLock
 from typing import cast
-
-from my_usermanager.manager import UserManager
 
 callback_executor: ContextVar[
     Callable[[Callable[[], object]], Awaitable[object]] | None
 ] = ContextVar("callback_executor", default=None)
-_SQLITE_CALLBACK_LOCK = RLock()
 
 
 def _is_async(callback: Callable[..., object]) -> bool:
@@ -25,29 +21,35 @@ async def _execute[T](callback: Callable[..., object], operation: Callable[[], T
         "Callable[[Callable[[], T]], Awaitable[T]] | None",
         getattr(owner, "callback_executor", None) or callback_executor.get(),
     )
-    if executor is not None:
-        return await executor(operation)
-    manager: object = getattr(owner, "manager", None)
-    connections: list[sqlite3.Connection] = []
-    if isinstance(manager, UserManager):
-        for store in (manager.users, manager.roles, manager.grants):
-            connection: object = getattr(store, "_conn", None)
-            if isinstance(connection, sqlite3.Connection):
-                connections.append(connection)
-
-    def guarded() -> T:
-        with _SQLITE_CALLBACK_LOCK:
-            for connection in connections:
-                try:
-                    connection.cursor().close()
-                except sqlite3.ProgrammingError as exc:
-                    message = "SQLite hooks require callback_executor for their owner"
-                    raise RuntimeError(message) from exc
-            return operation()
-
     from starlette.concurrency import run_in_threadpool
 
-    return await run_in_threadpool(guarded if connections else operation)
+    return await wait_for_owner((executor or run_in_threadpool)(operation))
+
+
+async def wait_for_owner[T](work: Awaitable[T]) -> T:
+    """Finish started owner work before propagating cancellation; never retry it."""
+    from anyio import CancelScope
+
+    with CancelScope(shield=True):
+        try:
+            _ = asyncio.get_running_loop()
+        except RuntimeError:
+            return await work
+        task = asyncio.ensure_future(work)
+        cancelled: asyncio.CancelledError | None = None
+        while not task.done():
+            try:
+                _ = await asyncio.shield(task)
+            except asyncio.CancelledError as exc:
+                if task.cancelled():
+                    raise
+                cancelled = exc
+        result = task.result()
+        if cancelled is not None:
+            raise cancelled
+        return result
+    message = "owner wait was interrupted"
+    raise RuntimeError(message)
 
 
 async def dispatch[**P, T](

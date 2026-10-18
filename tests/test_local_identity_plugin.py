@@ -143,11 +143,14 @@ def test_install_local_identity_hides_passkeys_after_unlink(
             from my_usermanager.models import ExternalIdentity, Scope, User
             from my_usermanager.sessions import SessionPrincipal
 
+            from starlette.concurrency import run_in_threadpool
+
             conn = sqlite3.connect(Path("auth.db"), check_same_thread=False)
             app = FastAPI()
             identity = install_local_identity(
                 app,
                 database=conn,
+                callback_executor=run_in_threadpool,
                 rp_id="localhost",
                 origin="http://localhost",
                 session_secret="test-secret",
