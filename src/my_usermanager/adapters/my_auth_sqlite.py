@@ -282,8 +282,7 @@ class SQLiteAuthDatabase:
             grants_conn=grants_conn,
         )
 
-    def transaction(self) -> _RegistrationTransaction:
-        """Bind one thread-affine connection to an atomic transaction."""
+    def transaction(self) -> _RegistrationTransaction:  # noqa: D102
         return _RegistrationTransaction(self)
 
     def complete_registration(

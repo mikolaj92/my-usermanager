@@ -63,15 +63,8 @@ type SessionPrincipalWriter[ResponseT, RequestT] = Callable[
 ]
 
 
-class RegistrationExecutor(Protocol):
-    """Run a whole synchronous operation on its resource-owning thread.
-
-    Submission must happen when awaited. Return only after operation cleanup;
-    do not abandon the operation or cancel its worker on caller cancellation.
-    """
-
-    def __call__[T](self, operation: Callable[[], T], /) -> Awaitable[T]:
-        """Submit one complete operation to its owner."""
+class RegistrationExecutor(Protocol):  # noqa: D101
+    def __call__[T](self, operation: Callable[[], T], /) -> Awaitable[T]:  # noqa: D102
         ...
 
 
@@ -249,15 +242,13 @@ async def _drain_registration[T](work: asyncio.Future[T]) -> T:
     return value
 
 
-def build_complete_registration[RequestT, ResultT, UserT](
+def build_complete_registration[RequestT, ResultT, UserT](  # noqa: D103
     completion_backend: Callable[
         [RequestT, ResultT], UserT | Awaitable[UserT | None] | None
     ],
     *,
     executor: RegistrationExecutor = asyncio.to_thread,
 ) -> Callable[[RequestT, ResultT], Awaitable[UserT | None]]:
-    """Invoke once; drain synchronous work before propagating cancellation."""
-
     async def complete_registration(request: RequestT, result: ResultT) -> UserT | None:
         if inspect.iscoroutinefunction(
             completion_backend
