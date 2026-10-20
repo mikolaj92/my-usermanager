@@ -34,6 +34,8 @@ from my_usermanager.stores import InvalidPageError, UserNotFoundError, UserQuery
 from my_usermanager.subjects import AuthenticatedSubject
 
 if TYPE_CHECKING:
+    from my_usermanager.adapters.my_auth_fastapi import RegistrationExecutor
+
     from my_usermanager.identity_capabilities import IdentityProviderCapabilities
 
 CurrentUser = Callable[[Request], AuthenticatedSubject | None]
@@ -52,6 +54,7 @@ class StandardUserManagerUiHooks:
     """
 
     manager: UserManager
+    executor: RegistrationExecutor | None
     current_user: CurrentUser
     require_admin_policy: RequireAdmin
     role_names: tuple[str, ...] = ()
@@ -65,6 +68,7 @@ class StandardUserManagerUiHooks:
         self,
         *,
         manager: UserManager,
+        executor: RegistrationExecutor | None = None,
         current_user: CurrentUser,
         require_admin: RequireAdmin,
         role_names: tuple[str, ...] = (),
@@ -79,6 +83,7 @@ class StandardUserManagerUiHooks:
             msg = "page_size must be positive"
             raise ValueError(msg)
         self.manager = manager
+        self.executor = executor
         self.current_user = current_user
         self.require_admin_policy = require_admin
         self.role_names = role_names
@@ -119,10 +124,12 @@ class StandardUserManagerUiHooks:
             reason = "must be greater than or equal to zero"
             raise InvalidPageError(field_name, offset, reason)
         user_query = UserQuery() if query is None else query
-        page = self.manager.users.list(
-            limit=selected_limit + 1,
-            offset=offset,
-            query=user_query,
+        page = tuple(
+            self.manager.users.list(
+                limit=selected_limit + 1,
+                offset=offset,
+                query=user_query,
+            )
         )
         return UserPage(
             items=tuple(self._row(user) for user in page[:selected_limit]),
@@ -308,7 +315,7 @@ class StandardUserManagerUiHooks:
         return self._row(user)
 
     def _row(self, user: User) -> UserRow:
-        grants = self.manager.grants.list_grants_for_user(user.user_id)
+        grants = tuple(self.manager.grants.list_grants_for_user(user.user_id))
         roles = tuple(
             sorted(
                 grant.role_name

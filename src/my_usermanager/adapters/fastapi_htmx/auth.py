@@ -45,7 +45,7 @@ async def current_user(
     hooks: UserManagerUiHooks,
 ) -> AuthResult:
     """Return the current user or the configured unauthenticated response."""
-    user = await resolve(hooks.get_current_user(request))
+    user = await resolve(hooks.get_current_user, request)
     if user is not None:
         return Authenticated(user)
     if request.method != "GET" or request.headers.get("HX-Request") == "true":
@@ -71,7 +71,7 @@ async def admin_user(
             return auth
         case Authenticated(current_user=user):
             try:
-                await resolve(hooks.require_admin(request, user))
+                await resolve(hooks.require_admin, request, user)
             except HTTPException as exc:
                 if exc.status_code != status.HTTP_403_FORBIDDEN:
                     raise

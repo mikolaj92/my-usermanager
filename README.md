@@ -179,8 +179,8 @@ hooks = StandardUserManagerUiHooks(
 )
 ```
 
-Use focused host hooks or a small subclass for optional surfaces; this adapter
-does not infer registration or authorization policy.
+HTMX awaits async hooks; sync hooks drain on cancellation, without undoing commits.
+Standard hooks stay inline unless `executor(operation)` delegates to their store owner.
 
 Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
 

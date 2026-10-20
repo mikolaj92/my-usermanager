@@ -76,9 +76,9 @@ def add_invitation_routes(
             return csrf_error
         changed = cast(
             "UserRow",
-            await resolve(callback(request, auth.current_user, form["invitation_id"])),
+            await resolve(callback, request, auth.current_user, form["invitation_id"]),
         )
-        csrf = await resolve(hooks.csrf_context(request))
+        csrf = await resolve(hooks.csrf_context, request)
         return await row_response(
             templates,
             request,
