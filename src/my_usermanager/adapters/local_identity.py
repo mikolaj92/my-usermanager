@@ -7,10 +7,13 @@ CSRF, chrome, ``/login``, ``/account``, and ``/admin/users``.
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast, final
 from urllib.parse import urlsplit
 
 from app_factory.adapters import (
@@ -53,19 +56,21 @@ from my_usermanager.adapters.my_auth_fastapi import (
     user_to_session_principal,
 )
 from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
+from my_usermanager.adapters.sqlite import SQLiteGrantStore, SQLiteUserStore
 from my_usermanager.identity_capabilities import (
     AccountCapability,
     IdentityProviderCapabilities,
 )
 from my_usermanager.manager import UserManager
+from my_usermanager.memory import MemoryRoleStore
 from my_usermanager.models import ExternalIdentity, User
 from my_usermanager.permissions import ADMIN_ROLE_NAME
 from my_usermanager.subjects import AuthenticatedSubject
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping
     from pathlib import Path
 
-    from my_usermanager.adapters.sqlite import SQLiteUserStore
     from my_usermanager.sessions import SessionPrincipal
 
 __all__: Final[tuple[str, ...]] = (
@@ -97,6 +102,7 @@ class LocalIdentity:
 
 @dataclass(frozen=True, slots=True)
 class _Stack:
+    connection: sqlite3.Connection
     auth_db: SQLiteAuthDatabase
     manager: UserManager
     users: SQLiteUserStore
@@ -126,6 +132,11 @@ def install_local_identity(  # noqa: PLR0913
         raise ValueError(_SESSION_KEY_REQUIRED)
 
     stack = _open_stack(database, rp_id=rp_id, origin=origin, app_name=app_name)
+    try:
+        owner = None if isinstance(database, sqlite3.Connection) else _UiOwner(database)
+    except BaseException:
+        stack.connection.close()
+        raise
     csrf = SessionCsrfProtection()
     _ = install_identity_adapters(
         app,
@@ -145,7 +156,11 @@ def install_local_identity(  # noqa: PLR0913
             register_success_url="/account",
         ),
         usermanager=UserManagerBinding(
-            hooks=_um_hooks(stack.manager),
+            hooks=(
+                _um_hooks(stack.manager)
+                if owner is None
+                else _um_hooks(owner.manager, executor=owner.execute)
+            ),
             csrf_protection=csrf,
         ),
         current_user=_platform_user,
@@ -157,8 +172,78 @@ def install_local_identity(  # noqa: PLR0913
         database=stack.auth_db,
         passkey=stack.service,
     )
+    lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def identity_lifespan(
+        application: FastAPI,
+    ) -> AsyncGenerator[Mapping[str, object]]:
+        try:
+            async with lifespan(application) as state:
+                yield {} if state is None else state
+        finally:
+            if owner is not None:
+                try:
+                    await owner.execute(owner.connection.close, transaction=False)
+                finally:
+                    owner.pool.shutdown(wait=True)
+                    stack.connection.close()
+
+    app.router.lifespan_context = identity_lifespan
     app.state.local_identity = installed
     return installed
+
+
+@final
+class _UiOwner:
+    def __init__(self, database: str | Path) -> None:
+        self.pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
+        try:
+            self.connection, self.manager = self.pool.submit(
+                self._open, database
+            ).result()
+        except BaseException:
+            self.pool.shutdown(wait=True)
+            raise
+
+    @staticmethod
+    def _open(database: str | Path) -> tuple[sqlite3.Connection, UserManager]:
+        conn = sqlite3.connect(database, timeout=30)
+        try:
+            _ = conn.execute("PRAGMA busy_timeout=30000")
+            _ = conn.execute("PRAGMA foreign_keys=ON")
+            return conn, UserManager(
+                users=SQLiteUserStore(conn, transaction_mode="external"),
+                roles=MemoryRoleStore(),
+                grants=SQLiteGrantStore(conn, transaction_mode="external"),
+            )
+        except BaseException:
+            conn.close()
+            raise
+
+    def _run[T](self, operation: Callable[[], T], *, transaction: bool) -> T:
+        if not transaction:
+            return operation()
+        try:
+            _ = self.connection.execute("BEGIN IMMEDIATE")
+            result = operation()
+            self.connection.commit()
+        except BaseException:
+            self.connection.rollback()
+            raise
+        return result
+
+    async def _submit[T](self, operation: Callable[[], T]) -> T:
+        return await asyncio.wrap_future(self.pool.submit(operation))
+
+    def execute[T](
+        self, operation: Callable[[], T], *, transaction: bool = True
+    ) -> Awaitable[T]:
+        def run(_request: object, _result: object) -> T:
+            return self._run(operation, transaction=transaction)
+
+        complete = build_complete_registration(run, executor=self._submit)
+        return cast("Awaitable[T]", complete(None, None))
 
 
 def _open_stack(
@@ -168,12 +253,13 @@ def _open_stack(
     origin: str,
     app_name: str,
 ) -> _Stack:
-    conn = _sqlite_connection(database)
     auth_db = SQLiteAuthDatabase(database)
     auth_db.initialize()
+    conn = _sqlite_connection(database)
     stores = SQLiteAuthDatabase(conn).stores()
     credentials = SQLiteCredentialStore(conn)
     return _Stack(
+        connection=conn,
         auth_db=auth_db,
         manager=UserManager(
             users=stores.users,
@@ -340,7 +426,9 @@ def _logout(_response: Response, request: Request) -> None:
     clear_current_user(request)
 
 
-def _um_hooks(manager: UserManager) -> StandardUserManagerUiHooks:
+def _um_hooks(
+    manager: UserManager, *, executor: RegistrationExecutor | None = None
+) -> StandardUserManagerUiHooks[RegistrationExecutor | None]:
     def subject_from_request(request: Request) -> AuthenticatedSubject | None:
         principal = current_user(request)
         if principal is None:
@@ -370,6 +458,7 @@ def _um_hooks(manager: UserManager) -> StandardUserManagerUiHooks:
         require_admin=require_admin,
         role_names=(ADMIN_ROLE_NAME,),
         identity_providers=_LOCAL_PASSKEY_CAPABILITIES,
+        executor=executor,
     )
 
 
