@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import Request
 
+from my_usermanager.adapters.fastapi_htmx.awaitables import MaybeAwaitable
 from my_usermanager.adapters.fastapi_htmx.config import (
     CapabilityOption,
     CsrfContext,
@@ -36,10 +37,12 @@ from my_usermanager.subjects import AuthenticatedSubject
 if TYPE_CHECKING:
     from my_usermanager.identity_capabilities import IdentityProviderCapabilities
 
-CurrentUser = Callable[[Request], AuthenticatedSubject | None]
-RequireAdmin = Callable[[Request, AuthenticatedSubject], None]
-AfterDisabled = Callable[[Request, AuthenticatedSubject, UserRow], None]
-PasskeyPanelProvider = Callable[[Request, AuthenticatedSubject], PasskeyPanel | None]
+CurrentUser = Callable[[Request], MaybeAwaitable[AuthenticatedSubject | None]]
+RequireAdmin = Callable[[Request, AuthenticatedSubject], MaybeAwaitable[None]]
+AfterDisabled = Callable[[Request, AuthenticatedSubject, UserRow], MaybeAwaitable[None]]
+PasskeyPanelProvider = Callable[
+    [Request, AuthenticatedSubject], MaybeAwaitable[PasskeyPanel | None]
+]
 
 
 @dataclass(slots=True)
@@ -88,15 +91,17 @@ class StandardUserManagerUiHooks:
         self.passkey_panel = passkey_panel
         self.identity_providers = identity_providers
 
-    def get_current_user(self, request: Request) -> AuthenticatedSubject | None:
+    def get_current_user(
+        self, request: Request
+    ) -> MaybeAwaitable[AuthenticatedSubject | None]:
         """Delegate request/session interpretation to the host."""
         return self.current_user(request)
 
     def require_admin(
         self, request: Request, current_user: AuthenticatedSubject
-    ) -> None:
+    ) -> MaybeAwaitable[None]:
         """Delegate administrator policy to the host."""
-        self.require_admin_policy(request, current_user)
+        return self.require_admin_policy(request, current_user)
 
     def list_users(
         self,
@@ -272,10 +277,11 @@ class StandardUserManagerUiHooks:
         request: Request,
         current_user: AuthenticatedSubject,
         row: UserRow,
-    ) -> None:
+    ) -> MaybeAwaitable[None]:
         """Run an optional host side effect after the manager mutation."""
         if self.after_disabled is not None:
-            self.after_disabled(request, current_user, row)
+            return self.after_disabled(request, current_user, row)
+        return None
 
     def account_identity_providers(
         self, request: Request, current_user: AuthenticatedSubject
@@ -295,7 +301,7 @@ class StandardUserManagerUiHooks:
 
     def render_passkey_panel(
         self, request: Request, current_user: AuthenticatedSubject
-    ) -> PasskeyPanel | None:
+    ) -> MaybeAwaitable[PasskeyPanel | None]:
         """Render an optional host-selected passkey panel."""
         if self.passkey_panel is None:
             return None
