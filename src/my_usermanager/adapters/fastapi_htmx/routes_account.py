@@ -80,7 +80,9 @@ def _account_endpoint(
             p.credentials.mode == "local" for p in providers
         )
         panel = (
-            await resolve(hooks.render_passkey_panel(request, auth.current_user))
+            await resolve(
+                lambda: hooks.render_passkey_panel(request, auth.current_user)
+            )
             if local_credentials
             else None
         )
@@ -88,7 +90,7 @@ def _account_endpoint(
         profile_editable = callable(getattr(hooks, "update_own_profile", None))
         csrf_fields: tuple[tuple[str, str], ...] = ()
         if profile_editable and config.csrf_protection is not None:
-            csrf = await resolve(hooks.csrf_context(request))
+            csrf = await resolve(lambda: hooks.csrf_context(request))
             csrf_fields = csrf_inputs(config, request, csrf)
         html = templates.get_template("account/index.html").render(
             **{
@@ -145,7 +147,7 @@ def _profile_endpoint(
                 birth_date=form.birth_date,
                 gender=form.gender,
             )
-            _ = await resolve(updater(request, auth.current_user, update))
+            _ = await resolve(lambda: updater(request, auth.current_user, update))
         except Exception as exc:
             return error_response(400, "Profile update failed", str(exc))
         return RedirectResponse(
