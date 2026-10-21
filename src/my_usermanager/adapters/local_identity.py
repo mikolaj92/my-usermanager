@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import secrets
 import sqlite3
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 from urllib.parse import urlsplit
@@ -63,6 +64,7 @@ from my_usermanager.permissions import ADMIN_ROLE_NAME
 from my_usermanager.subjects import AuthenticatedSubject
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Mapping
     from pathlib import Path
 
     from my_usermanager.adapters.sqlite import SQLiteUserStore
@@ -97,6 +99,7 @@ class LocalIdentity:
 
 @dataclass(frozen=True, slots=True)
 class _Stack:
+    connection: sqlite3.Connection
     auth_db: SQLiteAuthDatabase
     manager: UserManager
     users: SQLiteUserStore
@@ -157,6 +160,20 @@ def install_local_identity(  # noqa: PLR0913
         database=stack.auth_db,
         passkey=stack.service,
     )
+    lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def identity_lifespan(
+        application: FastAPI,
+    ) -> AsyncGenerator[Mapping[str, object]]:
+        try:
+            async with lifespan(application) as state:
+                yield {} if state is None else state
+        finally:
+            if not isinstance(database, sqlite3.Connection):
+                stack.connection.close()
+
+    app.router.lifespan_context = identity_lifespan
     app.state.local_identity = installed
     return installed
 
@@ -174,6 +191,7 @@ def _open_stack(
     stores = SQLiteAuthDatabase(conn).stores()
     credentials = SQLiteCredentialStore(conn)
     return _Stack(
+        connection=conn,
         auth_db=auth_db,
         manager=UserManager(
             users=stores.users,
