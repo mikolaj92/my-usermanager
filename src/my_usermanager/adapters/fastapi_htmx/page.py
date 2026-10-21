@@ -277,7 +277,7 @@ def _as_sequence(raw: object) -> Sequence[object]:
     raise TypeError(message)
 
 
-def csrf_inputs(
+async def csrf_inputs(
     config: UserManagerUiConfig, request: Request, context: CsrfContext
 ) -> tuple[tuple[str, str], ...]:
     """Merge host fields while reserving the authoritative csrf field."""
@@ -287,7 +287,7 @@ def csrf_inputs(
     protection = config.csrf_protection
     if protection is None:
         return inputs
-    return (*inputs, ("csrf", protection.token(request)))
+    return (*inputs, ("csrf", await resolve(protection.token, request)))
 
 
 async def page_context(
@@ -439,7 +439,7 @@ async def row_response(
                 )
             ),
             "csrf": csrf,
-            "csrf_inputs": csrf_inputs(config, request, csrf),
+            "csrf_inputs": await csrf_inputs(config, request, csrf),
             "labels": labels,
             "reissue_invitation_enabled": callable(
                 getattr(hooks, "reissue_invitation", None)
