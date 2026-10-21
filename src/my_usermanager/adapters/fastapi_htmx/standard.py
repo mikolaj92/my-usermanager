@@ -150,7 +150,7 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
         self, request: Request, current_user: AuthenticatedSubject
     ) -> None:
         """Delegate administrator policy to the host."""
-        self.require_admin_policy(request, current_user)
+        return self.require_admin_policy(request, current_user)
 
     @_ExecutedHook
     def list_users(
@@ -339,7 +339,8 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
     ) -> None:
         """Run an optional host side effect after the manager mutation."""
         if self.executor is None and self.after_disabled is not None:
-            self.after_disabled(request, current_user, row)
+            return self.after_disabled(request, current_user, row)
+        return None
 
     @_ExecutedHook
     def account_identity_providers(
