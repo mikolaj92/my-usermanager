@@ -153,11 +153,11 @@ def test_standard_hooks_keep_policy_and_optional_surfaces_host_owned() -> None:
     )
 
     assert hooks.get_current_user(_request()) is None
-    hooks.require_admin(_request(), _subject("admin"))
+    assert hooks.require_admin(_request(), _subject("admin")) is None
     assert calls == ["admin"]
     assert hooks.csrf_context(_request()).hidden_inputs == ()
     assert hooks.render_passkey_panel(_request(), _subject("admin")) is None
-    hooks.after_user_disabled_changed(
+    _ = hooks.after_user_disabled_changed(
         _request(),
         _subject("admin"),
         hooks.list_users(_request(), _subject("admin")).items[0],
