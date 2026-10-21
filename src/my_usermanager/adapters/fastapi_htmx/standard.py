@@ -150,7 +150,7 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
         self, request: Request, current_user: AuthenticatedSubject
     ) -> None:
         """Delegate administrator policy to the host."""
-        return self.require_admin_policy(request, current_user)
+        self.require_admin_policy(request, current_user)
 
     @_ExecutedHook
     def list_users(

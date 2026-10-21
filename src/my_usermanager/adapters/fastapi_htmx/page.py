@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import datetime
 from inspect import Parameter, signature
 from typing import TYPE_CHECKING, Protocol, cast
@@ -259,15 +259,12 @@ async def _call_list_hook(
             and getattr(parameters[name], "kind", None) in accepted
         }
     )
-    return await resolve(
-        lambda: callback(request, current_user, **kwargs), consume=_materialize_page
-    )
-
-
-def _materialize_page(raw: object) -> object:
-    if isinstance(raw, (UserPage, AuditPage)):
-        return replace(raw, items=tuple(raw.items))
-    return tuple(_as_sequence(raw))
+    try:
+        result: object = callback(request, current_user, **kwargs)
+        return await resolve(result)
+    except TypeError:
+        result = callback(request, current_user)
+        return await resolve(result)
 
 
 def _as_sequence(raw: object) -> Sequence[object]:
@@ -298,10 +295,7 @@ async def page_context(
     if provider is None:
         return {}
     hook = cast("_PageContextHook", cast("object", hooks))
-    raw = await resolve(
-        lambda: hook.page_context(request),
-        consume=lambda value: None if value is None else dict(value),
-    )
+    raw = await resolve(hook.page_context(request))
     if raw is None:
         return {}
     return dict(raw)
@@ -364,9 +358,7 @@ async def named_action(  # noqa: PLR0911
         if hook_name == "hard_delete_user"
         else tuple(form[name] for name in required)
     )
-    result = await resolve(
-        lambda: callback(request, auth.current_user, *callback_values)
-    )
+    result = await resolve(callback(request, auth.current_user, *callback_values))
     if hook_name in {"invite_user", "reissue_invitation"}:
         return _invitation_redirect(result, redirect_url)
     return RedirectResponse(url=redirect_url, status_code=303)
@@ -404,7 +396,7 @@ async def validate_csrf(
             403, "CSRF validation failed", "A valid CSRF token is required."
         )
     try:
-        _ = await resolve(lambda: protection.validate(request, submitted_token))
+        _ = await resolve(protection.validate(request, submitted_token))
     except Exception:
         return error_response(
             403, "CSRF validation failed", "A valid CSRF token is required."
@@ -432,15 +424,10 @@ async def row_response(
             "config": config,
             "user": safe_row(row),
             "role_options": tuple(
-                await resolve(
-                    lambda: hooks.role_options(request, current_user), consume=tuple
-                )
+                await resolve(hooks.role_options(request, current_user))
             ),
             "capability_options": tuple(
-                await resolve(
-                    lambda: hooks.capability_options(request, current_user),
-                    consume=tuple,
-                )
+                await resolve(hooks.capability_options(request, current_user))
             ),
             "csrf": csrf,
             "csrf_inputs": csrf_inputs(config, request, csrf),

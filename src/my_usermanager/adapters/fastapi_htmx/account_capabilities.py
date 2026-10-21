@@ -27,8 +27,5 @@ async def account_providers(
     if not callable(getattr(hooks, "account_identity_providers", None)):
         return None
     return await resolve(
-        lambda: cast("_ProviderHook", hooks).account_identity_providers(
-            request, subject
-        ),
-        consume=lambda value: None if value is None else tuple(value),
+        cast("_ProviderHook", hooks).account_identity_providers(request, subject)
     )
