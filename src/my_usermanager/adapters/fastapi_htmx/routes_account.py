@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from fastapi import Request
@@ -81,7 +82,8 @@ def _account_endpoint(
         )
         panel = (
             await resolve(
-                lambda: hooks.render_passkey_panel(request, auth.current_user)
+                lambda: hooks.render_passkey_panel(request, auth.current_user),
+                consume=_consume_panel,
             )
             if local_credentials
             else None
@@ -156,6 +158,10 @@ def _profile_endpoint(
         )
 
     return update_profile
+
+
+def _consume_panel(panel: PasskeyPanel | None) -> PasskeyPanel | None:
+    return None if panel is None else replace(panel, context=dict(panel.context))
 
 
 def _render_panel(
