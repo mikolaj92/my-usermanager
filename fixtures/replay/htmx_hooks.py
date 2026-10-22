@@ -1,16 +1,18 @@
 import asyncio
 import sqlite3
 import threading
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from types import SimpleNamespace
 from typing import cast
 
 import pytest
+from jinja2 import DictLoader, Environment
 from starlette.requests import Request
 
 from my_usermanager.adapters.fastapi_htmx.config import (
     AuditPage,
     AuditRow,
+    PasskeyPanel,
     UserManagerUiConfig,
     UserManagerUiHooks,
 )
@@ -19,6 +21,7 @@ from my_usermanager.adapters.fastapi_htmx.page import (
     load_audit_page,
     named_action,
 )
+from my_usermanager.adapters.fastapi_htmx.routes_account import _account_endpoint
 from my_usermanager.stores import AuditFilters
 from my_usermanager.subjects import AuthenticatedSubject
 
@@ -34,6 +37,7 @@ async def _listing_replay() -> None:
             return 1
 
         def __getitem__(self, index: int) -> AuditRow:
+            observed.append(threading.get_ident())
             if index != 0:
                 raise IndexError(index)
             return row
@@ -48,9 +52,14 @@ async def _listing_replay() -> None:
             LazyRows(), 7, 14, has_previous=True, has_next=True, filtered=True
         )
 
-    async def async_listing(*args: object, **kwargs: object) -> AuditPage:
+    async def async_listing(*_args: object, **_kwargs: object) -> AuditPage:
+        assert threading.get_ident() == main_thread
         await asyncio.sleep(0)
-        return listing(*args, **kwargs)
+        return AuditPage(
+            LazyRows(), 7, 14, has_previous=True, has_next=True, filtered=True
+        )
+
+    main_thread = threading.get_ident()
 
     for provider in (listing, async_listing):
         observed.clear()
@@ -64,7 +73,8 @@ async def _listing_replay() -> None:
         assert page == AuditPage(
             (row,), 7, 14, has_previous=True, has_next=True, filtered=True
         )
-        assert observed[-1] != threading.get_ident()
+        assert observed
+        assert all(worker != main_thread for worker in observed)
         if provider is listing:
             assert len(set(observed)) == 1
 
@@ -84,6 +94,66 @@ async def _listing_replay() -> None:
             filters=AuditFilters(),
         )
     assert calls == ["called"]
+
+
+async def _panel_replay() -> None:
+    main_thread = threading.get_ident()
+    observed = []
+    subject = AuthenticatedSubject(provider="local", subject="admin", user_id="admin")
+    request = Request(
+        {"type": "http", "method": "GET", "headers": [], "query_string": b""}
+    )
+
+    class LazyContext(Mapping[str, object]):
+        def __len__(self) -> int:
+            return 1
+
+        def __iter__(self) -> Iterator[str]:
+            observed.append(threading.get_ident())
+            yield "detail"
+
+        def __getitem__(self, key: str) -> object:
+            observed.append(threading.get_ident())
+            if key != "detail":
+                raise KeyError(key)
+            return "loaded"
+
+    def panel(*_args: object) -> PasskeyPanel:
+        observed.append(threading.get_ident())
+        return PasskeyPanel("panel.html", LazyContext())
+
+    async def async_panel(*_args: object) -> PasskeyPanel:
+        assert threading.get_ident() == main_thread
+        await asyncio.sleep(0)
+        return PasskeyPanel("panel.html", LazyContext())
+
+    templates = Environment(
+        loader=DictLoader(
+            {
+                "account/index.html": "{{ passkey_panel_html }}",
+                "panel.html": "{{ detail }}",
+            }
+        ),
+        autoescape=True,
+    )
+    for provider in (panel, async_panel):
+        observed.clear()
+        hooks = cast(
+            "UserManagerUiHooks",
+            SimpleNamespace(
+                get_current_user=lambda _request: subject,
+                page_context=lambda _request: {"platform_paths": {}},
+                render_passkey_panel=provider,
+            ),
+        )
+        response = await _account_endpoint(
+            templates, UserManagerUiConfig(admin_enabled=False), hooks
+        )(request)
+        assert response.body == b"loaded"
+        assert observed
+        assert all(worker != main_thread for worker in observed)
+        if provider is panel:
+            assert len(set(observed)) == 1
 
 
 class Csrf:
@@ -194,5 +264,6 @@ async def _cancel_accepted(
 
 with asyncio.Runner() as runner:
     runner.run(_listing_replay())
+    runner.run(_panel_replay())
     runner.run(_transaction_replay(fail=False))
     runner.run(_transaction_replay(fail=True))
