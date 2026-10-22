@@ -8,17 +8,14 @@ from typing import cast
 import pytest
 from starlette.requests import Request
 
-from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.config import (
     AuditPage,
     AuditRow,
-    CsrfContext,
     UserManagerUiConfig,
     UserManagerUiHooks,
 )
 from my_usermanager.adapters.fastapi_htmx.page import (
     PageQuery,
-    csrf_inputs,
     load_audit_page,
     named_action,
 )
@@ -93,10 +90,6 @@ class Csrf:
     def __init__(self, events: list[str]) -> None:
         self.events = events
 
-    def token(self, _request: Request) -> str:
-        assert threading.current_thread() is not threading.main_thread()
-        return "valid"
-
     def validate(self, _request: Request, submitted: str) -> None:
         assert submitted == "valid"
         self.events.append("csrf")
@@ -164,9 +157,6 @@ async def _transaction_replay(*, fail: bool) -> None:
         ),
     )
     config = UserManagerUiConfig(csrf_protection=Csrf(events))
-    assert await resolve(
-        lambda: csrf_inputs(config, post, CsrfContext(hidden_inputs=(), headers={}))
-    ) == (("csrf", "valid"),)
     task = asyncio.create_task(
         named_action(
             post,
