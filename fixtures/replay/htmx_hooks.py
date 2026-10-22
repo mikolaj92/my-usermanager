@@ -8,14 +8,17 @@ from typing import cast
 import pytest
 from starlette.requests import Request
 
+from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.config import (
     AuditPage,
     AuditRow,
+    CsrfContext,
     UserManagerUiConfig,
     UserManagerUiHooks,
 )
 from my_usermanager.adapters.fastapi_htmx.page import (
     PageQuery,
+    csrf_inputs,
     load_audit_page,
     named_action,
 )
@@ -28,12 +31,15 @@ async def _listing_replay() -> None:
     request = Request({"type": "http", "method": "GET", "headers": []})
     row = AuditRow("now", "admin", "read", "user", "target", "ok")
     observed = []
+    invocations = []
 
     class LazyRows(Sequence):
         def __len__(self) -> int:
+            observed.append(threading.get_ident())
             return 1
 
         def __getitem__(self, index: int) -> AuditRow:
+            observed.append(threading.get_ident())
             if index != 0:
                 raise IndexError(index)
             return row
@@ -43,7 +49,7 @@ async def _listing_replay() -> None:
             yield row
 
     def listing(*_args: object, **_kwargs: object) -> AuditPage:
-        observed.append(threading.get_ident())
+        invocations.append(threading.get_ident())
         return AuditPage(
             LazyRows(), 7, 14, has_previous=True, has_next=True, filtered=True
         )
@@ -54,6 +60,7 @@ async def _listing_replay() -> None:
 
     for provider in (listing, async_listing):
         observed.clear()
+        invocations.clear()
         page = await load_audit_page(
             provider,
             request,
@@ -64,9 +71,13 @@ async def _listing_replay() -> None:
         assert page == AuditPage(
             (row,), 7, 14, has_previous=True, has_next=True, filtered=True
         )
-        assert observed[-1] != threading.get_ident()
+        assert observed
+        assert all(worker != threading.get_ident() for worker in observed)
+        assert len(invocations) == 1
         if provider is listing:
-            assert len(set(observed)) == 1
+            assert len(set(invocations + observed)) == 1
+        else:
+            assert invocations == [threading.get_ident()]
 
     calls = []
 
@@ -84,11 +95,20 @@ async def _listing_replay() -> None:
             filters=AuditFilters(),
         )
     assert calls == ["called"]
+    config = UserManagerUiConfig(csrf_protection=Csrf([]))
+    assert await resolve(lambda: csrf_inputs(config, request, CsrfContext((), {}))) == (
+        ("csrf", "valid"),
+    )
 
 
 class Csrf:
     def __init__(self, events: list[str]) -> None:
         self.events = events
+
+    def token(self, _request: Request) -> str:
+        with pytest.raises(RuntimeError, match="no running event loop"):
+            asyncio.get_running_loop()
+        return "valid"
 
     def validate(self, _request: Request, submitted: str) -> None:
         assert submitted == "valid"

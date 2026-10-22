@@ -91,7 +91,7 @@ def _account_endpoint(
         csrf_fields: tuple[tuple[str, str], ...] = ()
         if profile_editable and config.csrf_protection is not None:
             csrf = await resolve(lambda: hooks.csrf_context(request))
-            csrf_fields = csrf_inputs(config, request, csrf)
+            csrf_fields = await resolve(lambda: csrf_inputs(config, request, csrf))
         html = templates.get_template("account/index.html").render(
             **{
                 **host_context,

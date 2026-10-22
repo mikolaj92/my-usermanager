@@ -443,7 +443,7 @@ async def row_response(
                 )
             ),
             "csrf": csrf,
-            "csrf_inputs": csrf_inputs(config, request, csrf),
+            "csrf_inputs": await resolve(lambda: csrf_inputs(config, request, csrf)),
             "labels": labels,
             "reissue_invitation_enabled": callable(
                 getattr(hooks, "reissue_invitation", None)
