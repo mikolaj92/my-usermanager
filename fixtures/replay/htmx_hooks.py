@@ -1,13 +1,14 @@
 import asyncio
 import sqlite3
 import threading
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from types import SimpleNamespace
 from typing import cast
 
 import pytest
 from starlette.requests import Request
 
+from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.config import (
     AuditPage,
     AuditRow,
@@ -19,6 +20,10 @@ from my_usermanager.adapters.fastapi_htmx.page import (
     load_audit_page,
     named_action,
 )
+from my_usermanager.adapters.fastapi_htmx.standard import StandardUserManagerUiHooks
+from my_usermanager.manager import UserManager
+from my_usermanager.memory import MemoryGrantStore, MemoryRoleStore, MemoryUserStore
+from my_usermanager.models import User
 from my_usermanager.stores import AuditFilters
 from my_usermanager.subjects import AuthenticatedSubject
 
@@ -28,12 +33,14 @@ async def _listing_replay() -> None:
     request = Request({"type": "http", "method": "GET", "headers": []})
     row = AuditRow("now", "admin", "read", "user", "target", "ok")
     observed = []
+    invoked = []
 
     class LazyRows(Sequence):
         def __len__(self) -> int:
             return 1
 
         def __getitem__(self, index: int) -> AuditRow:
+            observed.append(threading.get_ident())
             if index != 0:
                 raise IndexError(index)
             return row
@@ -43,7 +50,7 @@ async def _listing_replay() -> None:
             yield row
 
     def listing(*_args: object, **_kwargs: object) -> AuditPage:
-        observed.append(threading.get_ident())
+        invoked.append(threading.get_ident())
         return AuditPage(
             LazyRows(), 7, 14, has_previous=True, has_next=True, filtered=True
         )
@@ -54,6 +61,7 @@ async def _listing_replay() -> None:
 
     for provider in (listing, async_listing):
         observed.clear()
+        invoked.clear()
         page = await load_audit_page(
             provider,
             request,
@@ -64,9 +72,12 @@ async def _listing_replay() -> None:
         assert page == AuditPage(
             (row,), 7, 14, has_previous=True, has_next=True, filtered=True
         )
-        assert observed[-1] != threading.get_ident()
+        assert observed
+        assert all(worker != threading.get_ident() for worker in observed)
         if provider is listing:
-            assert len(set(observed)) == 1
+            assert len({*observed, *invoked}) == 1
+        else:
+            assert invoked == [threading.get_ident()]
 
     calls = []
 
@@ -192,7 +203,76 @@ async def _cancel_accepted(
             await asyncio.wait_for(task, 5)
 
 
+async def _standard_replay(*, fail: bool) -> None:
+    subject = AuthenticatedSubject(provider="local", subject="admin", user_id="admin")
+    request = Request({"type": "http", "method": "POST", "headers": []})
+    started, release = threading.Event(), threading.Event()
+    terminal, calls = [], []
+    main_thread = threading.get_ident()
+    manager = UserManager(
+        users=MemoryUserStore(), roles=MemoryRoleStore(), grants=MemoryGrantStore()
+    )
+    manager.users.create(User("target", "target"))
+
+    async def after_disabled(*_args: object) -> None:
+        assert threading.get_ident() == main_thread
+        calls.append("async")
+        await asyncio.sleep(0)
+        calls.append("finished")
+        if fail:
+            message = "callback failure"
+            raise TypeError(message)
+
+    async def executor[T](operation: Callable[[], T]) -> T:
+        def transaction() -> T:
+            worker = threading.get_ident()
+            assert worker != main_thread
+            connection = sqlite3.connect(":memory:")
+            connection.execute("CREATE TABLE result (value INTEGER)")
+            try:
+                try:
+                    with connection:
+                        connection.execute("INSERT INTO result VALUES (1)")
+                        started.set()
+                        assert release.wait(5), "worker release timed out"
+                        result = operation()
+                except TypeError:
+                    assert calls == ["async", "finished"]
+                    terminal.append("rollback")
+                    raise
+                else:
+                    assert calls == ["async", "finished"]
+                    terminal.append("commit")
+                    return result
+            finally:
+                assert threading.get_ident() == worker
+                count = connection.execute("SELECT count(*) FROM result").fetchone()[0]
+                assert count == (0 if fail else 1)
+                connection.close()
+                terminal.append("cleanup")
+
+        return await asyncio.to_thread(transaction)
+
+    hooks = StandardUserManagerUiHooks(
+        manager=manager,
+        current_user=lambda _request: subject,
+        require_admin=lambda *_args: None,
+        after_disabled=after_disabled,
+        executor=executor,
+    )
+    task = asyncio.create_task(
+        resolve(
+            lambda: hooks.set_user_disabled(request, subject, "target", disabled=True)
+        )
+    )
+    await _cancel_accepted(task, started, release, terminal)
+    assert calls == ["async", "finished"]
+    assert terminal == ["rollback" if fail else "commit", "cleanup"]
+
+
 with asyncio.Runner() as runner:
     runner.run(_listing_replay())
     runner.run(_transaction_replay(fail=False))
     runner.run(_transaction_replay(fail=True))
+    runner.run(_standard_replay(fail=False))
+    runner.run(_standard_replay(fail=True))

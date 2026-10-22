@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from contextvars import ContextVar
 from inspect import isawaitable
 
 from starlette.concurrency import run_in_threadpool
 
 type MaybeAwaitable[T] = T | Awaitable[T]
+
+execution_loop: ContextVar[asyncio.AbstractEventLoop] = ContextVar("execution_loop")
 
 
 async def resolve[T](
@@ -17,12 +20,17 @@ async def resolve[T](
     consume: Callable[[T], T] | None = None,
 ) -> T:
     """Return a callback value after awaiting it when needed."""
+    loop = asyncio.get_running_loop()
 
     def invoke() -> MaybeAwaitable[T]:
-        value = callback()
-        if consume is not None and not isawaitable(value):
-            return consume(value)
-        return value
+        token = execution_loop.set(loop)
+        try:
+            value = callback()
+            if consume is not None and not isawaitable(value):
+                return consume(value)
+            return value
+        finally:
+            execution_loop.reset(token)
 
     async def complete() -> T:
         value = await run_in_threadpool(invoke)
