@@ -96,7 +96,7 @@ def add_admin_users_page(
                 )
             ),
             "csrf": csrf,
-            "csrf_inputs": await resolve(lambda: csrf_inputs(config, request, csrf)),
+            "csrf_inputs": csrf_inputs(config, request, csrf),
             "static_url_path": config.static_url_path,
             "base_template": config.base_template,
             "labels": labels,
