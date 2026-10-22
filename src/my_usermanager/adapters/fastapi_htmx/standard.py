@@ -6,17 +6,14 @@ CSRF configuration, invitations, auditing, and product side effects.
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import partial
-from inspect import isawaitable
 from typing import TYPE_CHECKING, Concatenate, Generic, final, overload
 
 from fastapi import Request
 from typing_extensions import TypeVar as DefaultTypeVar
 
-from my_usermanager.adapters.fastapi_htmx.awaitables import execution_loop
 from my_usermanager.adapters.fastapi_htmx.config import (
     CapabilityOption,
     CsrfContext,
@@ -44,9 +41,7 @@ if TYPE_CHECKING:
 
 CurrentUser = Callable[[Request], AuthenticatedSubject | None]
 RequireAdmin = Callable[[Request, AuthenticatedSubject], None]
-AfterDisabled = Callable[
-    [Request, AuthenticatedSubject, UserRow], Awaitable[None] | None
-]
+AfterDisabled = Callable[[Request, AuthenticatedSubject, UserRow], None]
 PasskeyPanelProvider = Callable[[Request, AuthenticatedSubject], PasskeyPanel | None]
 
 
@@ -90,17 +85,8 @@ class _ExecutedHook[**Params, Result]:
             return partial(self.method, instance)
         executor = instance.executor
 
-        async def execute(*args: Params.args, **kwargs: Params.kwargs) -> Result:
-            loop = asyncio.get_running_loop()
-
-            def invoke() -> Result:
-                token = execution_loop.set(loop)
-                try:
-                    return self.method(instance, *args, **kwargs)
-                finally:
-                    execution_loop.reset(token)
-
-            return await executor(invoke)
+        def execute(*args: Params.args, **kwargs: Params.kwargs) -> Awaitable[Result]:
+            return executor(partial(self.method, instance, *args, **kwargs))
 
         return execute
 
@@ -235,7 +221,7 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
             )
         row = self._row(user)
         if self.executor is not None and self.after_disabled is not None:
-            self._after_disabled(request, current_user, row)
+            self.after_disabled(request, current_user, row)
         return row
 
     @_ExecutedHook
@@ -353,20 +339,8 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
     ) -> None:
         """Run an optional host side effect after the manager mutation."""
         if self.executor is None and self.after_disabled is not None:
-            self._after_disabled(request, current_user, row)
-
-    def _after_disabled(
-        self, request: Request, current_user: AuthenticatedSubject, row: UserRow
-    ) -> None:
-        if self.after_disabled is None:
-            return
-        result = self.after_disabled(request, current_user, row)
-        if isawaitable(result):
-
-            async def complete() -> None:
-                await result
-
-            asyncio.run_coroutine_threadsafe(complete(), execution_loop.get()).result()
+            return self.after_disabled(request, current_user, row)
+        return None
 
     @_ExecutedHook
     def account_identity_providers(
