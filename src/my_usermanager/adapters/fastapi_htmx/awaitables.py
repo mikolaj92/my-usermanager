@@ -3,41 +3,45 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Iterator
-from functools import partial
-from inspect import isawaitable, iscoroutinefunction
-from typing import cast
+from collections.abc import Awaitable, Callable
+from inspect import isawaitable
 
-from my_usermanager.adapters.my_auth_fastapi import build_complete_registration
+from starlette.concurrency import run_in_threadpool
 
 type MaybeAwaitable[T] = T | Awaitable[T]
 
 
-async def resolve[T, **P](
-    callback: Callable[P, MaybeAwaitable[T]], *args: P.args, **kwargs: P.kwargs
+async def resolve[T](
+    callback: Callable[[], MaybeAwaitable[T]],
+    *,
+    consume: Callable[[T], T] | None = None,
 ) -> T:
     """Return a callback value after awaiting it when needed."""
-    if iscoroutinefunction(callback) or iscoroutinefunction(
-        getattr(callback, "__call__", None)
-    ):
-        value = callback(*args, **kwargs)
-        if isawaitable(value):
-            return await value
-        return value
-    executor = getattr(getattr(callback, "__self__", None), "executor", asyncio.to_thread)
-    operation = partial(callback, *args, **kwargs)
 
-    def invoke(_request: None, _result: None) -> MaybeAwaitable[T]:
-        value = operation()
-        if isinstance(value, Iterator):
-            return cast("T", tuple(value))
+    def invoke() -> MaybeAwaitable[T]:
+        value = callback()
+        if consume is not None and not isawaitable(value):
+            return consume(value)
         return value
 
-    if executor is None:
-        value = invoke(None, None)
-        if isawaitable(value):
-            return await value
+    async def complete() -> T:
+        value = await run_in_threadpool(invoke)
+        if not isawaitable(value):
+            return value
+        value = await value
+        if consume is not None:
+            return await run_in_threadpool(consume, value)
         return value
-    return cast(
-        "T", await build_complete_registration(invoke, executor=executor)(None, None)
-    )
+
+    task = asyncio.create_task(complete())
+    cancelled = False
+    while not task.done():
+        try:
+            _ = await asyncio.wait({task})
+        except asyncio.CancelledError:
+            cancelled = True
+    if cancelled:
+        if not task.cancelled():
+            _ = task.exception()
+        raise asyncio.CancelledError
+    return task.result()

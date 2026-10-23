@@ -57,7 +57,7 @@ def add_session_routes(
             )
         host_context = await page_context(hooks, request)
         labels = merge_labels(config, host_context)
-        csrf = await resolve(hooks.csrf_context, request)
+        csrf = await resolve(lambda: hooks.csrf_context(request))
         html = templates.get_template("sessions/list.html").render(
             **host_context,
             request=request,
@@ -65,9 +65,10 @@ def add_session_routes(
             current_user=auth.current_user,
             sessions=tuple(
                 await resolve(
-                    cast("_ListSessionsHook", cast("object", hooks)).list_sessions,
-                    request,
-                    auth.current_user,
+                    lambda: cast(
+                        "_ListSessionsHook", cast("object", hooks)
+                    ).list_sessions(request, auth.current_user),
+                    consume=tuple,
                 )
             ),
             csrf_inputs=csrf_inputs(config, request, csrf),

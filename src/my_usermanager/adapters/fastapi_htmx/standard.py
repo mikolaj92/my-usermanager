@@ -6,11 +6,13 @@ CSRF configuration, invitations, auditing, and product side effects.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from functools import partial
+from typing import TYPE_CHECKING, Concatenate, Generic, final, overload
 
 from fastapi import Request
+from typing_extensions import TypeVar as DefaultTypeVar
 
 from my_usermanager.adapters.fastapi_htmx.config import (
     CapabilityOption,
@@ -22,6 +24,7 @@ from my_usermanager.adapters.fastapi_htmx.config import (
     UserRow,
 )
 from my_usermanager.adapters.fastapi_htmx.ids import row_key_from_user_id
+from my_usermanager.adapters.my_auth_fastapi import RegistrationExecutor
 from my_usermanager.manager import (
     PermissionGrantRequest,
     RoleGrantRequest,
@@ -34,8 +37,6 @@ from my_usermanager.stores import InvalidPageError, UserNotFoundError, UserQuery
 from my_usermanager.subjects import AuthenticatedSubject
 
 if TYPE_CHECKING:
-    from my_usermanager.adapters.my_auth_fastapi import RegistrationExecutor
-
     from my_usermanager.identity_capabilities import IdentityProviderCapabilities
 
 CurrentUser = Callable[[Request], AuthenticatedSubject | None]
@@ -44,8 +45,54 @@ AfterDisabled = Callable[[Request, AuthenticatedSubject, UserRow], None]
 PasskeyPanelProvider = Callable[[Request, AuthenticatedSubject], PasskeyPanel | None]
 
 
+_Executor_co = DefaultTypeVar(
+    "_Executor_co", bound=RegistrationExecutor | None, default=None, covariant=True
+)
+
+
+@final
+class _ExecutedHook[**Params, Result]:
+    def __init__(
+        self,
+        method: Callable[
+            Concatenate[
+                StandardUserManagerUiHooks[RegistrationExecutor | None], Params
+            ],
+            Result,
+        ],
+    ) -> None:
+        self.method = method
+
+    @overload
+    def __get__(
+        self, instance: StandardUserManagerUiHooks[None], owner: type[object]
+    ) -> Callable[Params, Result]: ...
+
+    @overload
+    def __get__(
+        self,
+        instance: StandardUserManagerUiHooks[RegistrationExecutor],
+        owner: type[object],
+    ) -> Callable[Params, Awaitable[Result]]: ...
+
+    def __get__(
+        self,
+        instance: StandardUserManagerUiHooks[RegistrationExecutor | None],
+        owner: type[object],
+    ) -> Callable[Params, Result] | Callable[Params, Awaitable[Result]]:
+        del owner
+        if instance.executor is None:
+            return partial(self.method, instance)
+        executor = instance.executor
+
+        def execute(*args: Params.args, **kwargs: Params.kwargs) -> Awaitable[Result]:
+            return executor(partial(self.method, instance, *args, **kwargs))
+
+        return execute
+
+
 @dataclass(slots=True)
-class StandardUserManagerUiHooks:
+class StandardUserManagerUiHooks(Generic[_Executor_co]):
     """Implement routine UI hooks using the public ``UserManager`` API.
 
     This adapter intentionally has no registration, invitation, session, audit,
@@ -53,8 +100,8 @@ class StandardUserManagerUiHooks:
     subclass when those surfaces are needed.
     """
 
+    executor: _Executor_co | None
     manager: UserManager
-    executor: RegistrationExecutor | None
     current_user: CurrentUser
     require_admin_policy: RequireAdmin
     role_names: tuple[str, ...] = ()
@@ -68,7 +115,6 @@ class StandardUserManagerUiHooks:
         self,
         *,
         manager: UserManager,
-        executor: RegistrationExecutor | None = None,
         current_user: CurrentUser,
         require_admin: RequireAdmin,
         role_names: tuple[str, ...] = (),
@@ -77,13 +123,14 @@ class StandardUserManagerUiHooks:
         after_disabled: AfterDisabled | None = None,
         passkey_panel: PasskeyPanelProvider | None = None,
         identity_providers: tuple[IdentityProviderCapabilities, ...] | None = None,
+        executor: _Executor_co | None = None,
     ) -> None:
         """Bind standard stores to the small set of host-owned policies."""
         if page_size < 1:
             msg = "page_size must be positive"
             raise ValueError(msg)
-        self.manager = manager
         self.executor = executor
+        self.manager = manager
         self.current_user = current_user
         self.require_admin_policy = require_admin
         self.role_names = role_names
@@ -93,16 +140,19 @@ class StandardUserManagerUiHooks:
         self.passkey_panel = passkey_panel
         self.identity_providers = identity_providers
 
+    @_ExecutedHook
     def get_current_user(self, request: Request) -> AuthenticatedSubject | None:
         """Delegate request/session interpretation to the host."""
         return self.current_user(request)
 
+    @_ExecutedHook
     def require_admin(
         self, request: Request, current_user: AuthenticatedSubject
     ) -> None:
         """Delegate administrator policy to the host."""
-        self.require_admin_policy(request, current_user)
+        return self.require_admin_policy(request, current_user)
 
+    @_ExecutedHook
     def list_users(
         self,
         request: Request,
@@ -124,12 +174,10 @@ class StandardUserManagerUiHooks:
             reason = "must be greater than or equal to zero"
             raise InvalidPageError(field_name, offset, reason)
         user_query = UserQuery() if query is None else query
-        page = tuple(
-            self.manager.users.list(
-                limit=selected_limit + 1,
-                offset=offset,
-                query=user_query,
-            )
+        page = self.manager.users.list(
+            limit=selected_limit + 1,
+            offset=offset,
+            query=user_query,
         )
         return UserPage(
             items=tuple(self._row(user) for user in page[:selected_limit]),
@@ -154,6 +202,7 @@ class StandardUserManagerUiHooks:
         del request, current_user
         return self.capabilities
 
+    @_ExecutedHook
     def set_user_disabled(
         self,
         request: Request,
@@ -162,17 +211,20 @@ class StandardUserManagerUiHooks:
         disabled: bool,
     ) -> UserRow:
         """Apply the manager's account-transition and last-admin rules."""
-        del request, current_user
         user = self.manager.users.get(user_id)
         if user is None:
             raise UserNotFoundError(user_id)
-        if user.disabled == disabled:
-            return self._row(user)
-        target_status = "disabled" if disabled else "active"
-        return self._row(
-            self.manager.transition_account(user_id=user_id, status=target_status)
-        )
+        if user.disabled != disabled:
+            target_status = "disabled" if disabled else "active"
+            user = self.manager.transition_account(
+                user_id=user_id, status=target_status
+            )
+        row = self._row(user)
+        if self.executor is not None and self.after_disabled is not None:
+            self.after_disabled(request, current_user, row)
+        return row
 
+    @_ExecutedHook
     def grant_role(
         self,
         request: Request,
@@ -188,6 +240,7 @@ class StandardUserManagerUiHooks:
         )
         return self._row_for(user_id)
 
+    @_ExecutedHook
     def revoke_role(
         self,
         request: Request,
@@ -203,6 +256,7 @@ class StandardUserManagerUiHooks:
         )
         return self._row_for(user_id)
 
+    @_ExecutedHook
     def grant_permission(
         self,
         request: Request,
@@ -222,6 +276,7 @@ class StandardUserManagerUiHooks:
         )
         return self._row_for(user_id)
 
+    @_ExecutedHook
     def revoke_permission(
         self,
         request: Request,
@@ -241,6 +296,7 @@ class StandardUserManagerUiHooks:
         )
         return self._row_for(user_id)
 
+    @_ExecutedHook
     def update_own_profile(
         self,
         request: Request,
@@ -274,6 +330,7 @@ class StandardUserManagerUiHooks:
         del request
         return CsrfContext(hidden_inputs=(), headers={})
 
+    @_ExecutedHook
     def after_user_disabled_changed(
         self,
         request: Request,
@@ -281,9 +338,11 @@ class StandardUserManagerUiHooks:
         row: UserRow,
     ) -> None:
         """Run an optional host side effect after the manager mutation."""
-        if self.after_disabled is not None:
-            self.after_disabled(request, current_user, row)
+        if self.executor is None and self.after_disabled is not None:
+            return self.after_disabled(request, current_user, row)
+        return None
 
+    @_ExecutedHook
     def account_identity_providers(
         self, request: Request, current_user: AuthenticatedSubject
     ) -> tuple[IdentityProviderCapabilities, ...] | None:
@@ -300,6 +359,7 @@ class StandardUserManagerUiHooks:
         linked = {identity.provider for identity in user.external_identities}
         return tuple(p for p in self.identity_providers if p.provider in linked)
 
+    @_ExecutedHook
     def render_passkey_panel(
         self, request: Request, current_user: AuthenticatedSubject
     ) -> PasskeyPanel | None:
