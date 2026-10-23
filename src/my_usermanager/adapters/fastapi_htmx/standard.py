@@ -339,11 +339,10 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
         request: Request,
         current_user: AuthenticatedSubject,
         row: UserRow,
-    ) -> Awaitable[None] | None:
+    ) -> None:
         """Run an optional host side effect after the manager mutation."""
-        if self.executor is None and self.after_disabled is not None:
-            return self.after_disabled(request, current_user, row)
-        return None
+        if self.executor is None:
+            self._after_disabled(request, current_user, row)
 
     def _after_disabled(
         self, request: Request, current_user: AuthenticatedSubject, row: UserRow
