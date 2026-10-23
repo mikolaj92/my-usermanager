@@ -179,8 +179,8 @@ hooks = StandardUserManagerUiHooks(
 )
 ```
 
-Use focused host hooks or a small subclass for optional surfaces; this adapter
-does not infer registration or authorization policy.
+For bound stores, pass an owner-thread `executor(operation)`; it owns the transaction and cleanup.
+With an executor, `after_disabled` awaitables finish on that worker before commit; failure rolls back.
 
 Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
 
