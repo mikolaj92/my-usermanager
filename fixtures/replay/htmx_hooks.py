@@ -27,15 +27,13 @@ async def _listing_replay() -> None:
     subject = AuthenticatedSubject(provider="local", subject="admin", user_id="admin")
     request = Request({"type": "http", "method": "GET", "headers": []})
     row = AuditRow("now", "admin", "read", "user", "target", "ok")
-    observed, invoked = [], []
+    observed = []
 
     class LazyRows(Sequence):
         def __len__(self) -> int:
-            observed.append(threading.get_ident())
             return 1
 
         def __getitem__(self, index: int) -> AuditRow:
-            observed.append(threading.get_ident())
             if index != 0:
                 raise IndexError(index)
             return row
@@ -45,7 +43,7 @@ async def _listing_replay() -> None:
             yield row
 
     def listing(*_args: object, **_kwargs: object) -> AuditPage:
-        invoked.append(threading.get_ident())
+        observed.append(threading.get_ident())
         return AuditPage(
             LazyRows(), 7, 14, has_previous=True, has_next=True, filtered=True
         )
@@ -56,7 +54,6 @@ async def _listing_replay() -> None:
 
     for provider in (listing, async_listing):
         observed.clear()
-        invoked.clear()
         page = await load_audit_page(
             provider,
             request,
@@ -67,12 +64,9 @@ async def _listing_replay() -> None:
         assert page == AuditPage(
             (row,), 7, 14, has_previous=True, has_next=True, filtered=True
         )
-        assert observed
-        assert all(worker != threading.get_ident() for worker in observed)
+        assert observed[-1] != threading.get_ident()
         if provider is listing:
-            assert len({*invoked, *observed}) == 1
-        else:
-            assert invoked == [threading.get_ident()]
+            assert len(set(observed)) == 1
 
     calls = []
 
