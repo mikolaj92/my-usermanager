@@ -7,14 +7,15 @@ CSRF, chrome, ``/login``, ``/account``, and ``/admin/users``.
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from functools import partial
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast, final
 from urllib.parse import urlsplit
 
-from anyio import Lock
 from app_factory.adapters import (
     PasskeyBinding,
     UserManagerBinding,
@@ -36,10 +37,8 @@ from my_auth.fastapi import (  # pyright: ignore[reportMissingTypeStubs]
 from my_auth.passkeys import (  # pyright: ignore[reportMissingTypeStubs]
     SQLiteCredentialStore,
 )
-from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
-from my_usermanager.adapters._callbacks import wait_for_owner
 from my_usermanager.adapters.fastapi import (
     clear_current_user,
     current_user,
@@ -49,6 +48,7 @@ from my_usermanager.adapters.fastapi_htmx import StandardUserManagerUiHooks
 from my_usermanager.adapters.my_auth import MY_AUTH_PROVIDER
 from my_usermanager.adapters.my_auth_fastapi import (
     PasskeyUserProfile,
+    RegistrationExecutor,
     build_after_login_identity_linker,
     build_after_register_identity_linker,
     build_complete_registration,
@@ -56,20 +56,21 @@ from my_usermanager.adapters.my_auth_fastapi import (
     user_to_session_principal,
 )
 from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
+from my_usermanager.adapters.sqlite import SQLiteGrantStore, SQLiteUserStore
 from my_usermanager.identity_capabilities import (
     AccountCapability,
     IdentityProviderCapabilities,
 )
 from my_usermanager.manager import UserManager
+from my_usermanager.memory import MemoryRoleStore
 from my_usermanager.models import ExternalIdentity, User
 from my_usermanager.permissions import ADMIN_ROLE_NAME
 from my_usermanager.subjects import AuthenticatedSubject
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping
     from pathlib import Path
 
-    from my_usermanager.adapters.sqlite import SQLiteUserStore
     from my_usermanager.sessions import SessionPrincipal
 
 __all__: Final[tuple[str, ...]] = (
@@ -81,10 +82,6 @@ _ADMIN_REQUIRED: Final = "admin required"
 _SESSION_KEY_REQUIRED: Final = "session_secret is required"
 _MISSING_PASSKEY_USER: Final = "verified registration is missing a passkey user"
 _LOCAL_PROVIDER: Final = "local"
-_CONNECTION_EXECUTOR_REQUIRED: Final = (
-    "registration_executor is required for a host SQLite connection; "
-    "it must execute the complete operation on the connection owner's thread"
-)
 _LOCAL_PASSKEY_CAPABILITIES: Final = (
     IdentityProviderCapabilities(
         provider=MY_AUTH_PROVIDER,
@@ -105,14 +102,12 @@ class LocalIdentity:
 
 @dataclass(frozen=True, slots=True)
 class _Stack:
+    connection: sqlite3.Connection
     auth_db: SQLiteAuthDatabase
     manager: UserManager
     users: SQLiteUserStore
     credentials: SQLiteCredentialStore
     service: PasskeyService
-    registration_db: SQLiteAuthDatabase
-    registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
-    callback_executor: Callable[[Callable[[], object]], Awaitable[object]]
 
 
 def install_local_identity(  # noqa: PLR0913
@@ -123,10 +118,7 @@ def install_local_identity(  # noqa: PLR0913
     origin: str,
     session_secret: str,
     app_name: str = "App",
-    registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
-    | None = None,
-    callback_executor: Callable[[Callable[[], object]], Awaitable[object]]
-    | None = None,
+    registration_executor: RegistrationExecutor | None = None,
 ) -> LocalIdentity:
     """Mount passkey login, account, and admin UI on one FastAPI app.
 
@@ -139,14 +131,12 @@ def install_local_identity(  # noqa: PLR0913
     if not session_secret:
         raise ValueError(_SESSION_KEY_REQUIRED)
 
-    stack = _open_stack(
-        database,
-        rp_id=rp_id,
-        origin=origin,
-        app_name=app_name,
-        registration_executor=registration_executor,
-        callback_executor=callback_executor,
-    )
+    stack = _open_stack(database, rp_id=rp_id, origin=origin, app_name=app_name)
+    try:
+        owner = None if isinstance(database, sqlite3.Connection) else _UiOwner(database)
+    except BaseException:
+        stack.connection.close()
+        raise
     csrf = SessionCsrfProtection()
     _ = install_identity_adapters(
         app,
@@ -159,14 +149,18 @@ def install_local_identity(  # noqa: PLR0913
         ),
         passkey=PasskeyBinding(
             service=stack.service,
-            hooks=_passkey_hooks(stack),
+            hooks=_passkey_hooks(stack, registration_executor),
             cookies=PasskeyCookies(secure=urlsplit(origin).scheme == "https"),
             csrf_token=csrf.token,
             login_success_url="/",
             register_success_url="/account",
         ),
         usermanager=UserManagerBinding(
-            hooks=_um_hooks(stack.manager, stack.callback_executor),
+            hooks=(
+                _um_hooks(stack.manager)
+                if owner is None
+                else _um_hooks(owner.manager, executor=owner.execute)
+            ),
             csrf_protection=csrf,
         ),
         current_user=_platform_user,
@@ -178,50 +172,95 @@ def install_local_identity(  # noqa: PLR0913
         database=stack.auth_db,
         passkey=stack.service,
     )
+    lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def identity_lifespan(
+        application: FastAPI,
+    ) -> AsyncGenerator[Mapping[str, object]]:
+        try:
+            async with lifespan(application) as state:
+                yield {} if state is None else state
+        finally:
+            if owner is not None:
+                try:
+                    await owner.execute(owner.connection.close, transaction=False)
+                finally:
+                    owner.pool.shutdown(wait=True)
+                    stack.connection.close()
+
+    app.router.lifespan_context = identity_lifespan
     app.state.local_identity = installed
     return installed
 
 
-def _open_stack(  # noqa: PLR0913
+@final
+class _UiOwner:
+    def __init__(self, database: str | Path) -> None:
+        self.pool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
+        try:
+            self.connection, self.manager = self.pool.submit(
+                self._open, database
+            ).result()
+        except BaseException:
+            self.pool.shutdown(wait=True)
+            raise
+
+    @staticmethod
+    def _open(database: str | Path) -> tuple[sqlite3.Connection, UserManager]:
+        conn = sqlite3.connect(database, timeout=30)
+        try:
+            _ = conn.execute("PRAGMA busy_timeout=30000")
+            _ = conn.execute("PRAGMA foreign_keys=ON")
+            return conn, UserManager(
+                users=SQLiteUserStore(conn, transaction_mode="external"),
+                roles=MemoryRoleStore(),
+                grants=SQLiteGrantStore(conn, transaction_mode="external"),
+            )
+        except BaseException:
+            conn.close()
+            raise
+
+    def _run[T](self, operation: Callable[[], T], *, transaction: bool) -> T:
+        if not transaction:
+            return operation()
+        try:
+            _ = self.connection.execute("BEGIN IMMEDIATE")
+            result = operation()
+            self.connection.commit()
+        except BaseException:
+            self.connection.rollback()
+            raise
+        return result
+
+    async def _submit[T](self, operation: Callable[[], T]) -> T:
+        return await asyncio.wrap_future(self.pool.submit(operation))
+
+    def execute[T](
+        self, operation: Callable[[], T], *, transaction: bool = True
+    ) -> Awaitable[T]:
+        def run(_request: object, _result: object) -> T:
+            return self._run(operation, transaction=transaction)
+
+        complete = build_complete_registration(run, executor=self._submit)
+        return cast("Awaitable[T]", complete(None, None))
+
+
+def _open_stack(
     database: str | Path | sqlite3.Connection,
     *,
     rp_id: str,
     origin: str,
     app_name: str,
-    registration_executor: Callable[[Callable[[], PasskeyUser]], Awaitable[PasskeyUser]]
-    | None,
-    callback_executor: Callable[[Callable[[], object]], Awaitable[object]] | None,
 ) -> _Stack:
-    lock = Lock()
-
-    async def require_owner(_operation: Callable[[], object]) -> object:
-        message = "callback_executor is required for a host SQLite connection"
-        raise ValueError(message)
-
-    async def serialized(operation: Callable[[], object]) -> object:
-        async with lock:
-            return await wait_for_owner(run_in_threadpool(operation))
-
-    conn = _sqlite_connection(database)
-    auth_db = SQLiteAuthDatabase(conn)
+    auth_db = SQLiteAuthDatabase(database)
     auth_db.initialize()
-    stores = auth_db.stores()
+    conn = _sqlite_connection(database)
+    stores = SQLiteAuthDatabase(conn).stores()
     credentials = SQLiteCredentialStore(conn)
     return _Stack(
+        connection=conn,
         auth_db=auth_db,
-        callback_executor=callback_executor
-        or (require_owner if isinstance(database, sqlite3.Connection) else serialized),
-        registration_db=(
-            auth_db
-            if isinstance(database, sqlite3.Connection)
-            else SQLiteAuthDatabase(database)
-        ),
-        registration_executor=registration_executor
-        or (
-            _require_registration_executor
-            if isinstance(database, sqlite3.Connection)
-            else run_in_threadpool
-        ),
         manager=UserManager(
             users=stores.users,
             roles=stores.roles,
@@ -243,21 +282,37 @@ def _sqlite_connection(
     if isinstance(database, sqlite3.Connection):
         return database
     conn = sqlite3.connect(database, timeout=30, check_same_thread=False)
-    _ = conn.execute("PRAGMA busy_timeout=30000")
-    _ = conn.execute("PRAGMA foreign_keys=ON")
-    _ = conn.execute("PRAGMA journal_mode=WAL")
-    _ = conn.execute("PRAGMA synchronous=NORMAL")
+    try:
+        _ = conn.execute("PRAGMA busy_timeout=30000")
+        _ = conn.execute("PRAGMA foreign_keys=ON")
+        _ = conn.execute("PRAGMA journal_mode=WAL")
+        _ = conn.execute("PRAGMA synchronous=NORMAL")
+    except BaseException:
+        conn.close()
+        raise
     return conn
 
 
-def _passkey_hooks(stack: _Stack) -> PasskeyRouteHooks:
+def _passkey_hooks(
+    stack: _Stack, executor: RegistrationExecutor | None
+) -> PasskeyRouteHooks:
     users = stack.users
+
+    def complete(request: Request, result: object) -> PasskeyUser:
+        if isinstance(stack.auth_db.database, sqlite3.Connection) and executor is None:
+            message = "borrowed SQLite registration requires registration_executor"
+            raise RuntimeError(message)
+        return _complete_registration(stack, request, result)
+
+    completion = (
+        build_complete_registration(complete)
+        if executor is None
+        else build_complete_registration(complete, executor=executor)
+    )
     return PasskeyRouteHooks(
         get_session_user=lambda request: _session_passkey_user(stack, request),
         prepare_registration=_prepare_registration,
-        complete_registration=build_complete_registration(
-            partial(_complete_registration, stack)
-        ),
+        complete_registration=completion,
         get_auth_user=lambda user_id: _get_auth_user(stack, user_id),
         login=build_login_session_principal_writer(
             users,
@@ -295,33 +350,15 @@ def _get_auth_user(stack: _Stack, user_id: str) -> PasskeyUser | None:
     return stack.credentials.get_user(user_id)
 
 
-async def _require_registration_executor(
-    _operation: Callable[[], PasskeyUser],
-) -> PasskeyUser:
-    raise ValueError(_CONNECTION_EXECUTOR_REQUIRED)
-
-
-async def _complete_registration(
+def _complete_registration(
     stack: _Stack,
-    request: Request,
-    result: object,
-) -> PasskeyUser:
-    return await wait_for_owner(
-        stack.registration_executor(
-            partial(_persist_registration, stack.registration_db, request, result)
-        )
-    )
-
-
-def _persist_registration(
-    database: SQLiteAuthDatabase,
     request: Request,
     result: object,
 ) -> PasskeyUser:
     passkey_user = getattr(result, "user", None)
     if not isinstance(passkey_user, PasskeyUser):
         raise TypeError(_MISSING_PASSKEY_USER)
-    _ = database.complete_registration(
+    _ = stack.auth_db.complete_registration(
         request,
         result,
         user=User(
@@ -390,9 +427,8 @@ def _logout(_response: Response, request: Request) -> None:
 
 
 def _um_hooks(
-    manager: UserManager,
-    callback_executor: Callable[[Callable[[], object]], Awaitable[object]],
-) -> StandardUserManagerUiHooks:
+    manager: UserManager, *, executor: RegistrationExecutor | None = None
+) -> StandardUserManagerUiHooks[RegistrationExecutor | None]:
     def subject_from_request(request: Request) -> AuthenticatedSubject | None:
         principal = current_user(request)
         if principal is None:
@@ -418,11 +454,11 @@ def _um_hooks(
 
     return StandardUserManagerUiHooks(
         manager=manager,
-        callback_executor=callback_executor,
         current_user=subject_from_request,
         require_admin=require_admin,
         role_names=(ADMIN_ROLE_NAME,),
         identity_providers=_LOCAL_PASSKEY_CAPABILITIES,
+        executor=executor,
     )
 
 

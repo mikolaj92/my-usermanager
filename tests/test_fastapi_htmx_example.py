@@ -161,12 +161,14 @@ def test_readme_uses_uv_only_and_names_host_owned_security_boundaries() -> None:
     for snippet in forbidden_unexported:
         assert snippet not in readme
     required_boundaries = (
-        "../../README.md#completion-backend-execution",
+        "host application owns sessions",
         "no-op demo CSRF",
         "in-memory users",
-        "does not implement production security or persistence",
-        "no production audit logging",
-        "demo-only in-memory role/capability grant callbacks",
+        "does not provide production sessions",
+        "does not provide production CSRF validation",
+        "does not provide persistence",
+        "does not provide audit logging",
+        "does not provide production role/grant policy",
     )
     for snippet in required_boundaries:
         assert snippet in readme

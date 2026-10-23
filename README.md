@@ -97,8 +97,10 @@ from my_usermanager.adapters.my_auth_fastapi import (
     build_prepare_registration,
     require_passkey_route_hooks,
 )
+from my_usermanager.adapters.my_auth_sqlite import SQLiteAuthDatabase
 
 prepare = build_prepare_registration(profile_for_policy)
+auth_db = SQLiteAuthDatabase("app.sqlite3")
 complete = build_complete_registration(
     lambda request, verified: auth_db.complete_registration(
         request,
@@ -121,13 +123,14 @@ hooks = PasskeyRouteHooks(
 )
 ```
 
-`build_prepare_registration` performs no writes. `build_complete_registration`
-dispatches a synchronous or asynchronous host backend through the execution contract below.
-The pinned `my-auth` router accepts sync or async callbacks but invokes sync
-callbacks on the event loop; it does not offload them. Supply async wrappers
-for blocking hooks other than completion. Registration policy runs before
-options and again before verify, then WebAuthn
-verification precedes completion, login, and non-fatal observer hooks.
+Completion invokes the callback once. Async callbacks and returned awaitables,
+including those returned after cancellation of synchronous work, are awaited.
+Synchronous callbacks
+run through `asyncio.to_thread`, or the explicit `executor(operation)` awaitable.
+The executor owns the whole operation, not individual SQL calls. Cancellation,
+including repeated cancellation, waits for synchronous cleanup. Success then
+propagates cancellation; failure takes precedence with cancellation as its cause.
+A committed registration is not undone. Failure or cancellation prevents login.
 
 ## Administrator invitations
 
@@ -176,15 +179,8 @@ hooks = StandardUserManagerUiHooks(
 )
 ```
 
-Use focused host hooks or a small subclass for optional surfaces; this adapter
-does not infer registration or authorization policy.
-
-Identity-linking checklist for host apps:
-
-- Provision or choose the local `User` in host code before returning `PasskeyRegistrationLink`.
-- Link `ExternalIdentity(provider="my-auth", subject=PasskeyUser.user_id)` explicitly; never infer grants from passkey registration or login.
-- Wire `after_register` and `after_login` through the identity-linker helpers so refreshes are idempotent and credential/user mismatches fail closed.
-- Build sessions only from an already-linked local user, then project roles, permissions, and claims from the app's grant stores.
+For bound stores, pass an owner-thread `executor(operation)`; it owns the transaction and cleanup.
+With an executor, `after_disabled` awaitables finish on that worker before commit; failure rolls back.
 
 Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
 
@@ -193,19 +189,6 @@ Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_f
 `SQLiteSelfRegistrationService.register(..., initial_role=...)` requires the host
 to select the initial role for every new user. Registration order never confers
 administrative access. Bootstrap and provisioning policy remain host-owned.
-
-### Completion backend execution
-
-`build_complete_registration` awaits async backends, including callable objects, and runs sync backends once in a worker; returned awaitables are awaited.
-Sync backends must open connections, build stores, finish transactions, materialize results, and close owned resources in that call; exceptions require owner-managed rollback.
-Started synchronous work finishes before cancellation propagates, including direct asyncio cancellation. Owner errors propagate after cleanup; committed operations are never retried or promised rollback.
-
-Packaged HTMX routes dispatch all host hooks: sync callables use Starlette's threadpool; async callables are awaited. Standard hooks access user/grant stores through `UserManager` inside that dispatch.
-FastAPI offloads sync `Depends` dependencies, not ordinary async-route calls. Session-only dependencies perform no store I/O. Each sync hook runs as one worker call, completing transactions and materializing rows before returning; separate hooks may use different workers.
-
-`StandardUserManagerUiHooks` retains manager/connection ownership. Its optional `callback_executor` must await a zero-argument operation on the serialized owner, including cleanup, for every sync standard hook, including host policy.
-Other thread-bound hooks use async delegation or the `callback_executor` context variable; the dispatcher never inspects stores. Request/session callbacks must not retain request state after returning.
-Local path registration opens and closes its connection inside the worker. Local HTMX hooks serialize access to installer-owned stores. Host connections require `callback_executor` for HTMX and `registration_executor` for registration, both executing on their owner.
 
 ## Canonical shared SQLite owner
 
@@ -233,8 +216,14 @@ policy verification.
 
 Call `initialize()` explicitly without a pending transaction: it inspects, initializes and migrates supported UM/my-auth schemas; unsupported schemas and orphan grants fail closed. Inspection alone is read-only.
 
-`SQLiteAuthDatabase.stores()` opens persistent operation-mode connections immediately;
-call `close()` on its result. Mutations commit independently. Transaction stores use
+Path registration opens, constructs stores, transacts, materializes the user,
+and closes on one worker thread with SQLite's default thread check.
+Borrowed connections remain open; pending host transactions are rejected untouched.
+For borrowed connections, pass an owner-thread `executor` to completion and
+`registration_executor` to `install_local_identity`; omission rejects registration.
+
+`SQLiteAuthDatabase.stores()` returns operation-mode stores whose mutations
+commit independently. Stores bound to `SQLiteAuthDatabase.transaction()` use
 `transaction_mode="external"` (savepoints); the outer context commits or rolls
 back. Do not instantiate independent auth and UM databases for one product.
 
@@ -245,9 +234,11 @@ path; supported legacy layouts require explicit `migrate_sqlite_schema`, which
 validates orphan grants and rebuilds them atomically. Direct store constructors
 receive an open `sqlite3.Connection`; the caller owns its lifecycle and
 transaction policy.
-Path-owned stores retain connections with `check_same_thread=False`, busy timeout,
-WAL, and foreign keys; hosts must serialize access. Caller-owned connections
-retain their thread affinity. Transactions must stay with one owner.
+Path-owned shared stores use per-operation connections with
+`check_same_thread=False`, busy timeout, WAL, and foreign keys. A caller-owned
+connection remains thread-affine by default: use one connection per thread or
+explicitly coordinate access. Never mix multiple connection owners for one
+logical database.
 
 ## Ownership matrix
 
@@ -352,6 +343,15 @@ Open `http://127.0.0.1:8000/auth/login`. The host demo uses in-memory users,
 explicit demo-only CSRF metadata, and host callbacks; it is not a production
 session, persistence, admin, or audit implementation. WebAuthn requires HTTPS
 or a local secure context such as localhost, and `/api/auth/*` remains JSON.
+
+## Development
+
+```sh
+uv sync
+uv run pytest tests/test_local_identity_plugin.py::test_install_local_identity_uses_one_sqlite_database -q
+uv run ruff check .
+uv run basedpyright src tests
+```
 
 ### FastAPI/HTMX session CSRF
 
