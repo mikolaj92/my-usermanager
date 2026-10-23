@@ -6,6 +6,7 @@ CSRF configuration, invitations, auditing, and product side effects.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import partial
@@ -41,7 +42,9 @@ if TYPE_CHECKING:
 
 CurrentUser = Callable[[Request], AuthenticatedSubject | None]
 RequireAdmin = Callable[[Request, AuthenticatedSubject], None]
-AfterDisabled = Callable[[Request, AuthenticatedSubject, UserRow], None]
+AfterDisabled = Callable[
+    [Request, AuthenticatedSubject, UserRow], Awaitable[None] | None
+]
 PasskeyPanelProvider = Callable[[Request, AuthenticatedSubject], PasskeyPanel | None]
 
 
@@ -220,8 +223,8 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
                 user_id=user_id, status=target_status
             )
         row = self._row(user)
-        if self.executor is not None and self.after_disabled is not None:
-            self.after_disabled(request, current_user, row)
+        if self.executor is not None:
+            self._after_disabled(request, current_user, row)
         return row
 
     @_ExecutedHook
@@ -336,11 +339,23 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
         request: Request,
         current_user: AuthenticatedSubject,
         row: UserRow,
-    ) -> None:
+    ) -> Awaitable[None] | None:
         """Run an optional host side effect after the manager mutation."""
         if self.executor is None and self.after_disabled is not None:
             return self.after_disabled(request, current_user, row)
         return None
+
+    def _after_disabled(
+        self, request: Request, current_user: AuthenticatedSubject, row: UserRow
+    ) -> None:
+        if self.after_disabled is not None:
+            result = self.after_disabled(request, current_user, row)
+            if isinstance(result, Awaitable):
+
+                async def complete() -> None:
+                    await result
+
+                asyncio.run(complete())
 
     @_ExecutedHook
     def account_identity_providers(
