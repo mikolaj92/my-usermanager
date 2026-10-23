@@ -162,11 +162,9 @@ sets `reveal_activation_url`. Manual one-time links are returned once after
 invite/reissue redirects and are never stored on listed rows, audit events, or
 flash cookies.
 
-For hosts using the package's standard `UserManager` and stores,
-`StandardUserManagerUiHooks` supplies the mechanical user listing, row mapping,
-profile update, account transition, and global role/permission mutations. The
-host still provides session lookup, administrator policy, assignable roles and
-capabilities, CSRF configuration, invitations, auditing, and product effects:
+The core and store protocols remain synchronous; no parallel `Async*` API is required.
+`StandardUserManagerUiHooks` supplies listing, profile updates, account transitions,
+and grants. Hosts supply sessions, policy, CSRF, invitations, audit, and effects:
 
 ```python
 from my_usermanager.adapters.fastapi_htmx import StandardUserManagerUiHooks
@@ -179,8 +177,10 @@ hooks = StandardUserManagerUiHooks(
 )
 ```
 
-Use focused host hooks or a small subclass for optional surfaces; this adapter
-does not infer registration or authorization policy.
+FastAPI runs sync dependencies and OIDC routes in Starlette's threadpool. HTMX `resolve` offloads sync hooks and lazy listing consumption together; returned awaitables are awaited, then lazy results are consumed in the pool.
+Pool calls do not guarantee thread affinity. For bound stores, pass an owner-thread `executor(operation)` owning the whole transaction, materialization, and cleanup; never dispatch individual queries. Async hooks must offload their own blocking I/O and return detached results.
+HTMX cancellation waits for accepted work and cleanup, then raises `CancelledError`, even if that work failed; it does not undo a commit. The executor must await terminal commit or rollback before returning.
+With an executor, `after_disabled` awaitables finish on that worker before commit; failure rolls back. The local installer's path-backed UI owns a separate connection on one worker, including close.
 
 Reusable adapter contracts are available from `my_usermanager.adapters.my_auth_fastapi_contracts`; call `assert_my_auth_fastapi_identity_contract()` in app test suites when composing `my-auth` with this adapter.
 

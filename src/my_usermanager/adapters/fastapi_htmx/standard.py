@@ -10,7 +10,6 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import partial
-from inspect import isawaitable
 from typing import TYPE_CHECKING, Concatenate, Generic, final, overload
 
 from fastapi import Request
@@ -350,7 +349,7 @@ class StandardUserManagerUiHooks(Generic[_Executor_co]):
     ) -> None:
         if self.after_disabled is not None:
             result = self.after_disabled(request, current_user, row)
-            if isawaitable(result):
+            if isinstance(result, Awaitable):
 
                 async def complete() -> None:
                     await result

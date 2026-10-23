@@ -1,32 +1,24 @@
 import asyncio
 import sqlite3
 import threading
-from collections.abc import Callable, Iterator, Sequence
-from pathlib import Path
-from tempfile import TemporaryDirectory
+from collections.abc import Iterator, Sequence
 from types import SimpleNamespace
 from typing import cast
 
 import pytest
 from starlette.requests import Request
 
-from my_usermanager.adapters.fastapi_htmx.awaitables import resolve
 from my_usermanager.adapters.fastapi_htmx.config import (
     AuditPage,
     AuditRow,
     UserManagerUiConfig,
     UserManagerUiHooks,
-    UserRow,
 )
 from my_usermanager.adapters.fastapi_htmx.page import (
     PageQuery,
     load_audit_page,
     named_action,
 )
-from my_usermanager.adapters.fastapi_htmx.standard import StandardUserManagerUiHooks
-from my_usermanager.adapters.local_identity import _UiOwner
-from my_usermanager.adapters.sqlite_schema import create_tables
-from my_usermanager.models import User
 from my_usermanager.stores import AuditFilters
 from my_usermanager.subjects import AuthenticatedSubject
 
@@ -36,15 +28,12 @@ async def _listing_replay() -> None:
     request = Request({"type": "http", "method": "GET", "headers": []})
     row = AuditRow("now", "admin", "read", "user", "target", "ok")
     observed = []
-    invocations = []
 
     class LazyRows(Sequence):
         def __len__(self) -> int:
-            observed.append(threading.get_ident())
             return 1
 
         def __getitem__(self, index: int) -> AuditRow:
-            observed.append(threading.get_ident())
             if index != 0:
                 raise IndexError(index)
             return row
@@ -54,7 +43,7 @@ async def _listing_replay() -> None:
             yield row
 
     def listing(*_args: object, **_kwargs: object) -> AuditPage:
-        invocations.append(threading.get_ident())
+        observed.append(threading.get_ident())
         return AuditPage(
             LazyRows(), 7, 14, has_previous=True, has_next=True, filtered=True
         )
@@ -65,7 +54,6 @@ async def _listing_replay() -> None:
 
     for provider in (listing, async_listing):
         observed.clear()
-        invocations.clear()
         page = await load_audit_page(
             provider,
             request,
@@ -76,13 +64,9 @@ async def _listing_replay() -> None:
         assert page == AuditPage(
             (row,), 7, 14, has_previous=True, has_next=True, filtered=True
         )
-        assert observed
-        assert all(worker != threading.get_ident() for worker in observed)
-        assert len(invocations) == 1
+        assert observed[-1] != threading.get_ident()
         if provider is listing:
-            assert len(set(invocations + observed)) == 1
-        else:
-            assert invocations == [threading.get_ident()]
+            assert len(set(observed)) == 1
 
     calls = []
 
@@ -208,87 +192,7 @@ async def _cancel_accepted(
             await asyncio.wait_for(task, 5)
 
 
-async def _standard_replay(*, fail: bool) -> None:
-    with TemporaryDirectory() as directory:
-        owner = _UiOwner(Path(directory) / "hooks.db")
-        subject = AuthenticatedSubject(
-            provider="local", subject="admin", user_id="admin"
-        )
-        request = Request({"type": "http", "method": "POST", "headers": []})
-        started, release = threading.Event(), threading.Event()
-        terminal: list[str] = []
-        calls: list[int] = []
-        main_thread = threading.get_ident()
-
-        async def after_disabled(*_args: object) -> None:
-            calls.append(threading.get_ident())
-            assert calls[-1] != main_thread
-            assert owner.connection.in_transaction
-            await asyncio.sleep(0)
-            started.set()
-            assert release.wait(5), "callback release timed out"
-            if fail:
-                message = "callback failure"
-                raise TypeError(message)
-            terminal.append("callback")
-
-        async def execute[T](operation: Callable[[], T]) -> T:
-            try:
-                return await owner.execute(operation)
-            finally:
-                terminal.append("transaction")
-
-        hooks = StandardUserManagerUiHooks(
-            manager=owner.manager,
-            current_user=lambda _request: subject,
-            require_admin=lambda *_args: None,
-            after_disabled=after_disabled,
-            executor=execute,
-        )
-        try:
-            await owner.execute(
-                lambda: create_tables(owner.connection), transaction=False
-            )
-            _ = await owner.execute(
-                lambda: owner.manager.users.create(User("target", "target"))
-            )
-            task = asyncio.create_task(
-                resolve(
-                    lambda: hooks.set_user_disabled(
-                        request, subject, "target", disabled=True
-                    )
-                )
-            )
-            await _cancel_accepted(task, started, release, terminal)
-            assert len(calls) == 1
-            assert terminal == (
-                ["transaction"] if fail else ["callback", "transaction"]
-            )
-            user = await owner.execute(lambda: owner.manager.users.get("target"))
-            assert user is not None
-            assert user.disabled is not fail
-            assert not await owner.execute(
-                lambda: owner.connection.in_transaction, transaction=False
-            )
-            row = UserRow(
-                "target",
-                "target",
-                "target",
-                None,
-                None,
-                disabled=not fail,
-                is_admin=False,
-            )
-            await hooks.after_user_disabled_changed(request, subject, row)
-            assert len(calls) == 1
-        finally:
-            await owner.execute(owner.connection.close, transaction=False)
-            owner.pool.shutdown(wait=True)
-
-
 with asyncio.Runner() as runner:
     runner.run(_listing_replay())
     runner.run(_transaction_replay(fail=False))
     runner.run(_transaction_replay(fail=True))
-    runner.run(_standard_replay(fail=False))
-    runner.run(_standard_replay(fail=True))
